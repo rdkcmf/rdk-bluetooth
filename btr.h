@@ -1,0 +1,166 @@
+/* Bluetooth Header file - June 04, 2015*/
+/* Make header file for the various functions... include structures*/
+/* commit 6aca47c658cf75cad0192a824915dabf82d3200f*/
+
+#define BT_LOG(...) printf(__VA_ARGS__)
+
+
+/* BT Init */
+typedef enum 
+  {
+   NO_ERROR, 
+   ERROR1
+   } BT_error;
+
+typedef enum 
+  {
+   FALSE,
+   TRUE
+   } BOOLEAN;
+
+/*platform specific data lengths */
+typedef unsigned char U8;
+typedef unsigned short U16;
+typedef unsigned int U32;
+   
+/* bd addr length and type */
+#ifndef BD_ADDR_LEN
+#define BD_ADDR_LEN     6
+typedef U8 BD_ADDR[BD_ADDR_LEN];
+#endif
+
+#define COD_LEN     3
+typedef U8 CLASS_OF_DEVICE[COD_LEN];
+
+#define BD_NAME_LEN     248
+typedef char BD_NAME[BD_NAME_LEN + 1];         /* Device name */
+typedef char *BD_NAME_PTR;                 /* Pointer to Device name */
+
+#define UUID_LEN 63
+typedef char UUID[UUID_LEN+1];
+      
+/*BT getAdapters*/
+typedef struct
+{
+	U8 number_of_adapters;
+}
+tGetAdapters;
+
+/*BT AdvertiseService*/
+typedef struct
+{
+	U16 socket;
+   	BD_NAME service_name;
+   	UUID uuid;
+	U8 class;
+	BD_NAME provider;
+	BD_NAME description;		
+}
+tAdvertiseService;
+
+/*Abort Discovery structure, may be needed for some BT stacks*/
+typedef struct
+{
+  int dummy;
+}
+tAbortDiscovery;
+
+typedef struct
+{
+   BD_ADDR bd_address;
+   BD_NAME service_name;
+   UUID uuid;	
+} tFilterMode;
+
+/*Radio params*/
+typedef struct
+{
+ 	U8 first_disabled_channel;
+	U8 last_disabled_channel;
+	U32 page_scan_interval;
+	U32 page_scan_window;
+	U32 inquiry_scan_interval;
+	U32 inquiry_scan_window;
+	U8 tx_power;
+} tRadioParams;
+
+/*BT getAdapter*/
+typedef struct
+{
+	U8 adapter_number;
+	BOOLEAN enable;
+	BOOLEAN discoverable;
+	BOOLEAN connectable;
+	BOOLEAN first_available;/*search for first available BT adapater*/
+	BD_ADDR bd_address;
+        U16 sock;
+	CLASS_OF_DEVICE class_of_device;
+	BD_NAME device_name;
+	tRadioParams RadioParams;
+	int (*p_callback) ();
+}
+tGetAdapter;
+
+/*BT find service*/
+typedef struct
+{
+	unsigned char adapter_number;
+	tFilterMode filter_mode;
+        int (*p_callback) ();
+}
+tFindService;
+
+/*startdiscovery*/
+typedef struct
+{
+	U8 adapter_number; 
+	U32 duration;
+	U8 max_devices;
+	BOOLEAN lookup_names;	
+        U32 flags;
+	U16 sock;
+	int (*p_callback) ();
+}
+tStartDiscovery;
+
+/* Generic call to init any needed stack.. may be called during powerup*/
+BT_error BT_Init(void);
+
+
+/*BT_GetAdapters  call to determine the number of BT radio interfaces... typically one, but could be more*/
+
+BT_error BT_GetAdapters(tGetAdapters *p_get_adapters);
+/*BT_GetAdapter get info about a specific adatper*/
+BT_error BT_GetAdapter(tGetAdapter *p_get_adapter);
+
+/* BT_EnableAdapter enable specific adapter*/
+BT_error BT_EnableAdapter(tGetAdapter *p_get_adapter);
+
+/* BT_DisableAdapter disable specific adapter*/
+BT_error BT_DisableAdapter(tGetAdapter *p_get_adapter);
+
+
+/* BT_ResetAdapter reset specific adapter*/
+BT_error BT_ResetAdapter(tGetAdapter *p_get_adapter);
+
+
+/*BT_ConfigureAdapter... set a particular attribute for the adapter*/
+BT_error BT_ConfigureAdapter(tGetAdapter *p_get_adapter);
+
+
+/* BT_StartDiscovery - start the discovery process*/
+BT_error BT_StartDiscovery(tStartDiscovery *p_start_discovery);
+
+/* BT_AbortDiscovery - aborts the discovery process*/
+BT_error BT_AbortDiscovery(tAbortDiscovery *p_abort_discovery);
+
+/*BT_FindService - finds a service amongst discovered devices*/
+BT_error BT_FindService(tFindService *p_find_service);
+
+/*BT_AdvertiseService - Advertise Service on local SDP server*/
+BT_error BT_AdvertiseService(tAdvertiseService *p_advertise_service);
+
+/*TODO (maybe)*/
+/*BT_ListKnownDevices - list previously Paired Devices*/
+/*BT_RemoveKnownDevice - "Forget" a previously paired device.*/
+/*BT_ConfigureResponses - callback or address for unsolicited status changes*/
