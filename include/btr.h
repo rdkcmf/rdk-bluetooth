@@ -123,6 +123,21 @@ typedef struct
 }
 tStartDiscovery;
 
+
+typedef struct
+{
+   BD_NAME bd_address;
+   BD_NAME device_name;
+   int found;	
+} tScannedDevices;
+
+typedef struct
+{
+   BD_NAME bd_path;
+   BD_NAME device_name;
+   int found;	
+} tKnownDevices;
+
 /* Generic call to init any needed stack.. may be called during powerup*/
 BT_error BT_Init(void);
 
@@ -160,7 +175,23 @@ BT_error BT_FindService(tFindService *p_find_service);
 /*BT_AdvertiseService - Advertise Service on local SDP server*/
 BT_error BT_AdvertiseService(tAdvertiseService *p_advertise_service);
 
+/*BT_PairDevice*/
+BT_error BT_PairDevice(tScannedDevices *p_scanned_device);
+
+
+/*BT_ConnectDevice*/
+BT_error BT_ConnectDevice(tKnownDevices *p_known_device);
+
+
+/*BT_ConnectDevice*/
+BT_error BT_DisconnectDevice(tKnownDevices *p_known_device);
+
+
+/*BT_ForgetDevice*/
+BT_error BT_ForgetDevice(tKnownDevices *p_known_device);
+
 /*TODO (maybe)*/
-/*BT_ListKnownDevices - list previously Paired Devices*/
-/*BT_RemoveKnownDevice - "Forget" a previously paired device.*/
+BT_error BT_ListKnownDevices(tGetAdapter *p_get_adapter); /*- list previously Paired Devices*/
+
+
 /*BT_ConfigureResponses - callback or address for unsolicited status changes*/
