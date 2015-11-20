@@ -29,6 +29,11 @@ tScannedDevices found_device;//a device for intermediate dbus processing
 tKnownDevices known_devices[20];//holds twenty known devices
 
 
+static DBusMessage* sendMethodCall (const char* objectpath, const char* busname, const char* interfacename, const char* methodname);
+static int remove_paired_device (DBusConnection* conn, const char* adapter_path, const char* fullpath);
+static int btrDevConnectFullPath (DBusConnection* conn, const char* fullpath, eBtrDeviceType e_device_type);
+static int btrDevDisconnectFullPath (DBusConnection* conn, const char* fullpath, eBtrDeviceType e_device_type);
+
 
 static DBusMessage* 
 sendMethodCall (
@@ -107,18 +112,33 @@ remove_paired_device (
 }
 
 static int 
-avDisconnectSinkFullPath (
+btrDevConnectFullPath (
     DBusConnection* conn,
-    const char*     fullpath
+    const char*     fullpath,
+    eBtrDeviceType  e_device_type
 ) {
     dbus_bool_t  success;
     DBusMessage* msg;
+    char         dbusIfce[32] = {'\0'};
         
     printf("fullpath is %s\n",fullpath);
+
+    switch (e_device_type) {
+    case eBtrAudioSink:
+        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    case eBtrHeadSet:
+        strncpy(dbusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
+        break;
+    default:
+        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    }
+
     msg = dbus_message_new_method_call( "org.bluez",
                                         fullpath,
-                                        "org.bluez.AudioSink",
-                                        "Disconnect");
+                                        dbusIfce,
+                                        "Connect");
 
     if (!msg) {
         fprintf(stderr, "Can't allocate new method call\n");
@@ -140,18 +160,33 @@ avDisconnectSinkFullPath (
 }
 
 static int 
-avconnectSinkFullPath (
-    DBusConnection* conn, 
-    const char*     fullpath
+btrDevDisconnectFullPath (
+    DBusConnection* conn,
+    const char*     fullpath,
+    eBtrDeviceType  e_device_type
 ) {
     dbus_bool_t  success;
     DBusMessage* msg;
+    char         dbusIfce[32] = {'\0'};
         
     printf("fullpath is %s\n",fullpath);
+
+    switch (e_device_type) {
+    case eBtrAudioSink:
+        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    case eBtrHeadSet:
+        strncpy(dbusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
+        break;
+    default:
+        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    }
+
     msg = dbus_message_new_method_call( "org.bluez",
                                         fullpath,
-                                        "org.bluez.AudioSink",
-                                        "Connect");
+                                        dbusIfce,
+                                        "Disconnect");
 
     if (!msg) {
         fprintf(stderr, "Can't allocate new method call\n");
@@ -706,10 +741,17 @@ agent_filter (
         printf("mikek Device PropertyChanged!\n");  */
 
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Connected"))
-        printf("Device Connected!\n");
+        printf("Device Connected - AudioSink!\n");
 
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Disconnected"))
-        printf("Device Disconnected!\n");
+        printf("Device Disconnected - AudioSink!\n");
+
+    if (dbus_message_is_signal(msg, "org.bluez.Headset","Connected"))
+        printf("Device Connected - Headset!\n");
+
+    if (dbus_message_is_signal(msg, "org.bluez.Headset","Disconnected"))
+        printf("Device Disconnected - Headset!\n");
+
 
     if (!dbus_message_is_signal(msg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -757,6 +799,7 @@ BT_Init (
 
     dbus_bus_add_match(conn, "type='signal',interface='org.bluez.Adapter'", NULL); //mikek needed for device scan results
     dbus_bus_add_match(conn, "type='signal',interface='org.bluez.AudioSink'", NULL); //mikek needed?
+    dbus_bus_add_match(conn, "type='signal',interface='org.bluez.Headset'", NULL);
 
     return NO_ERROR;
 }
@@ -988,31 +1031,6 @@ BT_ForgetDevice (
 }
 
 
-/*BT_ConnectDevice*/
-BT_error
-BT_ConnectDevice (
-    tKnownDevices* p_known_device
-) {
-    DBusConnection *conn;
-
-    BT_LOG(("BT_ConnectDevice\n"));
-
-    conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
-    if (!conn) {
-        fprintf(stderr, "Can't get on system bus");
-        exit(1);
-    }
-
-    if (avconnectSinkFullPath(conn, p_known_device->bd_path) < 0) {
-        dbus_connection_unref(conn);
-        BT_LOG("connection ERROR occurred\n");
-        return ERROR1;
-    }
-
-    return NO_ERROR;
-}
-
-
 BT_error
 BT_PairDevice (
     tScannedDevices* p_scanned_device
@@ -1030,9 +1048,36 @@ BT_PairDevice (
 }
 
 
+/*BT_ConnectDevice*/
+BT_error
+BT_ConnectDevice (
+    tKnownDevices* p_known_device,
+    eBtrDeviceType e_device_type
+) {
+    DBusConnection *conn;
+
+    BT_LOG(("BT_ConnectDevice\n"));
+
+    conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+    if (!conn) {
+        fprintf(stderr, "Can't get on system bus");
+        exit(1);
+    }
+
+    if (btrDevConnectFullPath(conn, p_known_device->bd_path, e_device_type) < 0) {
+        dbus_connection_unref(conn);
+        BT_LOG("connection ERROR occurred\n");
+        return ERROR1;
+    }
+
+    return NO_ERROR;
+}
+
+
 BT_error 
 BT_DisconnectDevice (
-    tKnownDevices* p_known_device
+    tKnownDevices* p_known_device,
+    eBtrDeviceType e_device_type
 ) {
     DBusConnection *conn;
 
@@ -1044,7 +1089,7 @@ BT_DisconnectDevice (
         exit(1);
     }
 
-    if (avDisconnectSinkFullPath(conn, p_known_device->bd_path) < 0) {
+    if (btrDevDisconnectFullPath(conn, p_known_device->bd_path, e_device_type) < 0) {
         dbus_connection_unref(conn);
         BT_LOG("connection ERROR occurred\n");
         return ERROR1;

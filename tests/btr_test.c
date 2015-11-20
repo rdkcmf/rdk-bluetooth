@@ -78,12 +78,14 @@ printMenu (
     printf("1. Get Current Adapter\n");
     printf("2. Scan\n");
     printf("3. Pair\n");
-    printf("4. Connect\n");
+    printf("4. Connect to Headset/Speakers\n");
     printf("5. Show found devices\n");
     printf("6. Show known devices\n");
-    printf("7. Disconnect\n");
+    printf("7. Disconnect to Headset/Speakers\n");
     printf("8. Forget a device\n");
     printf("9. Show all Bluetooth Adapters\n");
+    printf("10. Connect as Headset/Speakerst\n");
+    printf("11. Disconnect as Headset/Speakerst\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -186,7 +188,7 @@ main (
             devnum = getChoice();
             printf(" We will connect %s\n",known_devices[devnum].bd_path);
 
-            BT_ConnectDevice(&known_devices[devnum]); 
+            BT_ConnectDevice(&known_devices[devnum], eBtrAudioSink);
             printf("device connect process completed.\n");
             break;
         case 5:
@@ -204,7 +206,7 @@ main (
             BT_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
             printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
-            BT_DisconnectDevice(&known_devices[devnum]); 
+            BT_DisconnectDevice(&known_devices[devnum], eBtrAudioSink);
 
             printf("device disconnect process completed.\n");
             break;
@@ -255,6 +257,26 @@ main (
                 }
             }
             //END adapter selection
+            break;
+        case 10:
+            printf("Pick a Device to Connect...\n");
+            GetAdapter.adapter_number = myadapter;
+            BT_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf(" We will connect %s\n",known_devices[devnum].bd_path);
+
+            BT_ConnectDevice(&known_devices[devnum], eBtrHeadSet);
+            printf("device connect process completed.\n");
+            break;
+        case 11:
+            printf("Pick a Device to Disonnect...\n");
+            GetAdapter.adapter_number = myadapter;
+            BT_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
+            BT_DisconnectDevice(&known_devices[devnum], eBtrHeadSet);
+
+            printf("device disconnect process completed.\n");
             break;
         case 88:
             test_func();

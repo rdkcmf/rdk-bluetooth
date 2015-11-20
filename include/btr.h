@@ -27,6 +27,12 @@ typedef enum
     TRUE
 } BOOLEAN;
 
+typedef enum
+{
+    eBtrAudioSink,
+    eBtrHeadSet
+} eBtrDeviceType;
+
 /*platform specific data lengths */
 typedef unsigned char   U8;
 typedef unsigned short  U16;
@@ -178,10 +184,10 @@ BT_error BT_AdvertiseService(tAdvertiseService *p_advertise_service);
 BT_error BT_PairDevice(tScannedDevices *p_scanned_device);
 
 /*BT_ConnectDevice*/
-BT_error BT_ConnectDevice(tKnownDevices *p_known_device);
+BT_error BT_ConnectDevice(tKnownDevices *p_known_device, eBtrDeviceType e_device_type);
 
 /*BT_ConnectDevice*/
-BT_error BT_DisconnectDevice(tKnownDevices *p_known_device);
+BT_error BT_DisconnectDevice(tKnownDevices *p_known_device, eBtrDeviceType e_device_type);
 
 /*BT_ForgetDevice*/
 BT_error BT_ForgetDevice(tKnownDevices *p_known_device);
