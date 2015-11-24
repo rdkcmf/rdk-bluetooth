@@ -84,7 +84,15 @@ typedef struct
    UUID     uuid;
 } tFilterMode;
 
+typedef struct
+{
+   char device_type[64];
+   char device_state[64];
+} tStatusCB;
+void (*p_Status_callback) ();
+
 /*Radio params*/
+
 typedef struct
 {
     U8  first_disabled_channel;
@@ -109,7 +117,7 @@ typedef struct
     CLASS_OF_DEVICE class_of_device;
     BD_NAME device_name;
     tRadioParams RadioParams;
-    int (*p_callback) ();
+    int (*p_callback) ();//delete this later TODO
 } tGetAdapter;
 
 /*BT find service*/
@@ -195,6 +203,6 @@ BT_error BT_ForgetDevice(tKnownDevices *p_known_device);
 /*TODO (maybe)*/
 BT_error BT_ListKnownDevices(tGetAdapter *p_get_adapter); /*- list previously Paired Devices*/
 
-/*BT_ConfigureResponses - callback or address for unsolicited status changes*/
-
+/*BT_RegisterStatusCallback - callback for unsolicited status changes*/
+BT_error BT_RegisterStatusCallback(void * cb);
 #endif // _BTR_H_

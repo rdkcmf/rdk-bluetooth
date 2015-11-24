@@ -4,6 +4,7 @@
 #include <stdlib.h>     //for malloc
 #include <unistd.h>     //for getpid
 #include <pthread.h>    //for StopDiscovery test
+#include <string.h>  //for strcnp
 
 #include <dbus/dbus.h>
 
@@ -14,8 +15,7 @@ static char default_path[128];
 char *adapter_path = NULL;
 static char *agent_path = NULL;
 static int iret1;
-static int stop_discovery = 0;
-static char *message1 = "StopDiscovery Thread";
+
 static char *message2 = "Dispatch Thread";
 pthread_t thread1, thread2;
 
@@ -27,7 +27,7 @@ DBusConnection *conn;
 tScannedDevices scanned_devices[20];//holds twenty scanned devices
 tScannedDevices found_device;//a device for intermediate dbus processing
 tKnownDevices known_devices[20];//holds twenty known devices
-
+tStatusCB callback_info;//holds info for a callback
 
 static DBusMessage* sendMethodCall (const char* objectpath, const char* busname, const char* interfacename, const char* methodname);
 static int remove_paired_device (DBusConnection* conn, const char* adapter_path, const char* fullpath);
@@ -323,45 +323,20 @@ LoadScannedDevice (
 
 
 void
-test_func (
-    void
+test_func (tGetAdapter* p_get_adapter
 ) {
-    const char *value = "constchar device";
 
-    printf("test function\n");
-    strcpy(found_device.bd_address,"00:11:22:33:44:55");
-    strcpy(found_device.device_name,"Bogus Device");
-    LoadScannedDevice();//operates on found_device
-
-    strcpy(found_device.bd_address,"00:16:26:33:44:55");
-    strcpy(found_device.device_name,"Another Device");
-    LoadScannedDevice();//operates on found_device
-
-    strcpy(found_device.bd_address,"00:11:22:33:47:55");
-    strcpy(found_device.device_name,"Bogus Device");
-    LoadScannedDevice();//operates on found_device
-
-    //this is a dupe, should not show up in the list
-    strcpy(found_device.bd_address,"00:11:22:33:44:55");
-    strcpy(found_device.device_name,"Bogus Device");
-    LoadScannedDevice();//operates on found_device
-
-    strcpy(found_device.bd_address,"FC:11:22:33:47:55");
-    strcpy(found_device.device_name,value);
-    LoadScannedDevice();//operates on found_device
+if (p_Status_callback != NULL)
+  {
+    p_Status_callback();
+  }
+  else
+  {
+    printf("no callback installed\n");
+  }
 }
 
-void*
-DoStopDiscovery (
-    void* ptr
-) {
-     char *message;
-     message = (char *) ptr;
-     printf("%s \n", message);
-     sleep(15);
-     printf("Stopping discovery...\n");
-     stop_discovery = 1;
-}
+
 
 void*
 DoDispatch (
@@ -639,7 +614,7 @@ parse_device (
     const char* value;
     const char* bd_addr;
     short rssi;
-    int dbus_type;
+
 
     printf("\n\n\nBLUETOOTH DEVICE FOUND:\n");
     if (!dbus_message_iter_init(msg, &arg_i)) {
@@ -713,6 +688,48 @@ parse_device (
 #endif
 }
 
+static void 
+parse_change (
+    DBusMessage* msg
+) {
+    DBusMessageIter arg_i, variant_i;
+    const char* value;
+    const char* bd_addr;
+    int dbus_type;
+
+   // printf("\n\n\nBLUETOOTH DEVICE STATUS CHANGE:\n");
+    if (!dbus_message_iter_init(msg, &arg_i)) {
+       printf("GetProperties reply has no arguments.");
+    }
+
+    if (!dbus_message_get_args( msg, NULL,
+                                DBUS_TYPE_STRING, &bd_addr,
+                                DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+
+    //printf(" Name: %s\n",bd_addr);//"State" then the variant is a string
+    if (strcmp(bd_addr,"State") == 0)
+    {
+    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+   // printf("type is %d\n",dbus_type);
+
+    if (dbus_type == DBUS_TYPE_STRING) {
+       dbus_message_iter_next(&arg_i);
+       dbus_message_iter_recurse(&arg_i, &variant_i);
+       dbus_message_iter_get_basic(&variant_i, &value);      
+      //  printf("    the new state is: %s\n",value);
+        strncpy(callback_info.device_type,"Bluez",60);
+        strncpy(callback_info.device_state,value,60);
+        if (p_Status_callback)
+           {
+            p_Status_callback(&callback_info);
+           }
+         }
+     }
+}
+
 static DBusHandlerResult 
 agent_filter (
     DBusConnection* conn,
@@ -736,22 +753,32 @@ agent_filter (
 
     if (dbus_message_is_signal(msg, "org.bluez.Adapter","DeviceRemoved"))
         printf("mikek Device Removed!\n");
-
+*/
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","PropertyChanged"))
-        printf("mikek Device PropertyChanged!\n");  */
-
+       {
+         //printf("mikek Device PropertyChanged!\n");  
+         parse_change(msg);
+       }
+    if (dbus_message_is_signal(msg, "org.bluez.Headset","PropertyChanged"))
+       {
+         //printf("mikek Device PropertyChanged!\n");  
+         parse_change(msg);
+       }
+/*
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Connected"))
         printf("Device Connected - AudioSink!\n");
 
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Disconnected"))
-        printf("Device Disconnected - AudioSink!\n");
+         {
+           printf("Device Disconnected - AudioSink!\n");
+         }
 
     if (dbus_message_is_signal(msg, "org.bluez.Headset","Connected"))
         printf("Device Connected - Headset!\n");
 
     if (dbus_message_is_signal(msg, "org.bluez.Headset","Disconnected"))
         printf("Device Disconnected - Headset!\n");
-
+*/
 
     if (!dbus_message_is_signal(msg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -779,6 +806,8 @@ BT_Init (
     void
 ) {
     BT_LOG(("BT_Init\n"));
+    p_Status_callback = NULL;//set callbacks to NULL, later an app can register callbacks
+
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -987,6 +1016,7 @@ BT_ListKnownDevices (
 
         dbus_message_unref(reply);
     }//end for
+  return NO_ERROR;
 }
 
 
@@ -1098,3 +1128,9 @@ BT_DisconnectDevice (
     return NO_ERROR;
 }
 
+BT_error
+BT_RegisterStatusCallback(void * cb)
+{
+  p_Status_callback = cb;
+  return NO_ERROR;
+}

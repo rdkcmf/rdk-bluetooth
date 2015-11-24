@@ -11,7 +11,7 @@
 #include "btr.h"
 
 //test func
-void test_func(void);
+void test_func(tGetAdapter* p_get_adapter);
 //global connection variable for dbus?
 DBusConnection *conn;
 
@@ -62,11 +62,9 @@ ShowFound (
     }
 }
 
-int 
-callback_test_function (
-    void
-) {
-    printf("callback test\n");
+int cb_unsolicited_bluetooth_status (tStatusCB* p_StatusCB)
+{
+    printf("device status change: %s\n",p_StatusCB->device_state);
     return 0;
 }
 
@@ -139,6 +137,12 @@ main (
 
     //call the BT_init...eventually everything goes here...
     BT_Init();
+
+//register callback for unsolicted events, such as powering off a bluetooth device
+BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
+
+
+
 
     //display a menu of choices
     printMenu();
@@ -279,7 +283,7 @@ main (
             printf("device disconnect process completed.\n");
             break;
         case 88:
-            test_func();
+            test_func(&GetAdapter);
             break;
         case 99: 
             printf("Quitting program!\n");
