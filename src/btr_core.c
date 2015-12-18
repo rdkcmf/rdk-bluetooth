@@ -16,7 +16,7 @@ char *adapter_path = NULL;
 static char *agent_path = NULL;
 static int iret1;
 
-static char *message2 = "Dispatch Thread";
+static char *message2 = "Dispatch Thread Started";
 pthread_t thread1, thread2;
 
 const char *capabilities = "NoInputNoOutput";//I dont want to deal with pins and passcodes at this time
@@ -85,7 +85,7 @@ remove_paired_device (
     dbus_bool_t success;
     DBusMessage *msg;
         
-    printf("fullpath is %s\n",fullpath);
+   // BT_LOG("fullpath is %s\n",fullpath);
     msg = dbus_message_new_method_call( "org.bluez",
                                         adapter_path,
                                         "org.bluez.Adapter",
@@ -121,7 +121,7 @@ btrDevConnectFullPath (
     DBusMessage* msg;
     char         dbusIfce[32] = {'\0'};
         
-    printf("fullpath is %s\n",fullpath);
+    //BT_LOG("fullpath is %s\n",fullpath);
 
     switch (e_device_type) {
     case eBtrAudioSink:
@@ -169,7 +169,7 @@ btrDevDisconnectFullPath (
     DBusMessage* msg;
     char         dbusIfce[32] = {'\0'};
         
-    printf("fullpath is %s\n",fullpath);
+    //BT_LOG("fullpath is %s\n",fullpath);
 
     switch (e_device_type) {
     case eBtrAudioSink:
@@ -207,32 +207,7 @@ btrDevDisconnectFullPath (
     return 0;
 }
 
-void 
-ShowSignalStrength (
-    short strength
-) {
-    short pos_str;
 
-    pos_str = 100 + strength;//strength is usually negative with number meaning more strength
-
-    printf(" Signal Strength: %d dbmv  ",strength);
-
-    if (pos_str > 70) {
-        printf("++++\n");
-    }
-
-    if ((pos_str > 50) && (pos_str <= 70)) {
-        printf("+++\n");
-    }
-
-    if ((pos_str > 37) && (pos_str <= 50)) {
-        printf("++\n");
-    }
-
-    if (pos_str <= 37) {
-        printf("+\n");
-    } 
-}
 
 static int 
 create_paired_device (
@@ -242,8 +217,10 @@ create_paired_device (
     const char*     capabilities,
     const char*     device
 ) {
-    dbus_bool_t  success;
+   
     DBusMessage* msg;
+    DBusMessage*     reply;
+    DBusError err;
 
     msg = dbus_message_new_method_call( "org.bluez", 
                                         adapter_path,
@@ -260,16 +237,23 @@ create_paired_device (
                              DBUS_TYPE_STRING, &capabilities,
                              DBUS_TYPE_INVALID);
 
-    success = dbus_connection_send(conn, msg, NULL);
+
+    dbus_error_init(&err);
+
+    reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
 
     dbus_message_unref(msg);
 
-    if (!success) {
-        fprintf(stderr, "Not enough memory for message send\n");
-        return -1;
-    }
+    if (!reply) {
+        fprintf(stderr, "Pairing failed...\n");
 
-    dbus_connection_flush(conn);
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
+        return -1;
+       }
+
 
     return 0;
 }
@@ -314,6 +298,7 @@ LoadScannedDevice (
                 //printf("adding %s at location %d\n",found_device.bd_address,i);
                 strcpy(scanned_devices[i].bd_address,found_device.bd_address);
                 strcpy(scanned_devices[i].device_name,found_device.device_name);
+                scanned_devices[i].RSSI = found_device.RSSI;
                 scanned_devices[i].found = 1; //mark the record as found
                 break;
             }
@@ -538,7 +523,7 @@ StopDiscovery (
     dbus_bool_t success;
     DBusMessage *msg;
 
-    printf("calling StopDiscovery\n");
+   // printf("calling StopDiscovery\n");
 
     msg = dbus_message_new_method_call( "org.bluez", 
                                         adapter_path,
@@ -574,7 +559,7 @@ StartDiscovery (
     dbus_bool_t success;
     DBusMessage *msg;
 
-    printf("calling StartDiscovery with %s\n",adapter_path);
+    //printf("calling StartDiscovery with %s\n",adapter_path);
 
     msg = dbus_message_new_method_call( "org.bluez",
                                         adapter_path,
@@ -614,9 +599,9 @@ parse_device (
     const char* value;
     const char* bd_addr;
     short rssi;
+    int dbus_type;
 
-
-    printf("\n\n\nBLUETOOTH DEVICE FOUND:\n");
+    //printf("\n\n\nBLUETOOTH DEVICE FOUND:\n");
     if (!dbus_message_iter_init(msg, &arg_i)) {
        printf("GetProperties reply has no arguments.");
     }
@@ -628,8 +613,8 @@ parse_device (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    printf(" Address: %s\n",bd_addr);
-
+   // printf(" Address: %s\n",bd_addr);
+//TODO provide some indication, callback to app of devices being found in real time
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
     //printf("type is %d\n",dbus_type);
 
@@ -642,9 +627,7 @@ parse_device (
         if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
             //printf("GetProperties argument is STILL not DBUS_TYPE_ARRAY... \n");
         }
-        else {
-            printf("    Device Details:\n");
-        }
+        
     }
 
 #if 1
@@ -663,8 +646,8 @@ parse_device (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &rssi);
                 //printf("RSSI is type %d\n",dbus_message_iter_get_arg_type(&variant_i));
-                ShowSignalStrength(rssi);
                 //printf("    rssi: %d\n",rssi);
+                found_device.RSSI = rssi;
             }
 
             if (strcmp (key, "Name") == 0) {
@@ -672,7 +655,7 @@ parse_device (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &value);
             
-                printf("    name: %s\n",value);
+                //printf("    name: %s\n",value);
 
                 //load the found device into our array
                 strcpy(found_device.device_name,value);
@@ -846,14 +829,14 @@ BT_StartDiscovery (
     }
 
     sleep(p_start_discovery->duration);
-    printf("now stopping...\n");
+    
 
     if (StopDiscovery(conn, adapter_path, agent_path, dbus_device) < 0) {
         dbus_connection_unref(conn);
         exit(1);
     }
 
-    printf("Stopped device discovery\n");
+    
 
     return NO_ERROR;
 }
@@ -1026,7 +1009,7 @@ BT_GetAdapters (
 ) {
     DBusConnection *conn;
 
-    BT_LOG(("BT_GetAdapters\n"));
+    //BT_LOG(("BT_GetAdapters\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1047,7 +1030,7 @@ BT_ForgetDevice (
 ) {
     DBusConnection *conn;
 
-    BT_LOG(("BT_ForgetDevice\n"));
+    //BT_LOG(("BT_ForgetDevice\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1066,7 +1049,7 @@ BT_PairDevice (
     tScannedDevices* p_scanned_device
 ) {
 
-    BT_LOG(("BT_PairDevice\n"));
+    //BT_LOG(("BT_PairDevice\n"));
 
     if (create_paired_device(conn, adapter_path, agent_path, capabilities, p_scanned_device->bd_address) < 0) {
         dbus_connection_unref(conn);
@@ -1086,7 +1069,7 @@ BT_ConnectDevice (
 ) {
     DBusConnection *conn;
 
-    BT_LOG(("BT_ConnectDevice\n"));
+    //BT_LOG(("BT_ConnectDevice\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1111,7 +1094,7 @@ BT_DisconnectDevice (
 ) {
     DBusConnection *conn;
 
-    BT_LOG(("BT_DisconnectDevice\n"));
+   // BT_LOG(("BT_DisconnectDevice\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {

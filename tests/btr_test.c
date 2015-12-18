@@ -15,15 +15,6 @@ void test_func(tGetAdapter* p_get_adapter);
 //global connection variable for dbus?
 DBusConnection *conn;
 
-#if 0
-typedef struct
-{
-   BD_NAME bd_address;
-   BD_NAME device_name;
-   int found;
-} tScannedDevices;
-tScannedDevices scanned_devices[20]; //holds twenty scanned devices
-#endif
 
 extern tScannedDevices scanned_devices[20]; //holds twenty scanned devices
 extern char *adapter_path; //to keep track of currently selected
@@ -52,13 +43,43 @@ InitFound (
 }
 
 static void 
+ShowSignalStrength (
+    short strength
+) {
+    short pos_str;
+
+    pos_str = 100 + strength;//strength is usually negative with number meaning more strength
+
+    printf(" Signal Strength: %d dbmv  ",strength);
+
+    if (pos_str > 70) {
+        printf("++++\n");
+    }
+
+    if ((pos_str > 50) && (pos_str <= 70)) {
+        printf("+++\n");
+    }
+
+    if ((pos_str > 37) && (pos_str <= 50)) {
+        printf("++\n");
+    }
+
+    if (pos_str <= 37) {
+        printf("+\n");
+    } 
+}
+static void 
 ShowFound (
     void
 ) {
     int i;
     for (i = 0; i < 15; i++) {
         if (scanned_devices[i].found)
-        printf("Device %d. %s\n - %s\n\n",i,scanned_devices[i].device_name, scanned_devices[i].bd_address);
+          {
+        printf("Device %d. %s\n - %s  %d dbmV ",i,scanned_devices[i].device_name, scanned_devices[i].bd_address, scanned_devices[i].RSSI);
+        ShowSignalStrength(scanned_devices[i].RSSI);
+        printf("\n\n");
+       }
     }
 }
 
@@ -167,7 +188,9 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
                 BT_LOG("lookup_names %d\n",StartDiscovery.lookup_names);
                 StartDiscovery.flags = 0;
                 BT_LOG("flags %d\n",StartDiscovery.flags);
+                printf("Performing device scan. Please wait...\n");
                 BT_StartDiscovery(&StartDiscovery);
+                printf("scan complete\n");
             }
             else {
                 BT_LOG("Error, no default_adapter set\n");
@@ -182,8 +205,10 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
             printf(" adapter_path %s\n",adapter_path);
             printf(" agent_path %s\n",agent_path);
             printf(" address %s\n",scanned_devices[devnum].bd_address);
-            BT_PairDevice(&scanned_devices[devnum]);
-            printf("device pairing completed.\n");
+            if ( BT_PairDevice(&scanned_devices[devnum]) == NO_ERROR)
+                printf("device pairing successful.\n");
+            else
+              printf("device pairing FAILED.\n");
             break;
         case 4: 
             printf("Pick a Device to Connect...\n");

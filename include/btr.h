@@ -144,6 +144,7 @@ typedef struct
 {
    BD_NAME bd_address;
    BD_NAME device_name;
+   int RSSI;
    int found;
 } tScannedDevices;
 
