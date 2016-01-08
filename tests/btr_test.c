@@ -105,6 +105,11 @@ printMenu (
     printf("9. Show all Bluetooth Adapters\n");
     printf("10. Connect as Headset/Speakerst\n");
     printf("11. Disconnect as Headset/Speakerst\n");
+    printf("12. Enable Bluetooth Adapter\n");
+    printf("13. Disable Bluetooth Adapter\n");
+    printf("14. Set Discoverable Timeout\n");
+    printf("15. Set Discoverable \n");
+    printf("16. Set friendly name \n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -230,7 +235,7 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
             BT_ListKnownDevices(&GetAdapter); //TODO pass in a different structure for each adapter
             break;
         case 7:
-            printf("Pick a Device to Disonnect...\n");
+            printf("Pick a Device to Disconnect...\n");
             GetAdapter.adapter_number = myadapter;
             BT_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
@@ -307,8 +312,38 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
 
             printf("device disconnect process completed.\n");
             break;
+        case 12:
+            GetAdapter.adapter_number = myadapter;
+            printf("Enabling adapter %d\n",GetAdapter.adapter_number);
+            BT_EnableAdapter(&GetAdapter);
+            break;
+        case 13:
+            GetAdapter.adapter_number = myadapter;
+            printf("Disabling adapter %d\n",GetAdapter.adapter_number);
+            BT_DisableAdapter(&GetAdapter);
+            break;
+        case 14:
+            printf("Enter discoverable timeout in seconds.  Zero seconds = FOREVER \n");
+            GetAdapter.DiscoverableTimeout = getChoice();
+            printf("setting DiscoverableTimeout to %d\n",GetAdapter.DiscoverableTimeout);
+            BT_SetDiscoverableTimeout(&GetAdapter);
+            break;
+        case 15:
+            printf("Set discoverable.  Zero = Not Discoverable, One = Discoverable \n");
+            GetAdapter.discoverable = getChoice();
+            printf("setting discoverable to %d\n",GetAdapter.discoverable);
+            BT_SetDiscoverable(&GetAdapter);
+            break;
+        case 16:
+            printf("Set friendly name (up to 64 characters): \n");
+            //strcpy(GetAdapter.device_name, "KitchenTV");
+            //scanf("%s",GetAdapter.device_name);
+            fgets(GetAdapter.device_name,sizeof(GetAdapter.device_name),stdin);
+            printf("setting name to %s\n",GetAdapter.device_name);
+            BT_SetDeviceName(&GetAdapter);
+            break;
         case 88:
-            test_func(&GetAdapter);
+            test_func(&GetAdapter); 
             break;
         case 99: 
             printf("Quitting program!\n");
@@ -326,24 +361,7 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
 
 
 //TODO - stuff below is to be moved to shared library
-BT_error
-BT_EnableAdapter (
-    tGetAdapter* p_get_adapter
-) {
-    BT_LOG(("BT_EnableAdapter\n"));
-    p_get_adapter->enable = TRUE;
-    return NO_ERROR;
-}
 
-
-BT_error
-BT_DisableAdapter (
-    tGetAdapter* p_get_adapter
-) {
-    BT_LOG(("BT_DisableAdapter\n"));
-    p_get_adapter->enable = FALSE;
-    return NO_ERROR;
-}
 
 
 BT_error

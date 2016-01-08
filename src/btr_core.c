@@ -5,7 +5,7 @@
 #include <unistd.h>     //for getpid
 #include <pthread.h>    //for StopDiscovery test
 #include <string.h>  //for strcnp
-
+#include <errno.h> //for error numbers
 #include <dbus/dbus.h>
 
 #include "btr.h"
@@ -158,6 +158,56 @@ btrDevConnectFullPath (
 
     return 0;
 }
+
+static int set_property(DBusConnection *conn, const char *adapter,
+					const char *key, int type, void *val)
+{
+	DBusMessage *message, *reply;
+	DBusMessageIter array, value;
+	DBusError error;
+	const char *signature;
+	message = dbus_message_new_method_call( "org.bluez", 
+                                        adapter_path,
+                                        "org.bluez.Adapter",
+                                        "SetProperty");
+	if (!message)
+		return -ENOMEM;
+	switch (type) {
+	case DBUS_TYPE_BOOLEAN:
+		signature = DBUS_TYPE_BOOLEAN_AS_STRING;
+		break;
+	case DBUS_TYPE_UINT32:
+		signature = DBUS_TYPE_UINT32_AS_STRING;
+		break;
+	case DBUS_TYPE_STRING:
+		signature = DBUS_TYPE_STRING_AS_STRING;
+		break;
+	default:
+		return -EILSEQ;
+	}
+	dbus_message_iter_init_append(message, &array);
+	dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &key);
+	dbus_message_iter_open_container(&array, DBUS_TYPE_VARIANT,
+							signature, &value);
+	dbus_message_iter_append_basic(&value, type, val);
+	dbus_message_iter_close_container(&array, &value);
+	dbus_error_init(&error);
+	reply = dbus_connection_send_with_reply_and_block(conn,
+							message, -1, &error);
+	dbus_message_unref(message);
+	if (!reply) {
+		if (dbus_error_is_set(&error) == TRUE) {
+			fprintf(stderr, "%s\n", error.message);
+			dbus_error_free(&error);
+		} else
+			fprintf(stderr, "Failed to set property\n");
+		return -EIO;
+	}
+	dbus_message_unref(reply);
+//	BT_LOG("Set property %s for %s\n", key, adapter);
+	return 0;
+}
+
 
 static int 
 btrDevDisconnectFullPath (
@@ -590,7 +640,7 @@ StartDiscovery (
     return 0;
 }
 
-static void 
+static int 
 parse_device (
     DBusMessage* msg
 ) {
@@ -669,9 +719,10 @@ parse_device (
             break;
     }
 #endif
+  return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static void 
+static int 
 parse_change (
     DBusMessage* msg
 ) {
@@ -711,6 +762,7 @@ parse_change (
            }
          }
      }
+  return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 static DBusHandlerResult 
@@ -1117,3 +1169,60 @@ BT_RegisterStatusCallback(void * cb)
   p_Status_callback = cb;
   return NO_ERROR;
 }
+
+
+BT_error
+BT_EnableAdapter (
+    tGetAdapter* p_get_adapter
+) {
+    int powered;
+    powered = 1;
+    BT_LOG(("BT_EnableAdapter\n"));
+    p_get_adapter->enable = TRUE;//does this even mean anything?
+
+    set_property(conn, adapter_path, "Powered",DBUS_TYPE_BOOLEAN, &powered);
+    return NO_ERROR;
+}
+
+
+BT_error
+BT_DisableAdapter (
+    tGetAdapter* p_get_adapter
+) {
+    int powered;
+    powered = 0;
+    BT_LOG(("BT_DisableAdapter\n"));
+    p_get_adapter->enable = FALSE;
+     set_property(conn, adapter_path, "Powered",DBUS_TYPE_BOOLEAN, &powered);
+    return NO_ERROR;
+}
+
+
+BT_error BT_SetDiscoverableTimeout(tGetAdapter *p_get_adapter)
+{
+    U32 timeout;
+    timeout = p_get_adapter->DiscoverableTimeout;
+    set_property(conn, adapter_path, "DiscoverableTimeout",DBUS_TYPE_UINT32, &timeout);
+    return NO_ERROR;
+}
+
+
+BT_error BT_SetDiscoverable(tGetAdapter *p_get_adapter)
+{
+    int discoverable;
+    discoverable = p_get_adapter->discoverable;
+    set_property(conn, adapter_path, "Discoverable",DBUS_TYPE_BOOLEAN, &discoverable);
+    return NO_ERROR;
+}
+
+
+BT_error BT_SetDeviceName(tGetAdapter *p_get_adapter)
+{
+  char * myname;
+  myname=p_get_adapter->device_name;
+  set_property(conn, adapter_path, "Name",DBUS_TYPE_STRING, &myname);
+  return NO_ERROR;
+}
+
+
+

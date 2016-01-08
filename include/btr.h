@@ -117,6 +117,7 @@ typedef struct
     CLASS_OF_DEVICE class_of_device;
     BD_NAME device_name;
     tRadioParams RadioParams;
+    U32 DiscoverableTimeout;
     int (*p_callback) ();//delete this later TODO
 } tGetAdapter;
 
@@ -170,6 +171,17 @@ BT_error BT_EnableAdapter(tGetAdapter *p_get_adapter);
 
 /* BT_DisableAdapter disable specific adapter*/
 BT_error BT_DisableAdapter(tGetAdapter *p_get_adapter);
+
+
+/* BT_SetDiscoverable set adapter as discoverable or not discoverable*/
+BT_error BT_SetDiscoverable(tGetAdapter *p_get_adapter);
+
+
+/* BT_SetDiscoverableTimeout set how long the adapter is discoverable*/
+BT_error BT_SetDiscoverableTimeout(tGetAdapter *p_get_adapter);
+
+/* BT_SetDeviceName set friendly name of BT adapter*/
+BT_error BT_SetDeviceName(tGetAdapter *p_get_adapter);
 
 /* BT_ResetAdapter reset specific adapter*/
 BT_error BT_ResetAdapter(tGetAdapter *p_get_adapter);
