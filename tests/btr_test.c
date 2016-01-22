@@ -8,7 +8,8 @@
 
 #include <dbus/dbus.h>
 
-#include "btr.h"
+#include "btr.h" //basic RDK BT functions
+#include "btr_service.h" //service UUIDs, use for service discovery
 
 //test func
 void test_func(tGetAdapter* p_get_adapter);
@@ -29,6 +30,7 @@ getChoice (
     int mychoice;
     printf("Enter a choice...\n");
     scanf("%d", &mychoice);
+        getchar();//suck up a newline?
     return mychoice;
 }
 
@@ -110,6 +112,9 @@ printMenu (
     printf("14. Set Discoverable Timeout\n");
     printf("15. Set Discoverable \n");
     printf("16. Set friendly name \n");
+    printf("17. Check for audio sink capability\n");
+    printf("18. Check for existance of a service\n");
+    printf("19. Find service details\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -132,10 +137,12 @@ main (
 	//Dbus stuff
     char  default_path[128];
     char* agent_path = NULL;
-
+    char myData[2048];
     int myadapter = 0;
-    int pathlen;
-
+    int bfound;
+    int i, pathlen;
+    
+    char myService[16];//for testing findService API
     //init array of scanned devices
     InitFound();
 
@@ -176,7 +183,7 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
     do {
         printf("Enter a choice...\n");
         scanf("%d", &choice);
-
+        getchar();//suck up a newline?
         switch (choice) {
         case 1: 
             printf("Adapter is %s\n",adapter_path);
@@ -336,11 +343,101 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
             break;
         case 16:
             printf("Set friendly name (up to 64 characters): \n");
-            //strcpy(GetAdapter.device_name, "KitchenTV");
-            //scanf("%s",GetAdapter.device_name);
             fgets(GetAdapter.device_name,sizeof(GetAdapter.device_name),stdin);
             printf("setting name to %s\n",GetAdapter.device_name);
             BT_SetDeviceName(&GetAdapter);
+            break;
+        case 17:
+            printf("Check for Audio Sink capability\n");
+            printf("Pick a Device to Check for Audio Sink...\n");
+            GetAdapter.adapter_number = myadapter;
+            BT_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf("Checking for an audio sink on %s\n", known_devices[devnum].bd_path); 
+            if (BT_FindService(&known_devices[devnum],BT_A2SNK,NULL,&bfound) == NO_ERROR)
+              {
+               if (bfound)
+                {
+		  printf("Service UUID BT_A2SNK is found\n");
+                }
+               else
+                {
+                  printf("Service UUID BT_A2SNK is NOT found\n");
+                }
+               }
+              else
+              {
+                 printf("Error on BT_FindService\n");
+              }
+            break;
+        case 18:
+            printf("Find a Service\n");
+            printf("Pick a Device to Check for Services...\n");
+            GetAdapter.adapter_number = myadapter;
+            BT_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
+            fgets(myService,sizeof(myService),stdin);
+            printf("Checking for service %s on %s\n",myService, known_devices[devnum].bd_path);
+            for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
+                  {
+                if(myService[i] == '\n')
+                   myService[i] = '\0';
+                }
+            bfound=0;//assume not found
+            if (BT_FindService(&known_devices[devnum],myService,NULL,&bfound) == NO_ERROR)
+            {
+             if (bfound)
+                {
+		  printf("Service UUID %s is found\n",myService);
+                }
+               else
+                {
+                  printf("Service UUID %s is NOT found\n",myService);
+                }
+             }
+             else
+             {
+                printf("Error on BT_FindService\n");
+             }
+            break;
+        case 19:
+            printf("Find a Service and get details\n");
+            printf("Pick a Device to Check for Services...\n");
+            GetAdapter.adapter_number = myadapter;
+            BT_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
+            fgets(myService,sizeof(myService),stdin);
+            printf("Checking for service %s on %s\n",myService, known_devices[devnum].bd_path);
+            for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
+                  {
+                if(myService[i] == '\n')
+                   myService[i] = '\0';
+                }
+            bfound=0;//assume not found
+            /*CAUTION! This usage is intended for development purposes.
+           myData needs to be allocated large enough to hold the returned device data
+           for development purposes it may be helpful for an app to gain access to this data,
+           so this usage  can provide that capability.
+         In most cases, simply knowing if the service exists may suffice, in which case you can use
+         the simplified option where the data pointer is NULL, and no data is copied*/
+            if (BT_FindService(&known_devices[devnum],myService,myData,&bfound)  == NO_ERROR)
+              {
+              if (bfound)
+                {
+		  printf("Service UUID %s is found\n",myService);
+                  printf("Data is:\n %s \n",myData);
+                }
+               else
+                {
+                  printf("Service UUID %s is NOT found\n",myService);
+                }
+               }
+              else
+             {
+                printf("Error on BT_FindService\n");
+             }
             break;
         case 88:
             test_func(&GetAdapter); 
@@ -382,12 +479,12 @@ BT_ConfigureAdapter (
 }
 
 
-/*BT_FindService - finds a service from a given device*/
+/*BT_DiscoverServices - finds a service from a given device*/
 BT_error 
-BT_FindService (
+BT_DiscoverServices (
     tFindService* p_find_service
 ) {
-    BT_LOG(("BT_FindService\n"));
+    BT_LOG(("BT_DiscoverServices\n"));
 #ifdef SIM_MODE
 	BT_LOG(("Looking for services with:\n"));
 	BT_LOG("Service Name: %s\n",p_find_service->filter_mode.service_name);

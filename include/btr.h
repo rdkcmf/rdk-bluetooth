@@ -195,8 +195,8 @@ BT_error BT_StartDiscovery(tStartDiscovery *p_start_discovery);
 /* BT_AbortDiscovery - aborts the discovery process*/
 BT_error BT_AbortDiscovery(tAbortDiscovery *p_abort_discovery);
 
-/*BT_FindService - finds a service amongst discovered devices*/
-BT_error BT_FindService(tFindService *p_find_service);
+/*BT_DiscoverServices - finds a service amongst discovered devices*/
+BT_error BT_DiscoverServices(tFindService *p_find_service);
 
 /*BT_AdvertiseService - Advertise Service on local SDP server*/
 BT_error BT_AdvertiseService(tAdvertiseService *p_advertise_service);
@@ -213,8 +213,12 @@ BT_error BT_DisconnectDevice(tKnownDevices *p_known_device, eBtrDeviceType e_dev
 /*BT_ForgetDevice*/
 BT_error BT_ForgetDevice(tKnownDevices *p_known_device);
 
-/*TODO (maybe)*/
+/*BT_ListKnownDevices*/
 BT_error BT_ListKnownDevices(tGetAdapter *p_get_adapter); /*- list previously Paired Devices*/
+
+/*BT_FindService - confirm if a given service exists on a device*/
+BT_error BT_FindService (tKnownDevices* p_known_device,const char * UUID,char * XMLdata, int * found);
+
 
 /*BT_RegisterStatusCallback - callback for unsolicited status changes*/
 BT_error BT_RegisterStatusCallback(void * cb);

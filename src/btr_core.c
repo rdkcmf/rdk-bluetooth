@@ -76,6 +76,108 @@ sendMethodCall (
     return reply;
 }
 
+
+static int 
+discover_services (
+    DBusConnection* conn, 
+    const char*     fullpath,
+    const char*     search_string,
+    char * data_string
+) {
+    
+    DBusMessage *msg, *reply;
+    DBusMessageIter arg_i, element_i;
+    DBusMessageIter dict_i;
+    int dbus_type;
+    DBusError err;
+    int match;
+   const char* value;
+   char * ret;
+
+        
+   //BT_LOG("fullpath is %s\n and service UUID is %s",fullpath,search_string);
+    msg = dbus_message_new_method_call( "org.bluez",
+                                        fullpath,
+                                        "org.bluez.Device",
+                                        "DiscoverServices");
+
+    if (!msg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+    match = 0;//assume it does not match
+    dbus_message_append_args(msg, DBUS_TYPE_STRING, &search_string, DBUS_TYPE_INVALID);
+     dbus_error_init(&err);
+    reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
+
+    dbus_message_unref(msg);
+
+if (!reply) {
+        fprintf(stderr, "Failure attempting to Discover Services\n");
+
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
+
+        return -1;
+    }
+
+  if (!dbus_message_iter_init(reply, &arg_i)) {
+       printf("DiscoverServices reply has no information.");
+       return -1;
+    }
+    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+   // printf("type is %d\n",dbus_type);
+    
+    dbus_message_iter_recurse(&arg_i, &element_i);
+    dbus_type = dbus_message_iter_get_arg_type(&element_i);
+    //printf("checking the type, it is %d\n",dbus_type);
+
+   while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+    dbus_type = dbus_message_iter_get_arg_type(&element_i);
+    //printf("next element_i type is %d\n",dbus_type);
+      if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+
+            dbus_message_iter_recurse(&element_i, &dict_i);
+     dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+   // printf("checking the dict subtype, it is %d\n",dbus_type);
+
+
+     dbus_message_iter_next(&dict_i);
+     dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+//    printf("interating the dict subtype, it is %d\n",dbus_type);
+         dbus_message_iter_get_basic(&dict_i, &value);
+            
+           //  printf("Services: %s\n",value);
+             if (data_string !=NULL)
+                {
+                  strcpy(data_string,value);
+                }
+//lets strstr to see if "uuid value="<UUID>" is there
+ret =  strstr(value,search_string);
+if (ret !=NULL)
+ {
+    match = 1;//assume it does match
+   // printf("match\n");
+ }
+ else
+ {
+    //printf("NO match\n");
+    match = 0;//assume it does not match
+ }
+}
+        //load the new device into our list of scanned devices
+        if (!dbus_message_iter_next(&element_i))
+            break;
+    
+            
+        }
+
+    
+    return match;
+}
+
 static int 
 remove_paired_device (
     DBusConnection* conn, 
@@ -1096,6 +1198,33 @@ BT_ForgetDevice (
 }
 
 
+/*BT_FindService, other inputs will include string and boolean pointer for returning*/
+BT_error
+BT_FindService (
+    tKnownDevices* p_known_device,const char * UUID,char * XMLdata, int * found
+) {
+    DBusConnection *conn;
+
+    //BT_LOG(("BT_FindService\n"));
+    //printf("looking for %s\n",UUID);
+    conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+    if (!conn) {
+        fprintf(stderr, "Can't get on system bus");
+        exit(1);
+    }
+
+
+    *found = discover_services(conn,p_known_device->bd_path,UUID,XMLdata);
+    
+    if (*found < 0)
+     {
+        return ERROR1;
+     }
+     else
+     {
+        return NO_ERROR;
+     }
+}
 BT_error
 BT_PairDevice (
     tScannedDevices* p_scanned_device
