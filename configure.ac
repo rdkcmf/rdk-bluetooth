@@ -5,7 +5,9 @@ AC_PREREQ([2.69])
 AC_INIT([btr-core], [1.0], [Thomson_silvera@cable.comcast.com])
 AC_CONFIG_MACRO_DIR([cfg])
 AC_CONFIG_AUX_DIR([cfg])
-AM_INIT_AUTOMAKE([subdir-objects foreign no-dist-gzip dist-bzip2 1.9])
+AM_INIT_AUTOMAKE([subdir-objects  -Wall -Werror foreign no-dist-gzip dist-bzip2 1.9])
+
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 
 LT_INIT
 AC_LANG([C++])

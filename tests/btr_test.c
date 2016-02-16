@@ -171,11 +171,8 @@ main (
     //call the BT_init...eventually everything goes here...
     BT_Init();
 
-//register callback for unsolicted events, such as powering off a bluetooth device
-BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
-
-
-
+    //register callback for unsolicted events, such as powering off a bluetooth device
+    BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
 
     //display a menu of choices
     printMenu();
@@ -452,6 +449,11 @@ BT_RegisterStatusCallback(cb_unsolicited_bluetooth_status);
             break;
         }
     } while (1);
+
+
+    (void)AbortDiscovery;
+    (void)FindService;
+    (void)AdvertiseService;
 
     return 0;
 }

@@ -14,10 +14,10 @@
 static char default_path[128];
 char *adapter_path = NULL;
 static char *agent_path = NULL;
-static int iret1;
+static int  iret1;
 
 static char *message2 = "Dispatch Thread Started";
-pthread_t thread1, thread2;
+static pthread_t dispatchThread;
 
 const char *capabilities = "NoInputNoOutput";//I dont want to deal with pins and passcodes at this time
 
@@ -82,18 +82,16 @@ discover_services (
     DBusConnection* conn, 
     const char*     fullpath,
     const char*     search_string,
-    char * data_string
+    char*           data_string
 ) {
-    
     DBusMessage *msg, *reply;
     DBusMessageIter arg_i, element_i;
     DBusMessageIter dict_i;
     int dbus_type;
     DBusError err;
     int match;
-   const char* value;
-   char * ret;
-
+    const char* value;
+    char* ret;
         
    //BT_LOG("fullpath is %s\n and service UUID is %s",fullpath,search_string);
     msg = dbus_message_new_method_call( "org.bluez",
@@ -105,14 +103,15 @@ discover_services (
         fprintf(stderr, "Can't allocate new method call\n");
         return -1;
     }
-    match = 0;//assume it does not match
+
+    match = 0; //assume it does not match
     dbus_message_append_args(msg, DBUS_TYPE_STRING, &search_string, DBUS_TYPE_INVALID);
-     dbus_error_init(&err);
+    dbus_error_init(&err);
     reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
 
     dbus_message_unref(msg);
 
-if (!reply) {
+    if (!reply) {
         fprintf(stderr, "Failure attempting to Discover Services\n");
 
         if (dbus_error_is_set(&err)) {
@@ -123,57 +122,57 @@ if (!reply) {
         return -1;
     }
 
-  if (!dbus_message_iter_init(reply, &arg_i)) {
+    if (!dbus_message_iter_init(reply, &arg_i)) {
        printf("DiscoverServices reply has no information.");
        return -1;
     }
+
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
-   // printf("type is %d\n",dbus_type);
+    // printf("type is %d\n",dbus_type);
     
     dbus_message_iter_recurse(&arg_i, &element_i);
     dbus_type = dbus_message_iter_get_arg_type(&element_i);
     //printf("checking the type, it is %d\n",dbus_type);
 
-   while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
-    dbus_type = dbus_message_iter_get_arg_type(&element_i);
-    //printf("next element_i type is %d\n",dbus_type);
-      if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+    while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+        dbus_type = dbus_message_iter_get_arg_type(&element_i);
+        //printf("next element_i type is %d\n",dbus_type);
+
+        if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
 
             dbus_message_iter_recurse(&element_i, &dict_i);
-     dbus_type = dbus_message_iter_get_arg_type(&dict_i);
-   // printf("checking the dict subtype, it is %d\n",dbus_type);
+            dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+            // printf("checking the dict subtype, it is %d\n",dbus_type);
 
-
-     dbus_message_iter_next(&dict_i);
-     dbus_type = dbus_message_iter_get_arg_type(&dict_i);
-//    printf("interating the dict subtype, it is %d\n",dbus_type);
-         dbus_message_iter_get_basic(&dict_i, &value);
+            dbus_message_iter_next(&dict_i);
+            dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+            // printf("interating the dict subtype, it is %d\n",dbus_type);
+            dbus_message_iter_get_basic(&dict_i, &value);
             
-           //  printf("Services: %s\n",value);
-             if (data_string !=NULL)
-                {
-                  strcpy(data_string,value);
-                }
-//lets strstr to see if "uuid value="<UUID>" is there
-ret =  strstr(value,search_string);
-if (ret !=NULL)
- {
-    match = 1;//assume it does match
-   // printf("match\n");
- }
- else
- {
-    //printf("NO match\n");
-    match = 0;//assume it does not match
- }
-}
+            // printf("Services: %s\n",value);
+            if (data_string !=NULL) {
+                strcpy(data_string,value);
+            }
+
+            // lets strstr to see if "uuid value="<UUID>" is there
+            ret =  strstr(value,search_string);
+            if (ret !=NULL) {
+                match = 1;//assume it does match
+                // printf("match\n");
+            }
+            else {
+                //printf("NO match\n");
+                match = 0;//assume it does not match
+            }
+        }
+
         //load the new device into our list of scanned devices
         if (!dbus_message_iter_next(&element_i))
             break;
-    
-            
-        }
 
+    }
+
+    (void)dbus_type;
     
     return match;
 }
@@ -489,6 +488,8 @@ DoDispatch (
         if (dbus_connection_read_write_dispatch(conn, 500) != TRUE)
             break;
     }
+
+    return NULL;
 }
 
 int 
@@ -765,8 +766,8 @@ parse_device (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-   // printf(" Address: %s\n",bd_addr);
-//TODO provide some indication, callback to app of devices being found in real time
+    // printf(" Address: %s\n",bd_addr);
+    //TODO provide some indication, callback to app of devices being found in real time
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
     //printf("type is %d\n",dbus_type);
 
@@ -821,7 +822,10 @@ parse_device (
             break;
     }
 #endif
-  return DBUS_HANDLER_RESULT_HANDLED;
+
+    (void)dbus_type;
+
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 static int 
@@ -958,7 +962,7 @@ BT_Init (
     adapter_path = get_adapter_path(conn, NULL); //mikek hard code to default adapter for now
     printf("BT_Init - adapter path %s\n",adapter_path);
 
-    iret1 = pthread_create( &thread2, NULL, DoDispatch, (void*) message2);
+    iret1 = pthread_create( &dispatchThread, NULL, DoDispatch, (void*) message2);
 
     if (!dbus_connection_add_filter(conn, agent_filter, NULL, NULL))
         fprintf(stderr, "Can't add signal filter");
