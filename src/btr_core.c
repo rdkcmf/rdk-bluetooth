@@ -358,6 +358,47 @@ btrDevDisconnectFullPath (
     return 0;
 }
 
+static int
+find_paired_device (
+    DBusConnection* conn,
+    const char*     adapter_path,
+    const char*     device
+) {
+
+    DBusMessage* msg;
+    DBusMessage*     reply;
+    DBusError err;
+
+    msg = dbus_message_new_method_call( "org.bluez",
+                                        adapter_path,
+                                        "org.bluez.Adapter",
+                                        "FindDevice");
+
+    if (!msg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_append_args(msg, DBUS_TYPE_STRING, &device,DBUS_TYPE_INVALID);
+
+
+    dbus_error_init(&err);
+
+    reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
+
+    dbus_message_unref(msg);
+
+    if (!reply) {
+
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
+        return -1;
+       }
+
+    return 0;
+}
 
 
 static int 
@@ -1237,7 +1278,6 @@ BT_PairDevice (
     //BT_LOG(("BT_PairDevice\n"));
 
     if (create_paired_device(conn, adapter_path, agent_path, capabilities, p_scanned_device->bd_address) < 0) {
-        dbus_connection_unref(conn);
         BT_LOG("pairing ERROR occurred\n");
         return ERROR1;
     }
@@ -1245,6 +1285,21 @@ BT_PairDevice (
     return NO_ERROR;
 }
 
+/**See if a device has been previously paired***/
+BT_error
+BT_FindDevice (
+    tScannedDevices* p_scanned_device
+) {
+
+    //BT_LOG(("BT_FindDevice\n"));
+
+    if (find_paired_device(conn, adapter_path, p_scanned_device->bd_address) < 0) {
+       // BT_LOG("device not found\n");
+        return ERROR1;
+    }
+
+    return NO_ERROR;
+}
 
 /*BT_ConnectDevice*/
 BT_error
@@ -1263,7 +1318,6 @@ BT_ConnectDevice (
     }
 
     if (btrDevConnectFullPath(conn, p_known_device->bd_path, e_device_type) < 0) {
-        dbus_connection_unref(conn);
         BT_LOG("connection ERROR occurred\n");
         return ERROR1;
     }
@@ -1288,8 +1342,7 @@ BT_DisconnectDevice (
     }
 
     if (btrDevDisconnectFullPath(conn, p_known_device->bd_path, e_device_type) < 0) {
-        dbus_connection_unref(conn);
-        BT_LOG("connection ERROR occurred\n");
+        BT_LOG("disconnection ERROR occurred\n");
         return ERROR1;
     }
 

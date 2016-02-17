@@ -204,6 +204,9 @@ BT_error BT_AdvertiseService(tAdvertiseService *p_advertise_service);
 /*BT_PairDevice*/
 BT_error BT_PairDevice(tScannedDevices *p_scanned_device);
 
+/*BT_FindDevice*/
+BT_error BT_FindDevice(tScannedDevices *p_scanned_device);
+
 /*BT_ConnectDevice*/
 BT_error BT_ConnectDevice(tKnownDevices *p_known_device, eBtrDeviceType e_device_type);
 

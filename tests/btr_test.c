@@ -436,6 +436,17 @@ main (
                 printf("Error on BT_FindService\n");
              }
             break;
+         case 20:
+            printf("Pick a Device to Find (see if it is already paired)...\n");
+            ShowFound();
+            devnum = getChoice();
+            printf(" We will try to find %s\n",scanned_devices[devnum].device_name);
+            printf(" address %s\n",scanned_devices[devnum].bd_address);
+            if ( BT_FindDevice(&scanned_devices[devnum]) == NO_ERROR)
+                printf("device FOUND successful.\n");
+            else
+              printf("device was NOT found.\n");
+            break;
         case 88:
             test_func(&GetAdapter); 
             break;
