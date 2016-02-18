@@ -1,14 +1,16 @@
-//bt_test_imp.c
+//btrCore.c
 
 #include <stdio.h>
 #include <stdlib.h>     //for malloc
 #include <unistd.h>     //for getpid
 #include <pthread.h>    //for StopDiscovery test
-#include <string.h>  //for strcnp
-#include <errno.h> //for error numbers
+#include <string.h>     //for strcnp
+#include <errno.h>      //for error numbers
+
 #include <dbus/dbus.h>
 
-#include "btr.h"
+#include "btrCore.h"
+#include "btrCore_dbusBluez.h"
 
 
 static char default_path[128];
@@ -19,20 +21,20 @@ static int  iret1;
 static char *message2 = "Dispatch Thread Started";
 static pthread_t dispatchThread;
 
-const char *capabilities = "NoInputNoOutput";//I dont want to deal with pins and passcodes at this time
+const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
 
-static char dbus_device[32];//device string in dbus format
+static char dbus_device[32];                    //device string in dbus format
 DBusConnection *conn;
 
-tScannedDevices scanned_devices[20];//holds twenty scanned devices
-tScannedDevices found_device;//a device for intermediate dbus processing
-tKnownDevices known_devices[20];//holds twenty known devices
-tStatusCB callback_info;//holds info for a callback
+stBTRCoreScannedDevices scanned_devices[20];            //holds twenty scanned devices
+stBTRCoreScannedDevices found_device;                   //a device for intermediate dbus processing
+stBTRCoreKnownDevices known_devices[20];                //holds twenty known devices
+stBTRCoreDevStatusCB callback_info;                        //holds info for a callback
 
 static DBusMessage* sendMethodCall (const char* objectpath, const char* busname, const char* interfacename, const char* methodname);
 static int remove_paired_device (DBusConnection* conn, const char* adapter_path, const char* fullpath);
-static int btrDevConnectFullPath (DBusConnection* conn, const char* fullpath, eBtrDeviceType e_device_type);
-static int btrDevDisconnectFullPath (DBusConnection* conn, const char* fullpath, eBtrDeviceType e_device_type);
+static int btrDevConnectFullPath (DBusConnection* conn, const char* fullpath, enBTRCoreDeviceType enDeviceType);
+static int btrDevDisconnectFullPath (DBusConnection* conn, const char* fullpath, enBTRCoreDeviceType enDeviceType);
 
 
 static DBusMessage* 
@@ -63,9 +65,9 @@ sendMethodCall (
     dbus_message_unref(methodcall);
     methodcall = NULL;
 
-    dbus_pending_call_block(pending); //Now block on the pending call
+    dbus_pending_call_block(pending);               //Now block on the pending call
     reply = dbus_pending_call_steal_reply(pending); //Get the reply message from the queue
-    dbus_pending_call_unref(pending); //Free pending call handle
+    dbus_pending_call_unref(pending);               //Free pending call handle
 
     if (dbus_message_get_type(reply) ==  DBUS_MESSAGE_TYPE_ERROR) {
         printf("Error : %s\n\n",dbus_message_get_error_name(reply));
@@ -93,7 +95,7 @@ discover_services (
     const char* value;
     char* ret;
         
-   //BT_LOG("fullpath is %s\n and service UUID is %s",fullpath,search_string);
+   //BTRCore_LOG("fullpath is %s\n and service UUID is %s",fullpath,search_string);
     msg = dbus_message_new_method_call( "org.bluez",
                                         fullpath,
                                         "org.bluez.Device",
@@ -186,7 +188,7 @@ remove_paired_device (
     dbus_bool_t success;
     DBusMessage *msg;
         
-   // BT_LOG("fullpath is %s\n",fullpath);
+   // BTRCore_LOG("fullpath is %s\n",fullpath);
     msg = dbus_message_new_method_call( "org.bluez",
                                         adapter_path,
                                         "org.bluez.Adapter",
@@ -216,24 +218,24 @@ static int
 btrDevConnectFullPath (
     DBusConnection* conn,
     const char*     fullpath,
-    eBtrDeviceType  e_device_type
+    enBTRCoreDeviceType  enDeviceType
 ) {
     dbus_bool_t  success;
     DBusMessage* msg;
     char         dbusIfce[32] = {'\0'};
         
-    //BT_LOG("fullpath is %s\n",fullpath);
+    //BTRCore_LOG("fullpath is %s\n",fullpath);
 
-    switch (e_device_type) {
-    case eBtrAudioSink:
-        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
-        break;
-    case eBtrHeadSet:
-        strncpy(dbusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
-        break;
-    default:
-        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
-        break;
+    switch (enDeviceType) {
+        case enBTRCoreAudioSink:
+            strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+            break;
+        case enBTRCoreHeadSet:
+            strncpy(dbusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
+            break;
+        default:
+            strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+            break;
     }
 
     msg = dbus_message_new_method_call( "org.bluez",
@@ -260,52 +262,65 @@ btrDevConnectFullPath (
     return 0;
 }
 
-static int set_property(DBusConnection *conn, const char *adapter,
-					const char *key, int type, void *val)
-{
+static int 
+set_property (
+    DBusConnection* conn, 
+    const char*     adapter,
+    const char*     key, 
+    int             type, 
+    void*           val
+) {
 	DBusMessage *message, *reply;
 	DBusMessageIter array, value;
 	DBusError error;
 	const char *signature;
+
 	message = dbus_message_new_method_call( "org.bluez", 
-                                        adapter_path,
-                                        "org.bluez.Adapter",
-                                        "SetProperty");
+                                            adapter_path,
+                                            "org.bluez.Adapter",
+                                            "SetProperty");
+
 	if (!message)
 		return -ENOMEM;
+
 	switch (type) {
-	case DBUS_TYPE_BOOLEAN:
-		signature = DBUS_TYPE_BOOLEAN_AS_STRING;
-		break;
-	case DBUS_TYPE_UINT32:
-		signature = DBUS_TYPE_UINT32_AS_STRING;
-		break;
-	case DBUS_TYPE_STRING:
-		signature = DBUS_TYPE_STRING_AS_STRING;
-		break;
-	default:
-		return -EILSEQ;
+        case DBUS_TYPE_BOOLEAN:
+            signature = DBUS_TYPE_BOOLEAN_AS_STRING;
+            break;
+        case DBUS_TYPE_UINT32:
+            signature = DBUS_TYPE_UINT32_AS_STRING;
+            break;
+        case DBUS_TYPE_STRING:
+            signature = DBUS_TYPE_STRING_AS_STRING;
+            break;
+        default:
+            return -EILSEQ;
 	}
+
 	dbus_message_iter_init_append(message, &array);
 	dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &key);
-	dbus_message_iter_open_container(&array, DBUS_TYPE_VARIANT,
-							signature, &value);
+	dbus_message_iter_open_container(&array, DBUS_TYPE_VARIANT, signature, &value);
 	dbus_message_iter_append_basic(&value, type, val);
 	dbus_message_iter_close_container(&array, &value);
 	dbus_error_init(&error);
-	reply = dbus_connection_send_with_reply_and_block(conn,
-							message, -1, &error);
+
+	reply = dbus_connection_send_with_reply_and_block(conn,	message, -1, &error);
 	dbus_message_unref(message);
+
 	if (!reply) {
 		if (dbus_error_is_set(&error) == TRUE) {
 			fprintf(stderr, "%s\n", error.message);
 			dbus_error_free(&error);
-		} else
+		} 
+        else {
 			fprintf(stderr, "Failed to set property\n");
+        }
+
 		return -EIO;
 	}
+
 	dbus_message_unref(reply);
-//	BT_LOG("Set property %s for %s\n", key, adapter);
+//	BTRCore_LOG("Set property %s for %s\n", key, adapter);
 	return 0;
 }
 
@@ -314,24 +329,24 @@ static int
 btrDevDisconnectFullPath (
     DBusConnection* conn,
     const char*     fullpath,
-    eBtrDeviceType  e_device_type
+    enBTRCoreDeviceType  enDeviceType
 ) {
     dbus_bool_t  success;
     DBusMessage* msg;
     char         dbusIfce[32] = {'\0'};
         
-    //BT_LOG("fullpath is %s\n",fullpath);
+    //BTRCore_LOG("fullpath is %s\n",fullpath);
 
-    switch (e_device_type) {
-    case eBtrAudioSink:
-        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
-        break;
-    case eBtrHeadSet:
-        strncpy(dbusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
-        break;
-    default:
-        strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
-        break;
+    switch (enDeviceType) {
+        case enBTRCoreAudioSink:
+            strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+            break;
+        case enBTRCoreHeadSet:
+            strncpy(dbusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
+            break;
+        default:
+            strncpy(dbusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+            break;
     }
 
     msg = dbus_message_new_method_call( "org.bluez",
@@ -366,7 +381,7 @@ find_paired_device (
 ) {
 
     DBusMessage* msg;
-    DBusMessage*     reply;
+    DBusMessage* reply;
     DBusError err;
 
     msg = dbus_message_new_method_call( "org.bluez",
@@ -389,13 +404,13 @@ find_paired_device (
     dbus_message_unref(msg);
 
     if (!reply) {
-
         if (dbus_error_is_set(&err)) {
             fprintf(stderr, "%s\n", err.message);
             dbus_error_free(&err);
         }
+
         return -1;
-       }
+    }
 
     return 0;
 }
@@ -411,7 +426,7 @@ create_paired_device (
 ) {
    
     DBusMessage* msg;
-    DBusMessage*     reply;
+    DBusMessage* reply;
     DBusError err;
 
     msg = dbus_message_new_method_call( "org.bluez", 
@@ -429,7 +444,6 @@ create_paired_device (
                              DBUS_TYPE_STRING, &capabilities,
                              DBUS_TYPE_INVALID);
 
-
     dbus_error_init(&err);
 
     reply = dbus_connection_send_with_reply_and_block(conn, msg, -1, &err);
@@ -443,12 +457,13 @@ create_paired_device (
             fprintf(stderr, "%s\n", err.message);
             dbus_error_free(&err);
         }
-        return -1;
-       }
 
+        return -1;
+   }
 
     return 0;
 }
+
 
 void
 ClearScannedDeviceList (
@@ -461,6 +476,7 @@ ClearScannedDeviceList (
         memset(scanned_devices[i].bd_address,'\0',sizeof(scanned_devices[i].bd_address));
     }
 }
+
 
 void
 LoadScannedDevice (
@@ -500,19 +516,16 @@ LoadScannedDevice (
 
 
 void
-test_func (tGetAdapter* p_get_adapter
+test_func (
+    stBTRCoreGetAdapter* pstGetAdapter
 ) {
-
-if (p_Status_callback != NULL)
-  {
-    p_Status_callback();
-  }
-  else
-  {
-    printf("no callback installed\n");
-  }
+    if (p_Status_callback != NULL) {
+        p_Status_callback();
+    }
+    else {
+        printf("no callback installed\n");
+    }
 }
-
 
 
 void*
@@ -532,6 +545,7 @@ DoDispatch (
 
     return NULL;
 }
+
 
 int 
 GetAdapters (
@@ -618,6 +632,7 @@ get_default_adapter_path (
             fprintf(stderr, "%s\n", err.message);
             dbus_error_free(&err);
         }
+
         return NULL;
     }
 
@@ -629,6 +644,7 @@ get_default_adapter_path (
             fprintf(stderr, "%s\n", err.message);
             dbus_error_free(&err);
         }
+
         return NULL;
     }
 
@@ -676,7 +692,6 @@ get_adapter_path (
 
     if (!reply) {
         fprintf(stderr, "Can't find adapter %s\n", adapter);
-
         if (dbus_error_is_set(&err)) {
             fprintf(stderr, "%s\n", err.message);
             dbus_error_free(&err);
@@ -891,25 +906,25 @@ parse_change (
     }
 
     //printf(" Name: %s\n",bd_addr);//"State" then the variant is a string
-    if (strcmp(bd_addr,"State") == 0)
-    {
-    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
-   // printf("type is %d\n",dbus_type);
+    if (strcmp(bd_addr,"State") == 0) {
+        dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+       // printf("type is %d\n",dbus_type);
 
-    if (dbus_type == DBUS_TYPE_STRING) {
-       dbus_message_iter_next(&arg_i);
-       dbus_message_iter_recurse(&arg_i, &variant_i);
-       dbus_message_iter_get_basic(&variant_i, &value);      
-      //  printf("    the new state is: %s\n",value);
-        strncpy(callback_info.device_type,"Bluez",60);
-        strncpy(callback_info.device_state,value,60);
-        if (p_Status_callback)
-           {
-            p_Status_callback(&callback_info);
-           }
-         }
-     }
-  return DBUS_HANDLER_RESULT_HANDLED;
+        if (dbus_type == DBUS_TYPE_STRING) {
+            dbus_message_iter_next(&arg_i);
+            dbus_message_iter_recurse(&arg_i, &variant_i);
+            dbus_message_iter_get_basic(&variant_i, &value);      
+            //  printf("    the new state is: %s\n",value);
+            strncpy(callback_info.device_type,"Bluez",60);
+            strncpy(callback_info.device_state,value,60);
+
+            if (p_Status_callback) {
+                p_Status_callback(&callback_info);
+            }
+        }
+    }
+
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 static DBusHandlerResult 
@@ -935,32 +950,32 @@ agent_filter (
 
     if (dbus_message_is_signal(msg, "org.bluez.Adapter","DeviceRemoved"))
         printf("mikek Device Removed!\n");
-*/
-    if (dbus_message_is_signal(msg, "org.bluez.AudioSink","PropertyChanged"))
-       {
-         //printf("mikek Device PropertyChanged!\n");  
-         parse_change(msg);
-       }
-    if (dbus_message_is_signal(msg, "org.bluez.Headset","PropertyChanged"))
-       {
-         //printf("mikek Device PropertyChanged!\n");  
-         parse_change(msg);
-       }
-/*
+    */
+
+    if (dbus_message_is_signal(msg, "org.bluez.AudioSink","PropertyChanged")) {
+        //printf("mikek Device PropertyChanged!\n");  
+        parse_change(msg);
+    }
+
+    if (dbus_message_is_signal(msg, "org.bluez.Headset","PropertyChanged")) {
+        //printf("mikek Device PropertyChanged!\n");  
+        parse_change(msg);
+    }
+
+    /*
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Connected"))
         printf("Device Connected - AudioSink!\n");
 
-    if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Disconnected"))
-         {
-           printf("Device Disconnected - AudioSink!\n");
-         }
+    if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Disconnected")) {
+        printf("Device Disconnected - AudioSink!\n");
+    }
 
     if (dbus_message_is_signal(msg, "org.bluez.Headset","Connected"))
         printf("Device Connected - Headset!\n");
 
     if (dbus_message_is_signal(msg, "org.bluez.Headset","Disconnected"))
         printf("Device Disconnected - Headset!\n");
-*/
+    */
 
     if (!dbus_message_is_signal(msg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -982,14 +997,16 @@ agent_filter (
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
-////////////////////////////////////
-BT_error
-BT_Init (
+
+//////////////////
+//  Interfaces  //
+//////////////////
+enBTRCoreRet
+BTRCore_Init (
     void
 ) {
-    BT_LOG(("BT_Init\n"));
+    BTRCore_LOG(("BTRCore_Init\n"));
     p_Status_callback = NULL;//set callbacks to NULL, later an app can register callbacks
-
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1001,7 +1018,7 @@ BT_Init (
     agent_path = strdup(default_path);
 
     adapter_path = get_adapter_path(conn, NULL); //mikek hard code to default adapter for now
-    printf("BT_Init - adapter path %s\n",adapter_path);
+    printf("BTRCore_Init - adapter path %s\n",adapter_path);
 
     iret1 = pthread_create( &dispatchThread, NULL, DoDispatch, (void*) message2);
 
@@ -1012,13 +1029,13 @@ BT_Init (
     dbus_bus_add_match(conn, "type='signal',interface='org.bluez.AudioSink'", NULL); //mikek needed?
     dbus_bus_add_match(conn, "type='signal',interface='org.bluez.Headset'", NULL);
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error
-BT_StartDiscovery (
-    tStartDiscovery* p_start_discovery
+enBTRCoreRet
+BTRCore_StartDiscovery (
+    stBTRCoreStartDiscovery* pstStartDiscovery
 ) {
     ClearScannedDeviceList();
 
@@ -1027,51 +1044,48 @@ BT_StartDiscovery (
         exit(1);
     }
 
-    sleep(p_start_discovery->duration);
+    sleep(pstStartDiscovery->duration);
     
-
     if (StopDiscovery(conn, adapter_path, agent_path, dbus_device) < 0) {
         dbus_connection_unref(conn);
         exit(1);
     }
 
-    
-
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error
-BT_GetAdapter (
-    tGetAdapter* p_get_adapter
+enBTRCoreRet
+BTRCore_GetAdapter (
+    stBTRCoreGetAdapter* pstGetAdapter
 ) {
     adapter_path = get_adapter_path(conn, NULL); //mikek hard code to default adapter for now
 
 #if 0
     //*Bluez call hci_get_route with NULL to get instance of first available adapter
-    if (p_get_adapter->first_available == TRUE) {
-        p_get_adapter->adapter_number = hci_get_route(NULL);
-        BT_LOG("BT_GetAdapter found adapter %d\n",p_get_adapter->adapter_number);
+    if (pstGetAdapter->first_available == TRUE) {
+        pstGetAdapter->adapter_number = hci_get_route(NULL);
+        BTRCore_LOG("BTRCore_GetAdapter found adapter %d\n",pstGetAdapter->adapter_number);
 
-        if (p_get_adapter->adapter_number == 255) {
-            return ERROR1;
+        if (pstGetAdapter->adapter_number == 255) {
+            return enBTRCoreFailure;
         }
         else {
-            return NO_ERROR;
+            return enBTRCoreSuccess;
         }
     }
     else {
-        hci_open_dev((int)p_get_adapter->adapter_number);
+        hci_open_dev((int)pstGetAdapter->adapter_number);
         //TODO: check errors here
     }
 #endif
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error 
-BT_ListKnownDevices (
-    tGetAdapter* p_get_adapter
+enBTRCoreRet 
+BTRCore_ListKnownDevices (
+    stBTRCoreGetAdapter* pstGetAdapter
 ) {
     DBusError e;
     DBusMessageIter arg_i, element_i, variant_i;
@@ -1093,10 +1107,10 @@ BT_ListKnownDevices (
         exit(1);
     }
 
-    //adapter_path = get_adapter_path(conn, p_get_adapter->adapter_number);
+    //adapter_path = get_adapter_path(conn, pstGetAdapter->adapter_number);
     pathlen = strlen(adapter_path);
 
-    switch (p_get_adapter->adapter_number) {
+    switch (pstGetAdapter->adapter_number) {
         case 0:
             adapter_path[pathlen-1]='0';
             break;
@@ -1197,18 +1211,19 @@ BT_ListKnownDevices (
         }
 
         dbus_message_unref(reply);
-    }//end for
-  return NO_ERROR;
+    } //end for
+
+  return enBTRCoreSuccess;
 }
 
 
-BT_error
-BT_GetAdapters (
-    tGetAdapters* p_get_adapters
+enBTRCoreRet
+BTRCore_GetAdapters (
+    stBTRCoreGetAdapters* pstGetAdapters
 ) {
     DBusConnection *conn;
 
-    //BT_LOG(("BT_GetAdapters\n"));
+    //BTRCore_LOG(("BTRCore_GetAdapters\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1216,20 +1231,20 @@ BT_GetAdapters (
         exit(1);
     }
 
-    p_get_adapters->number_of_adapters = GetAdapters(conn);
+    pstGetAdapters->number_of_adapters = GetAdapters(conn);
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-/*BT_ForgetDevice*/
-BT_error
-BT_ForgetDevice (
-    tKnownDevices* p_known_device
+/*BTRCore_ForgetDevice*/
+enBTRCoreRet
+BTRCore_ForgetDevice (
+    stBTRCoreKnownDevices* pstKnownDevice
 ) {
     DBusConnection *conn;
 
-    //BT_LOG(("BT_ForgetDevice\n"));
+    //BTRCore_LOG(("BTRCore_ForgetDevice\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1237,20 +1252,23 @@ BT_ForgetDevice (
         exit(1);
     }
 
-    remove_paired_device(conn,adapter_path, p_known_device->bd_path);
+    remove_paired_device(conn,adapter_path, pstKnownDevice->bd_path);
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-/*BT_FindService, other inputs will include string and boolean pointer for returning*/
-BT_error
-BT_FindService (
-    tKnownDevices* p_known_device,const char * UUID,char * XMLdata, int * found
+/*BTRCore_FindService, other inputs will include string and boolean pointer for returning*/
+enBTRCoreRet
+BTRCore_FindService (
+    stBTRCoreKnownDevices*  pstKnownDevice,
+    const char*             UUID,
+    char*                   XMLdata,
+    int*                    found
 ) {
     DBusConnection *conn;
 
-    //BT_LOG(("BT_FindService\n"));
+    //BTRCore_LOG(("BTRCore_FindService\n"));
     //printf("looking for %s\n",UUID);
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1259,57 +1277,59 @@ BT_FindService (
     }
 
 
-    *found = discover_services(conn,p_known_device->bd_path,UUID,XMLdata);
+    *found = discover_services(conn,pstKnownDevice->bd_path,UUID,XMLdata);
     
-    if (*found < 0)
-     {
-        return ERROR1;
+    if (*found < 0) {
+        return enBTRCoreFailure;
      }
-     else
-     {
-        return NO_ERROR;
+     else {
+        return enBTRCoreSuccess;
      }
 }
-BT_error
-BT_PairDevice (
-    tScannedDevices* p_scanned_device
+
+
+enBTRCoreRet
+BTRCore_PairDevice (
+    stBTRCoreScannedDevices* pstScannedDevice
 ) {
 
-    //BT_LOG(("BT_PairDevice\n"));
+    //BTRCore_LOG(("BTRCore_PairDevice\n"));
 
-    if (create_paired_device(conn, adapter_path, agent_path, capabilities, p_scanned_device->bd_address) < 0) {
-        BT_LOG("pairing ERROR occurred\n");
-        return ERROR1;
+    if (create_paired_device(conn, adapter_path, agent_path, capabilities, pstScannedDevice->bd_address) < 0) {
+        BTRCore_LOG("pairing ERROR occurred\n");
+        return enBTRCoreFailure;
     }
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
+
 
 /**See if a device has been previously paired***/
-BT_error
-BT_FindDevice (
-    tScannedDevices* p_scanned_device
+enBTRCoreRet
+BTRCore_FindDevice (
+    stBTRCoreScannedDevices* pstScannedDevice
 ) {
 
-    //BT_LOG(("BT_FindDevice\n"));
+    //BTRCore_LOG(("BTRCore_FindDevice\n"));
 
-    if (find_paired_device(conn, adapter_path, p_scanned_device->bd_address) < 0) {
-       // BT_LOG("device not found\n");
-        return ERROR1;
+    if (find_paired_device(conn, adapter_path, pstScannedDevice->bd_address) < 0) {
+       // BTRCore_LOG("device not found\n");
+        return enBTRCoreFailure;
     }
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
-/*BT_ConnectDevice*/
-BT_error
-BT_ConnectDevice (
-    tKnownDevices* p_known_device,
-    eBtrDeviceType e_device_type
+
+/*BTRCore_ConnectDevice*/
+enBTRCoreRet
+BTRCore_ConnectDevice (
+    stBTRCoreKnownDevices* pstKnownDevice,
+    enBTRCoreDeviceType enDeviceType
 ) {
     DBusConnection *conn;
 
-    //BT_LOG(("BT_ConnectDevice\n"));
+    //BTRCore_LOG(("BTRCore_ConnectDevice\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1317,23 +1337,23 @@ BT_ConnectDevice (
         exit(1);
     }
 
-    if (btrDevConnectFullPath(conn, p_known_device->bd_path, e_device_type) < 0) {
-        BT_LOG("connection ERROR occurred\n");
-        return ERROR1;
+    if (btrDevConnectFullPath(conn, pstKnownDevice->bd_path, enDeviceType) < 0) {
+        BTRCore_LOG("connection ERROR occurred\n");
+        return enBTRCoreFailure;
     }
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error 
-BT_DisconnectDevice (
-    tKnownDevices* p_known_device,
-    eBtrDeviceType e_device_type
+enBTRCoreRet 
+BTRCore_DisconnectDevice (
+    stBTRCoreKnownDevices* pstKnownDevice,
+    enBTRCoreDeviceType enDeviceType
 ) {
     DBusConnection *conn;
 
-   // BT_LOG(("BT_DisconnectDevice\n"));
+   // BTRCore_LOG(("BTRCore_DisconnectDevice\n"));
 
     conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
     if (!conn) {
@@ -1341,74 +1361,80 @@ BT_DisconnectDevice (
         exit(1);
     }
 
-    if (btrDevDisconnectFullPath(conn, p_known_device->bd_path, e_device_type) < 0) {
-        BT_LOG("disconnection ERROR occurred\n");
-        return ERROR1;
+    if (btrDevDisconnectFullPath(conn, pstKnownDevice->bd_path, enDeviceType) < 0) {
+        BTRCore_LOG("disconnection ERROR occurred\n");
+        return enBTRCoreFailure;
     }
 
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
-BT_error
-BT_RegisterStatusCallback(void * cb)
-{
+
+enBTRCoreRet
+BTRCore_RegisterStatusCallback (
+    void* cb
+) {
   p_Status_callback = cb;
-  return NO_ERROR;
+  return enBTRCoreSuccess;
 }
 
 
-BT_error
-BT_EnableAdapter (
-    tGetAdapter* p_get_adapter
+enBTRCoreRet
+BTRCore_EnableAdapter (
+    stBTRCoreGetAdapter* pstGetAdapter
 ) {
     int powered;
     powered = 1;
-    BT_LOG(("BT_EnableAdapter\n"));
-    p_get_adapter->enable = TRUE;//does this even mean anything?
+    BTRCore_LOG(("BTRCore_EnableAdapter\n"));
+    pstGetAdapter->enable = TRUE;//does this even mean anything?
 
     set_property(conn, adapter_path, "Powered",DBUS_TYPE_BOOLEAN, &powered);
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error
-BT_DisableAdapter (
-    tGetAdapter* p_get_adapter
+enBTRCoreRet
+BTRCore_DisableAdapter (
+    stBTRCoreGetAdapter* pstGetAdapter
 ) {
     int powered;
     powered = 0;
-    BT_LOG(("BT_DisableAdapter\n"));
-    p_get_adapter->enable = FALSE;
+    BTRCore_LOG(("BTRCore_DisableAdapter\n"));
+    pstGetAdapter->enable = FALSE;
      set_property(conn, adapter_path, "Powered",DBUS_TYPE_BOOLEAN, &powered);
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error BT_SetDiscoverableTimeout(tGetAdapter *p_get_adapter)
-{
+enBTRCoreRet 
+BTRCore_SetDiscoverableTimeout (
+    stBTRCoreGetAdapter* pstGetAdapter
+) {
     U32 timeout;
-    timeout = p_get_adapter->DiscoverableTimeout;
+    timeout = pstGetAdapter->DiscoverableTimeout;
     set_property(conn, adapter_path, "DiscoverableTimeout",DBUS_TYPE_UINT32, &timeout);
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error BT_SetDiscoverable(tGetAdapter *p_get_adapter)
-{
+enBTRCoreRet 
+BTRCore_SetDiscoverable (
+    stBTRCoreGetAdapter* pstGetAdapter
+) {
     int discoverable;
-    discoverable = p_get_adapter->discoverable;
+    discoverable = pstGetAdapter->discoverable;
     set_property(conn, adapter_path, "Discoverable",DBUS_TYPE_BOOLEAN, &discoverable);
-    return NO_ERROR;
+    return enBTRCoreSuccess;
 }
 
 
-BT_error BT_SetDeviceName(tGetAdapter *p_get_adapter)
-{
+enBTRCoreRet 
+BTRCore_SetDeviceName (
+    stBTRCoreGetAdapter* pstGetAdapter
+) {
   char * myname;
-  myname=p_get_adapter->device_name;
+  myname=pstGetAdapter->device_name;
   set_property(conn, adapter_path, "Name",DBUS_TYPE_STRING, &myname);
-  return NO_ERROR;
+  return enBTRCoreSuccess;
 }
-
-
 
