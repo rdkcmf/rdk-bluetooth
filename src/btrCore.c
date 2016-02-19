@@ -10,7 +10,7 @@
 #include <dbus/dbus.h>
 
 #include "btrCore.h"
-#include "btrCore_dbusBluez.h"
+#include "btrCore_dbus_bt.h"
 
 
 static char default_path[128];
