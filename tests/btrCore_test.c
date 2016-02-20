@@ -13,8 +13,6 @@
 
 //test func
 void test_func(stBTRCoreGetAdapter* pstGetAdapter);
-//global connection variable for dbus?
-DBusConnection *conn;
 
 
 extern stBTRCoreScannedDevices scanned_devices[20]; //holds twenty scanned devices
@@ -154,11 +152,8 @@ main (
     if (!agent_path)
         agent_path = strdup(default_path);
 
-    conn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
-    if (!conn) {
-        fprintf(stderr, "Can't get on system bus");
-        exit(1);
-    }
+    //call the BTRCore_init...eventually everything goes after this...
+    BTRCore_Init();
 
     //Init the adapter
     GetAdapter.first_available = TRUE;
@@ -168,10 +163,8 @@ main (
     }
     else {
         BTRCore_LOG("No bluetooth adapter found!\n");
+        return -1;
     }
-
-    //call the BTRCore_init...eventually everything goes here...
-    BTRCore_Init();
 
     //register callback for unsolicted events, such as powering off a bluetooth device
     BTRCore_RegisterStatusCallback(cb_unsolicited_bluetooth_status);

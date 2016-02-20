@@ -18,6 +18,11 @@
 
 typedef enum _enBTRCoreRet {
     enBTRCoreFailure, 
+    enBTRCoreInitFailure, 
+    enBTRCoreNotInitialized, 
+    enBTRCoreInvalidAdapter, 
+    enBTRCorePairingFailed,
+    enBTRCoreDiscoveryFailure, 
     enBTRCoreSuccess
 } enBTRCoreRet;
 
