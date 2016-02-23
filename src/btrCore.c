@@ -1,9 +1,11 @@
 //btrCore.c
 
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>     //for malloc
 #include <unistd.h>     //for getpid
 #include <pthread.h>    //for StopDiscovery test
+#include <sched.h>      //for StopDiscovery test
 #include <string.h>     //for strcnp
 #include <errno.h>      //for error numbers
 
@@ -13,27 +15,83 @@
 #include "btrCore_dbus_bt.h"
 
 
-static char default_path[128];
-char *adapter_path = NULL;
+
+static char *adapter_path = NULL;
 static char *agent_path = NULL;
 
 
-static pthread_t dispatchThread;
+static pthread_t        dispatchThread;
+static pthread_mutex_t  dispatchMutex;
+static volatile BOOLEAN dispatchThreadQuit;
 
-const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
 
+#if 0
 static char dbus_device[32];                    //device string in dbus format
-DBusConnection *gDBusConn = NULL;
+#endif 
 
-stBTRCoreScannedDevices scanned_devices[20];            //holds twenty scanned devices
-stBTRCoreScannedDevices found_device;                   //a device for intermediate dbus processing
-stBTRCoreKnownDevices known_devices[20];                //holds twenty known devices
-stBTRCoreDevStatusCB callback_info;                        //holds info for a callback
+static DBusConnection *gDBusConn = NULL;
 
+stBTRCoreScannedDevices scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES];//holds twenty scanned devices
+static stBTRCoreScannedDevices found_device;                               //a device for intermediate dbus processing
+stBTRCoreKnownDevices   known_devices[BTRCORE_MAX_NUM_BT_DEVICES];  //holds twenty known devices
+static stBTRCoreDevStatusCB    callback_info;                              //holds info for a callback
+
+static void btrCore_InitDataSt (void);
+static void btrCore_ClearScannedDevicesList (void);
 static DBusMessage* sendMethodCall (DBusConnection* conn, const char* objectpath, const char* busname, const char* interfacename, const char* methodname);
 static int remove_paired_device (DBusConnection* conn, const char* adapter_path, const char* fullpath);
 static int btrDevConnectFullPath (DBusConnection* conn, const char* fullpath, enBTRCoreDeviceType enDeviceType);
 static int btrDevDisconnectFullPath (DBusConnection* conn, const char* fullpath, enBTRCoreDeviceType enDeviceType);
+
+
+static void
+btrCore_InitDataSt (
+    void
+) {
+    int i;
+
+    /* Scanned Devices */
+    for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        memset (scanned_devices[i].bd_address, '\0', sizeof(BD_NAME));
+        memset (scanned_devices[i].device_name, '\0', sizeof(BD_NAME));
+        scanned_devices[i].RSSI = INT_MIN;
+        scanned_devices[i].found = FALSE;
+    }
+
+    /* Found Device */
+    memset (found_device.bd_address, '\0', sizeof(BD_NAME));
+    memset (found_device.device_name, '\0', sizeof(BD_NAME));
+    found_device.RSSI = INT_MIN;
+    found_device.found = FALSE;
+
+    /* Known Devices */
+    for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        memset (known_devices[i].bd_path, '\0', sizeof(BD_NAME));
+        memset (known_devices[i].device_name, '\0', sizeof(BD_NAME));
+        known_devices[i].found = FALSE;
+    }
+
+    /* Callback Info */
+    memset(callback_info.device_type, '\0', sizeof(callback_info.device_type));
+    memset(callback_info.device_state, '\0', sizeof(callback_info.device_state));
+
+    /* Always safer to initialze Global variables, init if any left or added */
+}
+
+
+static void
+btrCore_ClearScannedDevicesList (
+    void
+) {
+    int i;
+
+    for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        memset (scanned_devices[i].device_name, '\0', sizeof(scanned_devices[i].device_name));
+        memset (scanned_devices[i].bd_address,  '\0', sizeof(scanned_devices[i].bd_address));
+        scanned_devices[i].RSSI = INT_MIN;
+        scanned_devices[i].found = FALSE;
+    }
+}
 
 
 static DBusMessage* 
@@ -465,18 +523,6 @@ create_paired_device (
 }
 
 
-void
-ClearScannedDeviceList (
-    void
-) {
-    int i;
-    for (i = 0; i < 15; i++) {
-        scanned_devices[i].found=0;
-        memset(scanned_devices[i].device_name,'\0',sizeof(scanned_devices[i].device_name));
-        memset(scanned_devices[i].bd_address,'\0',sizeof(scanned_devices[i].bd_address));
-    }
-}
-
 
 void
 LoadScannedDevice (
@@ -486,7 +532,7 @@ LoadScannedDevice (
     int found;
     int last;
 
-    found = 0;
+    found = FALSE;
     last = 0;
 
     //printf("LoadScannedDevice processing %s-%s\n",found_device.bd_address,found_device.device_name);
@@ -495,19 +541,19 @@ LoadScannedDevice (
             last++; //keep track of last valid record in array
 
         if (strcmp(found_device.bd_address, scanned_devices[i].bd_address) == 0) {
-            found = 1;
+            found = TRUE;
             break;
         }
     }
 
-    if (found == 0) { //device wasnt there, we got to add it
+    if (found == FALSE) { //device wasnt there, we got to add it
         for (i = 0; i < 15; i++) {
             if (!scanned_devices[i].found) {
                 //printf("adding %s at location %d\n",found_device.bd_address,i);
+                scanned_devices[i].found = TRUE; //mark the record as found
                 strcpy(scanned_devices[i].bd_address,found_device.bd_address);
                 strcpy(scanned_devices[i].device_name,found_device.device_name);
                 scanned_devices[i].RSSI = found_device.RSSI;
-                scanned_devices[i].found = 1; //mark the record as found
                 break;
             }
         }
@@ -532,25 +578,40 @@ void*
 DoDispatch (
     void* ptr
 ) {
-    char* message;
+    char*           message;
+    BOOLEAN         ldispatchThreadQuit = FALSE;
+    enBTRCoreRet*   penDispThreadExitStatus = malloc(sizeof(enBTRCoreRet));
+
     message = (char*) ptr;
     printf("%s \n", message);
-    enBTRCoreRet *enDispThreadExitStatus = enBTRCoreFailure; 
+
+
 
     if (!gDBusConn) {
         fprintf(stderr, "Dispatch thread failure - BTRCore not initialized\n");
-        *enDispThreadExitStatus = enBTRCoreNotInitialized;
-        return (void*)enDispThreadExitStatus;
+        *penDispThreadExitStatus = enBTRCoreNotInitialized;
+        return (void*)penDispThreadExitStatus;
     }
     
     while (1) {
+        pthread_mutex_lock (&dispatchMutex);
+        ldispatchThreadQuit = dispatchThreadQuit;
+        pthread_mutex_unlock (&dispatchMutex);
+
+        if (ldispatchThreadQuit == TRUE)
+            break;
+
+#if 1
         sleep(1);
+#else
+        sched_yield(); // Would like to use some form of yield rather than sleep sometime in the future
+#endif
         if (dbus_connection_read_write_dispatch(gDBusConn, 500) != TRUE)
             break;
     }
 
-    *enDispThreadExitStatus = enBTRCoreSuccess;
-    return (void*)enDispThreadExitStatus;
+    *penDispThreadExitStatus = enBTRCoreSuccess;
+    return (void*)penDispThreadExitStatus;
 }
 
 
@@ -608,6 +669,7 @@ GetAdapters (
 }
 
 
+#if 0
 static char*
 get_default_adapter_path (
     DBusConnection* conn
@@ -661,6 +723,7 @@ get_default_adapter_path (
 
     return path;
 }
+
 
 
 static char*
@@ -726,6 +789,7 @@ get_adapter_path (
 
     return path;
 }
+
 
 static int
 StopDiscovery (
@@ -803,6 +867,7 @@ StartDiscovery (
 
     return 0;
 }
+#endif
 
 static int 
 parse_device (
@@ -1011,26 +1076,47 @@ BTRCore_Init (
     void
 ) {
     char *message2 = "Dispatch Thread Started";
+#if 0
+    char default_path[128];
+#endif
 
     BTRCore_LOG(("BTRCore_Init\n"));
     p_Status_callback = NULL;//set callbacks to NULL, later an app can register callbacks
 
+#if 0
     gDBusConn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+#else
+    gDBusConn = BtrCore_BTInitGetConnection();
+#endif
     if (!gDBusConn) {
         fprintf(stderr, "Can't get on system bus");
         return enBTRCoreInitFailure;
     }
 
+    //init array of scanned , known & found devices
+    btrCore_InitDataSt();
+
+#if 0
     snprintf(default_path, sizeof(default_path), "/org/bluez/agent_%d", getpid());
     agent_path = strdup(default_path);
+#else
+    agent_path = BtrCore_BTGetAgentPath();
+#endif
 
+#if 0
     adapter_path = get_adapter_path(gDBusConn, NULL); //mikek hard code to default adapter for now
+#else
+    adapter_path = BtrCore_BTGetAdapterPath(gDBusConn, NULL); //mikek hard code to default adapter for now
+#endif
     if (!adapter_path) {
         fprintf(stderr, "Failed to get BT Adapter");
         return enBTRCoreInitFailure;
     }
 
     printf("BTRCore_Init - adapter path %s\n",adapter_path);
+
+    dispatchThreadQuit = FALSE;
+    pthread_mutex_init(&dispatchMutex, NULL);
 
     if(pthread_create(&dispatchThread, NULL, DoDispatch, (void*)message2)) {
         fprintf(stderr, "Failed to create Dispatch Thread");
@@ -1051,27 +1137,63 @@ BTRCore_Init (
 
 
 enBTRCoreRet
+BTRCore_DeInit (
+    void
+) {
+    void*           penDispThreadExitStatus = NULL;
+    enBTRCoreRet    enDispThreadExitStatus = enBTRCoreFailure;
+
+    pthread_mutex_lock(&dispatchMutex);
+    dispatchThreadQuit = TRUE;
+    pthread_mutex_unlock(&dispatchMutex);
+
+    /* Free any memory allotted for use in BTRCore */
+
+    pthread_join(dispatchThread, &penDispThreadExitStatus);
+    pthread_mutex_destroy(&dispatchMutex);
+
+    fprintf(stderr, "BTRCore_DeInit - Exiting BTRCore - %d\n", *((enBTRCoreRet*)penDispThreadExitStatus));
+    enDispThreadExitStatus = *((enBTRCoreRet*)penDispThreadExitStatus);
+    free(penDispThreadExitStatus);
+
+    return  enDispThreadExitStatus;
+}
+
+
+enBTRCoreRet
 BTRCore_StartDiscovery (
     stBTRCoreStartDiscovery* pstStartDiscovery
 ) {
-    ClearScannedDeviceList();
+    btrCore_ClearScannedDevicesList();
 
     if (!gDBusConn) {
         fprintf(stderr, "BTRCore_StartDiscovery - BTRCore not initialized\n");
         return enBTRCoreNotInitialized;
     }
 
+#if 0
     if (StartDiscovery(gDBusConn, adapter_path, agent_path, dbus_device) < 0) {
-        dbus_connection_unref(gDBusConn);
+        dbus_connection_unref(gDBusConn); // Do we really need to unref the global connection just because Discovery failed
         return enBTRCoreDiscoveryFailure;
     }
+#else
+    if (BtrCore_BTStartDiscovery(gDBusConn, adapter_path, agent_path)) {
+        return enBTRCoreDiscoveryFailure;
+    }
+#endif
 
-    sleep(pstStartDiscovery->duration);
+    sleep(pstStartDiscovery->duration); //TODO: Better to setup a timer which calls BTStopDiscovery
     
+#if 0
     if (StopDiscovery(gDBusConn, adapter_path, agent_path, dbus_device) < 0) {
         dbus_connection_unref(gDBusConn);
         return enBTRCoreDiscoveryFailure;
     }
+#else
+    if (BtrCore_BTStopDiscovery(gDBusConn, adapter_path, agent_path)) {
+        return enBTRCoreDiscoveryFailure;
+    }
+#endif
 
     return enBTRCoreSuccess;
 }
@@ -1086,7 +1208,11 @@ BTRCore_GetAdapter (
         return enBTRCoreNotInitialized;
     }
 
+#if 0
     adapter_path = get_adapter_path(gDBusConn, NULL); //mikek hard code to default adapter for now
+#else
+    adapter_path = BtrCore_BTGetAdapterPath(gDBusConn, NULL); //mikek hard code to default adapter for now
+#endif
 
 #if 0
     //*Bluez call hci_get_route with NULL to get instance of first available adapter
@@ -1110,6 +1236,47 @@ BTRCore_GetAdapter (
         fprintf(stderr, "Failed to get BT Adapter");
         return enBTRCoreInvalidAdapter;
     }
+
+    if (pstGetAdapter) {
+        pstGetAdapter->adapter_number = 0; //hard code to default adapter for now
+        pstGetAdapter->adapter_path = adapter_path;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
+BTRCore_SetAdapter (
+    int adapter_number
+) {
+    int pathlen;
+
+    pathlen = strlen(adapter_path);
+    switch (adapter_number) {
+        case 0:
+            adapter_path[pathlen-1]='0';
+            break;
+        case 1:
+            adapter_path[pathlen-1]='1';
+            break;
+        case 2:
+            adapter_path[pathlen-1]='2';
+            break;
+        case 3:
+            adapter_path[pathlen-1]='3';
+            break;
+        case 4:
+            adapter_path[pathlen-1]='4';
+            break;
+        case 5:
+            adapter_path[pathlen-1]='5';
+            break;
+        default:
+            printf("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
+            adapter_path[pathlen-1]='0';
+    }
+    printf("Now current adatper is %s\n",adapter_path);
 
     return enBTRCoreSuccess;
 }
@@ -1311,6 +1478,8 @@ enBTRCoreRet
 BTRCore_PairDevice (
     stBTRCoreScannedDevices* pstScannedDevice
 ) {
+    const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
+
     //BTRCore_LOG(("BTRCore_PairDevice\n"));
     if (!gDBusConn) {
         fprintf(stderr, "BTRCore_PairDevice - BTRCore not initialized\n");

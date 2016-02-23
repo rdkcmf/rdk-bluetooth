@@ -3,6 +3,17 @@
  * Implementation of Audio Video & Media finctionalities of Bluetooth
  */
 
+#include "btrCore.h"
+#include "btrCore_dbus_bt.h"
 
 #include "btrCore_avMedia.h"
-#include "btrCore_dbus_bt.h"
+
+//////////////////
+//  Interfaces  //
+//////////////////
+enBTRCoreRet
+BTRCore_AVMedia_Init (
+    void
+) {
+    return enBTRCoreSuccess;
+}

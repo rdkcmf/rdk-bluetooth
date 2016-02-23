@@ -6,8 +6,12 @@
 #ifndef __BTR_CORE_DBUS_BT_H__
 #define __BTR_CORE_DBUS_BT_H__
 
-// TODO: 
-// Common DBUSfunctionality needs to be exposed only to BTR Core for usage here
-// This header file should not be exposed to users of libbtrCore.so
+/* Interfaces */
+void* BtrCore_BTInitGetConnection (void);
+char* BtrCore_BTGetAgentPath (void);
+char* BtrCore_BTGetDefaultAdapterPath (void* apBTConn);
+char* BtrCore_BTGetAdapterPath (void* apBTConn, const char* apBtAdapter);
+int BtrCore_BTStartDiscovery (void* apBTConn, const char* apBtAdapter, const char* apBtAgentPath);
+int BtrCore_BTStopDiscovery (void* apBTConn, const char* apBtAdapter, const char* apBtAgentPath);
 
 #endif // __BTR_CORE_DBUS_BT_H__

@@ -15,9 +15,11 @@
 void test_func(stBTRCoreGetAdapter* pstGetAdapter);
 
 
-extern stBTRCoreScannedDevices scanned_devices[20]; //holds twenty scanned devices
+extern stBTRCoreScannedDevices scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty scanned devices
+#if 0
 extern char *adapter_path; //to keep track of currently selected
-extern stBTRCoreKnownDevices known_devices[20]; //holds twenty known devices
+#endif
+extern stBTRCoreKnownDevices known_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty known devices
 
 #define NO_ADAPTER 1234
 
@@ -32,15 +34,6 @@ getChoice (
     return mychoice;
 }
 
-static void 
-InitFound (
-    void
-) {
-    int i;
-    for (i = 0; i < 15; i++) {
-        scanned_devices[i].found=0;
-    }
-}
 
 static void 
 ShowSignalStrength (
@@ -68,12 +61,14 @@ ShowSignalStrength (
         printf("+\n");
     } 
 }
+
+
 static void 
 ShowFound (
     void
 ) {
     int i;
-    for (i = 0; i < 15; i++) {
+    for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if (scanned_devices[i].found)
           {
         printf("Device %d. %s\n - %s  %d dbmV ",i,scanned_devices[i].device_name, scanned_devices[i].bd_address, scanned_devices[i].RSSI);
@@ -140,11 +135,13 @@ main (
     char myData[2048];
     int myadapter = 0;
     int bfound;
+#if 0
     int i, pathlen;
+#else
+    int i;
+#endif
     
     char myService[16];//for testing findService API
-    //init array of scanned devices
-    InitFound();
 
     //Init Dbus
     snprintf(default_path, sizeof(default_path), "/org/bluez/agent_%d", getpid());
@@ -178,7 +175,7 @@ main (
         getchar();//suck up a newline?
         switch (choice) {
         case 1: 
-            printf("Adapter is %s\n",adapter_path);
+            printf("Adapter is %s\n", GetAdapter.adapter_path);
             break;
         case 2: 
             if (default_adapter != NO_ADAPTER) {
@@ -206,7 +203,7 @@ main (
             devnum = getChoice();
             printf(" We will pair %s\n",scanned_devices[devnum].device_name);
 
-            printf(" adapter_path %s\n",adapter_path);
+            printf(" adapter_path %s\n", GetAdapter.adapter_path);
             printf(" agent_path %s\n",agent_path);
             printf(" address %s\n",scanned_devices[devnum].bd_address);
             if ( BTRCore_PairDevice(&scanned_devices[devnum]) == enBTRCoreSuccess)
@@ -258,10 +255,11 @@ main (
             BTRCore_GetAdapters(&GetAdapters);
             if ( GetAdapters.number_of_adapters > 1) {
                 printf("There are %d Bluetooth adapters\n",GetAdapters.number_of_adapters);
-                printf("current adatper is %s\n",adapter_path);
+                printf("current adatper is %s\n", GetAdapter.adapter_path);
                 printf("Which adapter would you like to use (0 = default)?\n");
                 myadapter = getChoice();
 
+#if 0
                 pathlen = strlen(adapter_path);
                 switch (myadapter) {
                 case 0:
@@ -288,6 +286,9 @@ main (
 
                     printf("Now current adatper is %s\n",adapter_path);
                 }
+#else
+                BTRCore_SetAdapter(myadapter);
+#endif
             }
             //END adapter selection
             break;
@@ -447,6 +448,7 @@ main (
             break;
         case 99: 
             printf("Quitting program!\n");
+            BTRCore_DeInit();
             exit(0);
             break;
         default: 

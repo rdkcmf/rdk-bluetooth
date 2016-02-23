@@ -16,6 +16,9 @@
 #endif
 
 
+#define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
+
+
 typedef enum _enBTRCoreRet {
     enBTRCoreFailure, 
     enBTRCoreInitFailure, 
@@ -104,6 +107,7 @@ typedef struct _stBTRCoreRadioParams {
 /*BT getAdapter*/
 typedef struct _stBTRCoreGetAdapter {
     U8      adapter_number;
+    char*   adapter_path;
     BOOLEAN enable;
     BOOLEAN discoverable;
     BOOLEAN connectable;
@@ -139,24 +143,30 @@ typedef struct _stBTRCoreScannedDevices {
    BD_NAME bd_address;
    BD_NAME device_name;
    int RSSI;
-   int found;
+   BOOLEAN found;
 } stBTRCoreScannedDevices;
 
 typedef struct _stBTRCoreKnownDevices {
    BD_NAME bd_path;
    BD_NAME device_name;
-   int found;
+   BOOLEAN found;
 } stBTRCoreKnownDevices;
 
 
 /* Generic call to init any needed stack.. may be called during powerup*/
 enBTRCoreRet BTRCore_Init(void);
 
+/* Deinitialze and free BTRCore */
+enBTRCoreRet BTRCore_DeInit(void);
+
 /*BTRCore_GetAdapters  call to determine the number of BT radio interfaces... typically one, but could be more*/
 enBTRCoreRet BTRCore_GetAdapters(stBTRCoreGetAdapters* pstGetAdapters);
 
 /*BTRCore_GetAdapter get info about a specific adatper*/
 enBTRCoreRet BTRCore_GetAdapter(stBTRCoreGetAdapter* pstGetAdapter);
+
+/*BTRCore_SetAdapter Set Current Bluetotth Adapter to use*/
+enBTRCoreRet BTRCore_SetAdapter(int adapter_number);
 
 /* BTRCore_EnableAdapter enable specific adapter*/
 enBTRCoreRet BTRCore_EnableAdapter(stBTRCoreGetAdapter* pstGetAdapter);
