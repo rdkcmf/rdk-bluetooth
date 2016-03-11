@@ -19,7 +19,7 @@ extern stBTRCoreScannedDevices scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //ho
 #if 0
 extern char *adapter_path; //to keep track of currently selected
 #endif
-extern stBTRCoreKnownDevices known_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty known devices
+extern stBTRCoreKnownDevice known_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty known devices
 
 #define NO_ADAPTER 1234
 
@@ -69,14 +69,14 @@ ShowFound (
 ) {
     int i;
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
-        if (scanned_devices[i].found)
-          {
-        printf("Device %d. %s\n - %s  %d dbmV ",i,scanned_devices[i].device_name, scanned_devices[i].bd_address, scanned_devices[i].RSSI);
-        ShowSignalStrength(scanned_devices[i].RSSI);
-        printf("\n\n");
-       }
+        if (scanned_devices[i].found) {
+            printf("Device %d. %s\n - %s  %d dbmV ",i,scanned_devices[i].device_name, scanned_devices[i].bd_address, scanned_devices[i].RSSI);
+            ShowSignalStrength(scanned_devices[i].RSSI);
+            printf("\n\n");
+        }
     }
 }
+
 
 int 
 cb_unsolicited_bluetooth_status (

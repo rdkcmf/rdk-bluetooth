@@ -4,6 +4,8 @@
 #ifndef __BTR_CORE_H__
 #define __BTR_CORE_H__
 
+#include "btrCoreTypes.h"
+
 #define BTRCore_LOG(...) printf(__VA_ARGS__)
 
 
@@ -18,16 +20,6 @@
 
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
 
-
-typedef enum _enBTRCoreRet {
-    enBTRCoreFailure, 
-    enBTRCoreInitFailure, 
-    enBTRCoreNotInitialized, 
-    enBTRCoreInvalidAdapter, 
-    enBTRCorePairingFailed,
-    enBTRCoreDiscoveryFailure, 
-    enBTRCoreSuccess
-} enBTRCoreRet;
 
 typedef enum _BOOLEAN {
     FALSE,
@@ -54,7 +46,7 @@ typedef U8 BD_ADDR[BD_ADDR_LEN];
 typedef U8 CLASS_OF_DEVICE[COD_LEN];
 
 #define BD_NAME_LEN     248
-typedef char BD_NAME[BD_NAME_LEN + 1];         /* Device name */
+typedef char BD_NAME[BD_NAME_LEN + 1];     /* Device name */
 typedef char *BD_NAME_PTR;                 /* Pointer to Device name */
 
 #define UUID_LEN 63
@@ -146,11 +138,11 @@ typedef struct _stBTRCoreScannedDevices {
    BOOLEAN found;
 } stBTRCoreScannedDevices;
 
-typedef struct _stBTRCoreKnownDevices {
+typedef struct _stBTRCoreKnownDevice {
    BD_NAME bd_path;
    BD_NAME device_name;
    BOOLEAN found;
-} stBTRCoreKnownDevices;
+} stBTRCoreKnownDevice;
 
 
 /* Generic call to init any needed stack.. may be called during powerup*/
@@ -208,19 +200,19 @@ enBTRCoreRet BTRCore_PairDevice(stBTRCoreScannedDevices* pstScannedDevice);
 enBTRCoreRet BTRCore_FindDevice(stBTRCoreScannedDevices* pstScannedDevice);
 
 /*BTRCore_ConnectDevice*/
-enBTRCoreRet BTRCore_ConnectDevice(stBTRCoreKnownDevices* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
+enBTRCoreRet BTRCore_ConnectDevice(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
 
 /*BTRCore_ConnectDevice*/
-enBTRCoreRet BTRCore_DisconnectDevice(stBTRCoreKnownDevices* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
+enBTRCoreRet BTRCore_DisconnectDevice(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
 
 /*BTRCore_ForgetDevice*/
-enBTRCoreRet BTRCore_ForgetDevice(stBTRCoreKnownDevices* pstKnownDevice);
+enBTRCoreRet BTRCore_ForgetDevice(stBTRCoreKnownDevice* pstKnownDevice);
 
 /*BTRCore_ListKnownDevices*/
 enBTRCoreRet BTRCore_ListKnownDevices(stBTRCoreGetAdapter* pstGetAdapter); /*- list previously Paired Devices*/
 
 /*BTRCore_FindService - confirm if a given service exists on a device*/
-enBTRCoreRet BTRCore_FindService (stBTRCoreKnownDevices* pstKnownDevice, const char* UUID, char* XMLdata, int* found);
+enBTRCoreRet BTRCore_FindService (stBTRCoreKnownDevice* pstKnownDevice, const char* UUID, char* XMLdata, int* found);
 
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
 enBTRCoreRet BTRCore_RegisterStatusCallback(void * cb);

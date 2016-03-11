@@ -6,6 +6,8 @@
 #ifndef __BTR_CORE_AV_MEDIA_H__
 #define __BTR_CORE_AV_MEDIA_H__
 
-enBTRCoreRet BTRCore_AVMedia_Init (void);
+#include "btrCoreTypes.h"
+
+enBTRCoreRet BTRCore_AVMedia_Init (void* apBtConn, const char* apBtAdapter);
 
 #endif // __BTR_CORE_AV_MEDIA_H__

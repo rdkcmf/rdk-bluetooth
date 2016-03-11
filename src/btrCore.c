@@ -12,6 +12,7 @@
 #include <dbus/dbus.h>
 
 #include "btrCore.h"
+#include "btrCore_avMedia.h"
 #include "btrCore_dbus_bt.h"
 
 
@@ -33,7 +34,7 @@ static DBusConnection *gDBusConn = NULL;
 
 stBTRCoreScannedDevices scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES];//holds twenty scanned devices
 static stBTRCoreScannedDevices found_device;                               //a device for intermediate dbus processing
-stBTRCoreKnownDevices   known_devices[BTRCORE_MAX_NUM_BT_DEVICES];  //holds twenty known devices
+stBTRCoreKnownDevice   known_devices[BTRCORE_MAX_NUM_BT_DEVICES];  //holds twenty known devices
 static stBTRCoreDevStatusCB    callback_info;                              //holds info for a callback
 
 static void btrCore_InitDataSt (void);
@@ -1032,7 +1033,7 @@ agent_filter (
         parse_change(msg);
     }
 
-    /*
+
     if (dbus_message_is_signal(msg, "org.bluez.AudioSink","Connected"))
         printf("Device Connected - AudioSink!\n");
 
@@ -1040,6 +1041,19 @@ agent_filter (
         printf("Device Disconnected - AudioSink!\n");
     }
 
+    if (dbus_message_is_method_call(msg, "org.bluez.MediaEndpoint","SelectConfiguration"))
+        printf("MediaEndpoint - SelectConfiguration!\n");
+
+    if (dbus_message_is_method_call(msg, "org.bluez.MediaEndpoint","SetConfiguration")) {
+        printf("MediaEndpoint - SetConfiguration!\n");
+    }
+
+    if (dbus_message_is_method_call(msg, "org.bluez.MediaEndpoint","ClearConfiguration")) {
+        printf("MediaEndpoint - ClearConfiguration!\n");
+    }
+
+
+    /*
     if (dbus_message_is_signal(msg, "org.bluez.Headset","Connected"))
         printf("Device Connected - Headset!\n");
 
@@ -1115,6 +1129,13 @@ BTRCore_Init (
 
     printf("BTRCore_Init - adapter path %s\n",adapter_path);
 
+    /* Initialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
+    if (enBTRCoreSuccess != BTRCore_AVMedia_Init(gDBusConn, adapter_path)) {
+        fprintf(stderr, "Failed to Init AV Media Subsystem");
+        return enBTRCoreInitFailure;
+    }
+
+
     dispatchThreadQuit = FALSE;
     pthread_mutex_init(&dispatchMutex, NULL);
 
@@ -1131,6 +1152,8 @@ BTRCore_Init (
     dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL); //mikek needed for device scan results
     dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL); //mikek needed?
     dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
+
+    dbus_bus_add_match(gDBusConn, "interface='org.bluez.MediaEndPoint'", NULL); //mikek needed? // Chandresh - Try this dbus_connection_register_object_path
 
     return enBTRCoreSuccess;
 }
@@ -1346,7 +1369,7 @@ BTRCore_ListKnownDevices (
         for ( i = 0; i < num; i++) {
             //printf("device: %d is %s\n",i,paths[i]);
             memset(known_devices[i].bd_path,'\0',sizeof(known_devices[i].bd_path));
-            strcpy(known_devices[i].bd_path,paths[i]);
+            strcpy(known_devices[i].bd_path, paths[i]);
         }
 
         dbus_message_unref(reply);
@@ -1434,7 +1457,7 @@ BTRCore_GetAdapters (
 /*BTRCore_ForgetDevice*/
 enBTRCoreRet
 BTRCore_ForgetDevice (
-    stBTRCoreKnownDevices* pstKnownDevice
+    stBTRCoreKnownDevice* pstKnownDevice
 ) {
     //BTRCore_LOG(("BTRCore_ForgetDevice\n"));
     if (!gDBusConn) {
@@ -1451,7 +1474,7 @@ BTRCore_ForgetDevice (
 /*BTRCore_FindService, other inputs will include string and boolean pointer for returning*/
 enBTRCoreRet
 BTRCore_FindService (
-    stBTRCoreKnownDevices*  pstKnownDevice,
+    stBTRCoreKnownDevice*  pstKnownDevice,
     const char*             UUID,
     char*                   XMLdata,
     int*                    found
@@ -1518,7 +1541,7 @@ BTRCore_FindDevice (
 /*BTRCore_ConnectDevice*/
 enBTRCoreRet
 BTRCore_ConnectDevice (
-    stBTRCoreKnownDevices* pstKnownDevice,
+    stBTRCoreKnownDevice* pstKnownDevice,
     enBTRCoreDeviceType enDeviceType
 ) {
     //BTRCore_LOG(("BTRCore_ConnectDevice\n"));
@@ -1538,7 +1561,7 @@ BTRCore_ConnectDevice (
 
 enBTRCoreRet 
 BTRCore_DisconnectDevice (
-    stBTRCoreKnownDevices* pstKnownDevice,
+    stBTRCoreKnownDevice* pstKnownDevice,
     enBTRCoreDeviceType enDeviceType
 ) {
    // BTRCore_LOG(("BTRCore_DisconnectDevice\n"));

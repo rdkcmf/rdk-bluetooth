@@ -73,7 +73,7 @@ BtrCore_BTGetAgentPath (
 
 char*
 BtrCore_BTGetDefaultAdapterPath (
-    void* apBTConn
+    void* apBtConn
 ) {
     DBusMessage*    lpDBusMsg;
     DBusMessage*    lpDBusReply;
@@ -81,7 +81,7 @@ BtrCore_BTGetDefaultAdapterPath (
     const char*     lpReplyPath;
     dbus_bool_t     lDBusOp;
 
-    if (!gpDBusConn || (gpDBusConn != apBTConn))
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
         return NULL;
 
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
@@ -121,7 +121,7 @@ BtrCore_BTGetDefaultAdapterPath (
 
 char*
 BtrCore_BTGetAdapterPath (
-    void*       apBTConn,
+    void*       apBtConn,
     const char* apBtAdapter
 ) {
     DBusMessage*    lpDBusMsg;
@@ -130,7 +130,7 @@ BtrCore_BTGetAdapterPath (
     const char*     lpReplyPath;
     dbus_bool_t     lDBusOp;
 
-    if (!gpDBusConn || (gpDBusConn != apBTConn))
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
         return NULL;
 
     if (!apBtAdapter)
@@ -175,14 +175,14 @@ BtrCore_BTGetAdapterPath (
 
 int
 BtrCore_BTStartDiscovery (
-    void*       apBTConn,
+    void*       apBtConn,
     const char* apBtAdapter,
     const char* apBtAgentPath
 ) {
     dbus_bool_t     lDBusOp;
     DBusMessage*    lpDBusMsg;
 
-    if (!gpDBusConn || (gpDBusConn != apBTConn))
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
@@ -211,14 +211,14 @@ BtrCore_BTStartDiscovery (
 
 int
 BtrCore_BTStopDiscovery (
-    void*       apBTConn,
+    void*       apBtConn,
     const char* apBtAdapter,
     const char* apBtAgentPath
 ) {
     dbus_bool_t     lDBusOp;
     DBusMessage*    lpDBusMsg;
 
-    if (!gpDBusConn || (gpDBusConn != apBTConn))
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
@@ -244,3 +244,96 @@ BtrCore_BTStopDiscovery (
     return 0;
 }
 
+
+int 
+BtrCore_BTRegisterMedia (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    char*       apBtMediaType,
+    void*       apBtUUID,
+    void*       apBtMediaCodec,
+    void*       apBtMediaCapabilities,
+    int         apBtMediaCapabilitiesSize
+) {
+    DBusMessageIter lDBusMsgIter;
+    DBusMessageIter lDBusMsgIterArr;
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusError       lDBusErr;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apBtAdapter,
+                                             "org.bluez.Media",
+                                             "RegisterEndpoint");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_OBJECT_PATH, &apBtMediaType);
+    dbus_message_iter_open_container (&lDBusMsgIter, DBUS_TYPE_ARRAY, "{sv}", &lDBusMsgIterArr);
+    { //util_add_dict_variant_entry (&lDBusMsgIterArr, "UUID", DBUS_TYPE_STRING, uuid);
+        DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
+        char *key = "UUID";
+        int  type = DBUS_TYPE_STRING;
+
+        dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
+            dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
+            dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &apBtUUID);
+            dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
+    }
+    { //util_add_dict_variant_entry (&lDBusMsgIterArr, "Codec", DBUS_TYPE_BYTE, A2DP_CODEC_SBC);
+        DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
+        char *key = "Codec";
+        int  type = DBUS_TYPE_BYTE;
+
+        dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
+            dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
+            dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &apBtMediaCodec);
+            dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
+    }
+    { //util_add_dict_array_entry (&lDBusMsgIterArr, "Capabilities", DBUS_TYPE_BYTE, &capabilities, sizeof (capabilities));
+        DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant, lDBusMsgIterSubArray;
+        char *key = "Capabilities";
+        int  type = DBUS_TYPE_BYTE;
+
+        char array_type[5] = "a";
+        strncat (array_type, (char*)&type, sizeof(array_type));
+
+        dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
+            dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
+            dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, array_type, &lDBusMsgIterVariant);
+                dbus_message_iter_open_container (&lDBusMsgIterVariant, DBUS_TYPE_ARRAY, (char *)&type, &lDBusMsgIterSubArray);
+                    dbus_message_iter_append_fixed_array (&lDBusMsgIterSubArray, type, &apBtMediaCapabilities, apBtMediaCapabilitiesSize);
+                dbus_message_iter_close_container (&lDBusMsgIterVariant, &lDBusMsgIterSubArray);
+            dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
+    }
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterArr);
+
+
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block (apBtConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lpDBusReply) {
+        fprintf(stderr, "Reply Null\n");
+        btrCore_HandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    dbus_message_unref(lpDBusReply);
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
