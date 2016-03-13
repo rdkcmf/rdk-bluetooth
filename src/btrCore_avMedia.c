@@ -4,6 +4,7 @@
  */
 
 /* System Headers */
+#include <stdlib.h>
 
 
 /* External Library Headers */
@@ -16,11 +17,18 @@
 #include "btrCore_avMedia.h"
 #include "btrCore_dbus_bt.h"
 
-
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 #define BTR_MEDIA_A2DP_SINK_ENDPOINT      "/MediaEndpoint/A2DPSink"
 #define BTR_MEDIA_A2DP_SOURCE_ENDPOINT    "/MediaEndpoint/A2DPSource"
 
+static int          gBTMediaSBCSampFreqPref = BT_SBC_SAMPLING_FREQ_44100;
+//TODO: Mutex protect this
+static a2dp_sbc_t*  gpBTMediaSBCConfig = NULL;
+
+static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
+static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps);
 
 
 //////////////////
@@ -51,14 +59,55 @@ BTRCore_AVMedia_Init (
     lstBtA2dpCapabilities.min_bitpool        = MIN_BITPOOL;
     lstBtA2dpCapabilities.max_bitpool        = MAX_BITPOOL;
 
+    //TODO: Mutex protect this
+    gpBTMediaSBCConfig = (a2dp_sbc_t*)malloc(sizeof(a2dp_sbc_t));
+    if (!gpBTMediaSBCConfig)
+        return enBTRCoreInitFailure;
 
     lBtAVMediaRet = BtrCore_BTRegisterMedia(apBtConn,
                                             apBtAdapter,
-                                            BTR_MEDIA_A2DP_SINK_ENDPOINT,
-                                            A2DP_SINK_UUID,
+                                            BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
+                                            A2DP_SOURCE_UUID,
                                             A2DP_CODEC_SBC,
                                             (void*)&lstBtA2dpCapabilities,
                                             sizeof(lstBtA2dpCapabilities));
+
+    if (!lBtAVMediaRet) {
+       lBtAVMediaRet = BtrCore_BTRegisterNegotiateMediacB(apBtConn,
+                                                          apBtAdapter,
+                                                          BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
+                                                          &btrCore_AVMedia_NegotiateMedia_cb);
+
+        if (!lBtAVMediaRet)
+            lenBTRCoreRet = enBTRCoreSuccess;
+    }
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_DeInit (
+    void*       apBtConn,
+    const char* apBtAdapter
+) {
+    int lBtAVMediaRet = -1;
+    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
+
+    if (apBtConn == NULL || apBtAdapter == NULL) {
+        return enBTRCoreInvalidArg;
+    }
+
+    lBtAVMediaRet = BtrCore_BTUnRegisterMedia(apBtConn,
+                                              apBtAdapter,
+                                              BTR_MEDIA_A2DP_SOURCE_ENDPOINT);
+
+    //TODO: Mutex protect this
+    if (gpBTMediaSBCConfig) {
+        free(gpBTMediaSBCConfig);
+        gpBTMediaSBCConfig = NULL;
+    }
+
     if (!lBtAVMediaRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
@@ -66,4 +115,144 @@ BTRCore_AVMedia_Init (
 }
 
 
+static uint8_t 
+btrCore_AVMedia_GetA2DPDefaultBitpool (
+    uint8_t au8SamplingFreq, 
+    uint8_t au8AudioChannelsMode
+) {
+    switch (au8SamplingFreq) {
+    case BT_SBC_SAMPLING_FREQ_16000:
+    case BT_SBC_SAMPLING_FREQ_32000:
+        return 53;
 
+    case BT_SBC_SAMPLING_FREQ_44100:
+        switch (au8AudioChannelsMode) {
+        case BT_A2DP_CHANNEL_MODE_MONO:
+        case BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
+            return 31;
+
+        case BT_A2DP_CHANNEL_MODE_STEREO:
+        case BT_A2DP_CHANNEL_MODE_JOINT_STEREO:
+            return 53;
+
+        default:
+            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            return 53;
+        }
+    case BT_SBC_SAMPLING_FREQ_48000:
+        switch (au8AudioChannelsMode) {
+        case BT_A2DP_CHANNEL_MODE_MONO:
+        case BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
+            return 29;
+
+        case BT_A2DP_CHANNEL_MODE_STEREO:
+        case BT_A2DP_CHANNEL_MODE_JOINT_STEREO:
+            return 51;
+
+        default:
+            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            return 51;
+        }
+    default:
+        fprintf (stderr, "Invalid Bluetooth SBC sampling freq %u\n", au8SamplingFreq);
+        return 53;
+    }
+}
+
+
+static void*
+btrCore_AVMedia_NegotiateMedia_cb (
+    void* apBtMediaCaps
+) {
+    a2dp_sbc_t* apBtMediaSBCCaps = NULL;
+    a2dp_sbc_t  lstBTMediaSBCConfig;
+
+   if (!apBtMediaCaps) {
+        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: Invalid input MT Media Capabilities\n");
+        return NULL;
+    } 
+
+    apBtMediaSBCCaps = (a2dp_sbc_t*)apBtMediaCaps;
+
+    memset(&lstBTMediaSBCConfig, 0, sizeof(a2dp_sbc_t));
+    lstBTMediaSBCConfig.frequency = gBTMediaSBCSampFreqPref;
+
+    if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_JOINT_STEREO) {
+        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_JOINT_STEREO;
+    }
+    else if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_STEREO) {
+        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_STEREO;
+    }
+    else if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL) {
+        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL;
+    }
+    else if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_MONO) {
+        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_MONO;
+    } 
+    else {
+        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported channel modes\n");
+        return NULL;
+    }
+
+    if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_16) {
+        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_16;
+    }
+    else if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_12) {
+        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_12;
+    }
+    else if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_8) {
+        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_8;
+    }
+    else if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_4) {
+        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_4;
+    }
+    else {
+        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported block lengths\n");
+        return NULL;
+    }
+
+    if (apBtMediaSBCCaps->subbands & BT_A2DP_SUBBANDS_8) {
+        lstBTMediaSBCConfig.subbands = BT_A2DP_SUBBANDS_8;
+    }
+    else if (apBtMediaSBCCaps->subbands & BT_A2DP_SUBBANDS_4) {
+        lstBTMediaSBCConfig.subbands = BT_A2DP_SUBBANDS_4;
+    }
+    else {
+        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported subbands\n");
+        return NULL;
+    }
+
+    if (apBtMediaSBCCaps->allocation_method & BT_A2DP_ALLOCATION_LOUDNESS) {
+        lstBTMediaSBCConfig.allocation_method = BT_A2DP_ALLOCATION_LOUDNESS;
+    }
+    else if (apBtMediaSBCCaps->allocation_method & BT_A2DP_ALLOCATION_SNR) {
+        lstBTMediaSBCConfig.allocation_method = BT_A2DP_ALLOCATION_SNR;
+    }
+
+    lstBTMediaSBCConfig.min_bitpool = (uint8_t) MAX(MIN_BITPOOL, apBtMediaSBCCaps->min_bitpool);
+    lstBTMediaSBCConfig.max_bitpool = (uint8_t) MIN(btrCore_AVMedia_GetA2DPDefaultBitpool(lstBTMediaSBCConfig.frequency, 
+                                                                                          lstBTMediaSBCConfig.channel_mode),
+                                                    apBtMediaSBCCaps->max_bitpool);
+
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: Negotiated Configuration\n");
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
+    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
+
+    //TODO: Mutex protect this
+    {
+        gpBTMediaSBCConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
+        gpBTMediaSBCConfig->frequency           =  lstBTMediaSBCConfig.frequency;
+        gpBTMediaSBCConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
+        gpBTMediaSBCConfig->subbands            =  lstBTMediaSBCConfig.subbands;
+        gpBTMediaSBCConfig->block_length        =  lstBTMediaSBCConfig.block_length;
+        gpBTMediaSBCConfig->min_bitpool         =  lstBTMediaSBCConfig.min_bitpool;
+        gpBTMediaSBCConfig->max_bitpool         =  lstBTMediaSBCConfig.max_bitpool;
+    }
+
+    return (void*)gpBTMediaSBCConfig;
+}

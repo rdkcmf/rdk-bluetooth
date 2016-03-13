@@ -238,6 +238,7 @@ discover_services (
     return match;
 }
 
+
 static int 
 remove_paired_device (
     DBusConnection* conn, 
@@ -272,6 +273,7 @@ remove_paired_device (
 
     return 0;
 }
+
 
 static int 
 btrDevConnectFullPath (
@@ -320,6 +322,7 @@ btrDevConnectFullPath (
 
     return 0;
 }
+
 
 static int 
 set_property (
@@ -432,6 +435,7 @@ btrDevDisconnectFullPath (
     return 0;
 }
 
+
 static int
 find_paired_device (
     DBusConnection* conn,
@@ -524,7 +528,6 @@ create_paired_device (
 }
 
 
-
 void
 LoadScannedDevice (
     void
@@ -603,11 +606,11 @@ DoDispatch (
             break;
 
 #if 1
-        sleep(1);
+        usleep(25000); // 25ms
 #else
         sched_yield(); // Would like to use some form of yield rather than sleep sometime in the future
 #endif
-        if (dbus_connection_read_write_dispatch(gDBusConn, 500) != TRUE)
+        if (dbus_connection_read_write_dispatch(gDBusConn, 25) != TRUE)
             break;
     }
 
@@ -1090,18 +1093,11 @@ BTRCore_Init (
     void
 ) {
     char *message2 = "Dispatch Thread Started";
-#if 0
-    char default_path[128];
-#endif
 
     BTRCore_LOG(("BTRCore_Init\n"));
     p_Status_callback = NULL;//set callbacks to NULL, later an app can register callbacks
 
-#if 0
-    gDBusConn = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
-#else
     gDBusConn = BtrCore_BTInitGetConnection();
-#endif
     if (!gDBusConn) {
         fprintf(stderr, "Can't get on system bus");
         return enBTRCoreInitFailure;
@@ -1110,18 +1106,24 @@ BTRCore_Init (
     //init array of scanned , known & found devices
     btrCore_InitDataSt();
 
-#if 0
-    snprintf(default_path, sizeof(default_path), "/org/bluez/agent_%d", getpid());
-    agent_path = strdup(default_path);
-#else
     agent_path = BtrCore_BTGetAgentPath();
-#endif
 
-#if 0
-    adapter_path = get_adapter_path(gDBusConn, NULL); //mikek hard code to default adapter for now
-#else
+    if (!dbus_connection_add_filter(gDBusConn, agent_filter, NULL, NULL)) {
+        fprintf(stderr, "Can't add signal filter");
+        return enBTRCoreInitFailure;
+    }
+    dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL); //mikek needed for device scan results
+
+
+    dispatchThreadQuit = FALSE;
+    pthread_mutex_init(&dispatchMutex, NULL);
+
+    if(pthread_create(&dispatchThread, NULL, DoDispatch, (void*)message2)) {
+        fprintf(stderr, "Failed to create Dispatch Thread");
+        return enBTRCoreInitFailure;
+    }
+
     adapter_path = BtrCore_BTGetAdapterPath(gDBusConn, NULL); //mikek hard code to default adapter for now
-#endif
     if (!adapter_path) {
         fprintf(stderr, "Failed to get BT Adapter");
         return enBTRCoreInitFailure;
@@ -1135,26 +1137,6 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-
-    dispatchThreadQuit = FALSE;
-    pthread_mutex_init(&dispatchMutex, NULL);
-
-    if(pthread_create(&dispatchThread, NULL, DoDispatch, (void*)message2)) {
-        fprintf(stderr, "Failed to create Dispatch Thread");
-        return enBTRCoreInitFailure;
-    }
-
-    if (!dbus_connection_add_filter(gDBusConn, agent_filter, NULL, NULL)) {
-        fprintf(stderr, "Can't add signal filter");
-        return enBTRCoreInitFailure;
-    }
-
-    dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL); //mikek needed for device scan results
-    dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL); //mikek needed?
-    dbus_bus_add_match(gDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
-
-    dbus_bus_add_match(gDBusConn, "interface='org.bluez.MediaEndPoint'", NULL); //mikek needed? // Chandresh - Try this dbus_connection_register_object_path
-
     return enBTRCoreSuccess;
 }
 
@@ -1166,11 +1148,17 @@ BTRCore_DeInit (
     void*           penDispThreadExitStatus = NULL;
     enBTRCoreRet    enDispThreadExitStatus = enBTRCoreFailure;
 
+    /* Free any memory allotted for use in BTRCore */
+    
+    /* DeInitialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
+    if (enBTRCoreSuccess != BTRCore_AVMedia_DeInit(gDBusConn, adapter_path)) {
+        fprintf(stderr, "Failed to DeInit AV Media Subsystem");
+        enDispThreadExitStatus = enBTRCoreFailure;
+    }
+
     pthread_mutex_lock(&dispatchMutex);
     dispatchThreadQuit = TRUE;
     pthread_mutex_unlock(&dispatchMutex);
-
-    /* Free any memory allotted for use in BTRCore */
 
     pthread_join(dispatchThread, &penDispThreadExitStatus);
     pthread_mutex_destroy(&dispatchMutex);
@@ -1178,6 +1166,7 @@ BTRCore_DeInit (
     fprintf(stderr, "BTRCore_DeInit - Exiting BTRCore - %d\n", *((enBTRCoreRet*)penDispThreadExitStatus));
     enDispThreadExitStatus = *((enBTRCoreRet*)penDispThreadExitStatus);
     free(penDispThreadExitStatus);
+
 
     return  enDispThreadExitStatus;
 }
