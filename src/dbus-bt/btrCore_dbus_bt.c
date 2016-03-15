@@ -5,6 +5,7 @@
 
 /* System Headers */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -25,11 +26,16 @@ static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage *apDB
 
 
 /* Static Global Variables Defs */
-static DBusConnection *gpDBusConn = NULL;
-static fPtr_BtrCore_BTNegotiateMedia_cB gfpcBNegotiateMedia = NULL;
+static DBusConnection*  gpDBusConn = NULL;
+static char*            gpcDevTransportPath = NULL;
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
 };
+
+
+/* Callbacks */
+static fPtr_BtrCore_BTNegotiateMedia_cB gfpcBNegotiateMedia = NULL;
+static fPtr_BtrCore_BTTransportPathMedia_cB gfpcBTransportPathMedia = NULL;
 
 
 /* Static Function Defs */
@@ -127,7 +133,9 @@ static DBusMessage*
 btrCore_BTMediaEndpointSetConfiguration (
     DBusMessage *apDBusMsg
 ) {
-    const char *transport_path, *dev_path = NULL, *uuid = NULL;
+    const char *lDevTransportPath = NULL;
+    const char *lStoredDevTransportPath = NULL;
+    const char *dev_path = NULL, *uuid = NULL;
     unsigned char* config = NULL;
     int size = 0; 
 
@@ -139,7 +147,7 @@ btrCore_BTMediaEndpointSetConfiguration (
 
 
     dbus_message_iter_init(apDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_get_basic(&lDBusMsgIter, &transport_path);
+    dbus_message_iter_get_basic(&lDBusMsgIter, &lDevTransportPath);
     if (!dbus_message_iter_next(&lDBusMsgIter))
         return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
@@ -180,7 +188,20 @@ btrCore_BTMediaEndpointSetConfiguration (
         dbus_message_iter_next(&lDBusMsgIterProp);
     }    
 
-    fprintf(stderr, "Set configuration - Transport Path %s\n",transport_path);
+    fprintf(stderr, "Set configuration - Transport Path %s\n", lDevTransportPath);
+
+    if (gpcDevTransportPath) {
+        free(gpcDevTransportPath);
+        gpcDevTransportPath = NULL;
+    }
+
+    gpcDevTransportPath = strdup(lDevTransportPath);
+
+    if (gfpcBTransportPathMedia) {
+        if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath))) {
+            fprintf(stderr, "Stored - Transport Path 0x%8x:%s\n", (unsigned int)lStoredDevTransportPath, lStoredDevTransportPath);
+        }
+    }
 
     return dbus_message_new_method_return(apDBusMsg);
 }
@@ -194,12 +215,24 @@ btrCore_BTMediaEndpointClearConfiguration (
     DBusMessage*    lpDBusReply;
     DBusError       lDBusErr;
     DBusMessageIter lDBusMsgIter;
-    char*           transport_path;
+    const char*     lDevTransportPath = NULL;
+    const char*     lStoredDevTransportPath = NULL;
 
     dbus_error_init(&lDBusErr);
     dbus_message_iter_init(apDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_get_basic(&lDBusMsgIter, &transport_path);
-    fprintf(stderr, "Clear configuration - Transport Path %s\n",transport_path);
+    dbus_message_iter_get_basic(&lDBusMsgIter, &lDevTransportPath);
+    fprintf(stderr, "Clear configuration - Transport Path %s\n", lDevTransportPath);
+
+    if (gpcDevTransportPath) {
+        free(gpcDevTransportPath);
+        gpcDevTransportPath = NULL;
+    }
+
+    if (gfpcBTransportPathMedia) {
+        if(!(lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath))) {
+            fprintf(stderr, "Cleared - Transport Path %s\n", lDevTransportPath);
+        }
+    }
     
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
     return lpDBusReply;
@@ -414,6 +447,118 @@ BtrCore_BTStopDiscovery (
 }
 
 
+int
+BtrCore_BTConnectDevice (
+    void*           apBtConn,
+    const char*     apDevPath,
+    enBTDeviceType  aenBTDeviceType
+) {
+    dbus_bool_t  lDBusOp;
+    DBusMessage* lpDBusMsg;
+    char         larDBusIfce[32] = {'\0'};
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
+        return -1;
+
+    switch (aenBTDeviceType) {
+    case enBTDevAudioSink:
+        strncpy(larDBusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    case enBTDevAudioSource:
+        strncpy(larDBusIfce, "org.bluez.AudioSource", strlen("org.bluez.AudioSource"));
+        break;
+    case enBTDevHFPHeadset:
+        strncpy(larDBusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
+        break;
+    case enBTDevHFPHeadsetGateway:
+        strncpy(larDBusIfce, "org.bluez.HeadsetGateway", strlen("org.bluez.HeadsetGateway"));
+        break;
+    case enBTDevUnknown:
+    default:
+        strncpy(larDBusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    }
+
+    lpDBusMsg = dbus_message_new_method_call( "org.bluez",
+                                        apDevPath,
+                                        larDBusIfce,
+                                        "Connect");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        fprintf(stderr, "Not enough memory for message send\n");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
+int
+BtrCore_BTDisconnectDevice (
+    void*           apBtConn,
+    const char*     apDevPath,
+    enBTDeviceType  aenBTDeviceType
+) {
+    dbus_bool_t  lDBusOp;
+    DBusMessage* lpDBusMsg;
+    char         larDBusIfce[32] = {'\0'};
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
+        return -1;
+
+    switch (aenBTDeviceType) {
+    case enBTDevAudioSink:
+        strncpy(larDBusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    case enBTDevAudioSource:
+        strncpy(larDBusIfce, "org.bluez.AudioSource", strlen("org.bluez.AudioSource"));
+        break;
+    case enBTDevHFPHeadset:
+        strncpy(larDBusIfce, "org.bluez.Headset", strlen("org.bluez.Headset"));
+        break;
+    case enBTDevHFPHeadsetGateway:
+        strncpy(larDBusIfce, "org.bluez.HeadsetGateway", strlen("org.bluez.HeadsetGateway"));
+        break;
+    case enBTDevUnknown:
+    default:
+        strncpy(larDBusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
+        break;
+    }
+
+    lpDBusMsg = dbus_message_new_method_call( "org.bluez",
+                                        apDevPath,
+                                        larDBusIfce,
+                                        "Disconnect");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        fprintf(stderr, "Not enough memory for message send\n");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
 int 
 BtrCore_BTRegisterMedia (
     void*       apBtConn,
@@ -565,6 +710,116 @@ BtrCore_BTUnRegisterMedia (
 
     dbus_connection_flush(gpDBusConn);
 
+    return 0;
+}
+
+
+int
+BtrCore_BTAcquireDevDataPath (
+    void*   apBtConn,
+    char*   apcDevTransportPath,
+    int*    dataPathFd,
+    int*    dataReadMTU,
+    int*    dataWriteMTU
+) {
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusMessageIter lDBusMsgIter;
+    DBusError       lDBusErr;
+    dbus_bool_t     lDBusOp;
+
+    //TODO: There is no point in always acquire a rw socket/fd/anything else
+    //Decide the Access type based on the current Device type
+    char *access_type = "rw";
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apcDevTransportPath)
+        return -1;
+
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apcDevTransportPath,
+                                             "org.bluez.MediaTransport",
+                                             "Acquire");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_STRING, &access_type);
+
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block (gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lpDBusReply) {
+        fprintf(stderr, "Reply Null\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    lDBusOp = dbus_message_get_args(lpDBusReply, &lDBusErr,
+                                    DBUS_TYPE_UNIX_FD, dataPathFd,
+                                    DBUS_TYPE_UINT16,  dataReadMTU,
+                                    DBUS_TYPE_UINT16,  dataWriteMTU,
+                                    DBUS_TYPE_INVALID);
+    dbus_message_unref(lpDBusReply);
+
+    if (!lDBusOp) {
+        fprintf(stderr, "Can't get reply arguments\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
+int
+BtrCore_BTReleaseDevDataPath (
+    void*   apBtConn,
+    char*   apcDevTransportPath
+) {
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusMessageIter lDBusMsgIter;
+    DBusError       lDBusErr;
+
+    //TODO: There is no point in always acquire a rw socket/fd/anything else
+    //Decide the Access type based on the current Device type
+    char *access_type = "rw";
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apcDevTransportPath)
+        return -1;
+
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apcDevTransportPath,
+                                             "org.bluez.MediaTransport",
+                                             "Release");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_STRING, &access_type);
+
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block (gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lpDBusReply) {
+        fprintf(stderr, "Reply Null\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    dbus_message_unref(lpDBusReply);
+
+    dbus_connection_flush(gpDBusConn);
 
     return 0;
 }
@@ -587,3 +842,23 @@ BtrCore_BTRegisterNegotiateMediacB (
 
     return 0;
 }
+
+
+int
+BtrCore_BTRegisterTransportPathMediacB (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    char*       apBtMediaType,
+    fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apBtAdapter || !apBtMediaType || !afpcBTransportPathMedia)
+        return -1;
+
+    gfpcBTransportPathMedia = afpcBTransportPathMedia;
+
+    return 0;
+}
+

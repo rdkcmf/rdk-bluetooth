@@ -23,12 +23,21 @@
 #define BTR_MEDIA_A2DP_SINK_ENDPOINT      "/MediaEndpoint/A2DPSink"
 #define BTR_MEDIA_A2DP_SOURCE_ENDPOINT    "/MediaEndpoint/A2DPSource"
 
-static int          gBTMediaSBCSampFreqPref = BT_SBC_SAMPLING_FREQ_44100;
+
+/* Static Function Prototypes */
+static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
+
+
+/* Static Global Variables Defs */
+static int          gBTMediaSBCSampFreqPref = BT_SBC_SAMPLING_FREQ_48000;
 //TODO: Mutex protect this
 static a2dp_sbc_t*  gpBTMediaSBCConfig = NULL;
+static char*        gpcAVMediaTransportPath = NULL;
 
-static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
+
+/* Callbacks */
 static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps);
+static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath);
 
 
 //////////////////
@@ -39,7 +48,10 @@ BTRCore_AVMedia_Init (
     void*       apBtConn,
     const char* apBtAdapter
 ) {
-    int lBtAVMediaRet = -1;
+    int lBtAVMediaRegisterRet   = -1;
+    int lBtAVMediaNegotiateRet  = -1;
+    int lBtAVMediaTransportPRet = -1;
+
     enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
 
     if (apBtConn == NULL || apBtAdapter == NULL) {
@@ -64,23 +76,31 @@ BTRCore_AVMedia_Init (
     if (!gpBTMediaSBCConfig)
         return enBTRCoreInitFailure;
 
-    lBtAVMediaRet = BtrCore_BTRegisterMedia(apBtConn,
-                                            apBtAdapter,
-                                            BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
-                                            A2DP_SOURCE_UUID,
-                                            A2DP_CODEC_SBC,
-                                            (void*)&lstBtA2dpCapabilities,
-                                            sizeof(lstBtA2dpCapabilities));
+    //TODO: Mutex protect this
+    gpcAVMediaTransportPath = NULL;
 
-    if (!lBtAVMediaRet) {
-       lBtAVMediaRet = BtrCore_BTRegisterNegotiateMediacB(apBtConn,
-                                                          apBtAdapter,
-                                                          BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
-                                                          &btrCore_AVMedia_NegotiateMedia_cb);
+    lBtAVMediaRegisterRet = BtrCore_BTRegisterMedia(apBtConn,
+                                                    apBtAdapter,
+                                                    BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
+                                                    A2DP_SOURCE_UUID,
+                                                    A2DP_CODEC_SBC,
+                                                    (void*)&lstBtA2dpCapabilities,
+                                                    sizeof(lstBtA2dpCapabilities));
 
-        if (!lBtAVMediaRet)
-            lenBTRCoreRet = enBTRCoreSuccess;
-    }
+    if (!lBtAVMediaRegisterRet)
+       lBtAVMediaNegotiateRet = BtrCore_BTRegisterNegotiateMediacB(apBtConn,
+                                                                   apBtAdapter,
+                                                                   BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
+                                                                   &btrCore_AVMedia_NegotiateMedia_cb);
+
+    if (!lBtAVMediaRegisterRet && !lBtAVMediaNegotiateRet)
+        lBtAVMediaTransportPRet = BtrCore_BTRegisterTransportPathMediacB(apBtConn,
+                                                                         apBtAdapter,
+                                                                         BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
+                                                                         &btrCore_AVMedia_TransportPath_cb);
+
+    if (!lBtAVMediaRegisterRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet)
+        lenBTRCoreRet = enBTRCoreSuccess;
 
     return lenBTRCoreRet;
 }
@@ -107,6 +127,65 @@ BTRCore_AVMedia_DeInit (
         free(gpBTMediaSBCConfig);
         gpBTMediaSBCConfig = NULL;
     }
+
+    //TODO: Mutex protect this
+    if (gpcAVMediaTransportPath) {
+        free(gpcAVMediaTransportPath);
+        gpcAVMediaTransportPath = NULL;
+    }
+
+    if (!lBtAVMediaRet)
+        lenBTRCoreRet = enBTRCoreSuccess;
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_AcquireDataPath (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    int*        apDataPath,
+    int*        apDataReadMTU,
+    int*        apDataWriteMTU
+) {
+    int lBtAVMediaRet = -1;
+    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
+
+    if (apBtConn == NULL || apBtAdapter == NULL) {
+        return enBTRCoreInvalidArg;
+    }
+
+    if (gpcAVMediaTransportPath == NULL) {
+        return enBTRCoreFailure;
+    }
+
+    lBtAVMediaRet = BtrCore_BTAcquireDevDataPath (apBtConn, gpcAVMediaTransportPath, apDataPath, apDataReadMTU, apDataWriteMTU);
+
+    if (!lBtAVMediaRet)
+        lenBTRCoreRet = enBTRCoreSuccess;
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_ReleaseDataPath (
+    void*       apBtConn,
+    const char* apBtAdapter
+) {
+    int lBtAVMediaRet = -1;
+    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
+
+    if (apBtConn == NULL || apBtAdapter == NULL) {
+        return enBTRCoreInvalidArg;
+    }
+
+    if (gpcAVMediaTransportPath == NULL) {
+        return enBTRCoreFailure;
+    }
+
+    lBtAVMediaRet = BtrCore_BTReleaseDevDataPath(apBtConn, gpcAVMediaTransportPath);
 
     if (!lBtAVMediaRet)
         lenBTRCoreRet = enBTRCoreSuccess;
@@ -255,4 +334,29 @@ btrCore_AVMedia_NegotiateMedia_cb (
     }
 
     return (void*)gpBTMediaSBCConfig;
+}
+
+
+static const char*
+btrCore_AVMedia_TransportPath_cb (
+    const char* apBtMediaTransportPath
+) {
+    if (!apBtMediaTransportPath) {
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Invalid transport path\n");
+        return NULL;
+    }
+
+    //TODO: Mutex protect this
+    if (gpcAVMediaTransportPath) {
+        if(!strncmp(gpcAVMediaTransportPath, apBtMediaTransportPath, strlen(gpcAVMediaTransportPath)))
+            fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Freeing 0x%8x:%s\n", (unsigned int)gpcAVMediaTransportPath, gpcAVMediaTransportPath);
+
+        free(gpcAVMediaTransportPath);
+        gpcAVMediaTransportPath = NULL;
+    }
+    else {
+        gpcAVMediaTransportPath = strdup(apBtMediaTransportPath);
+    }
+
+    return gpcAVMediaTransportPath;
 }

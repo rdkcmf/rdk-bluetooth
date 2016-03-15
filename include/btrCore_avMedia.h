@@ -10,5 +10,7 @@
 
 enBTRCoreRet BTRCore_AVMedia_Init (void* apBtConn, const char* apBtAdapter);
 enBTRCoreRet BTRCore_AVMedia_DeInit (void* apBtConn, const char* apBtAdapter);
+enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (void* apBtConn, const char* apBtAdapter, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
+enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (void* apBtConn, const char* apBtAdapter);
 
 #endif // __BTR_CORE_AV_MEDIA_H__

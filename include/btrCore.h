@@ -19,6 +19,7 @@
 
 
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
+#define BTRCORE_STRINGS_MAX_LEN     32
 
 
 typedef enum _BOOLEAN {
@@ -27,8 +28,11 @@ typedef enum _BOOLEAN {
 } BOOLEAN;
 
 typedef enum _enBTRCoreDeviceType {
-    enBTRCoreAudioSink,
-    enBTRCoreHeadSet
+    enBTRCoreSpeakers,
+    enBTRCoreHeadSet,
+    enBTRCoreMobileAudioIn,
+    enBTRCorePCAudioIn,
+    enBTRCoreUnknown
 } enBTRCoreDeviceType;
 
 /*platform specific data lengths */
@@ -78,10 +82,11 @@ typedef struct _stBTRCoreFilterMode {
    UUID     uuid;
 } stBTRCoreFilterMode;
 
-typedef struct _stBTRCoreDevStatusCB {
-   char device_type[64];
-   char device_state[64];
-} stBTRCoreDevStatusCB;
+typedef struct _stBTRCoreDevStateCB {
+   char cDeviceType[BTRCORE_STRINGS_MAX_LEN];
+   char cDevicePrevState[BTRCORE_STRINGS_MAX_LEN];
+   char cDeviceCurrState[BTRCORE_STRINGS_MAX_LEN];
+} stBTRCoreDevStateCB;
 
 void (*p_Status_callback) ();
 
@@ -202,8 +207,15 @@ enBTRCoreRet BTRCore_FindDevice(stBTRCoreScannedDevices* pstScannedDevice);
 /*BTRCore_ConnectDevice*/
 enBTRCoreRet BTRCore_ConnectDevice(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
 
-/*BTRCore_ConnectDevice*/
+/*BTRCore_DisconnectDevice*/
 enBTRCoreRet BTRCore_DisconnectDevice(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
+
+/*BTRCore_AcquireDeviceDataPath*/
+enBTRCoreRet BTRCore_AcquireDeviceDataPath(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
+                                            int* aidataReadMTU, int* aidataWriteMTU);
+
+/*BTRCore_ReleaseDeviceDataPath*/
+enBTRCoreRet BTRCore_ReleaseDeviceDataPath(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
 
 /*BTRCore_ForgetDevice*/
 enBTRCoreRet BTRCore_ForgetDevice(stBTRCoreKnownDevice* pstKnownDevice);

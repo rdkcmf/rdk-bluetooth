@@ -5,6 +5,7 @@
 #include <stdlib.h>     //for malloc
 #include <unistd.h>     //for close?
 #include <errno.h>      //for errno handling
+#include <poll.h>
 
 #include <dbus/dbus.h>
 
@@ -16,9 +17,6 @@ void test_func(stBTRCoreGetAdapter* pstGetAdapter);
 
 
 extern stBTRCoreScannedDevices scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty scanned devices
-#if 0
-extern char *adapter_path; //to keep track of currently selected
-#endif
 extern stBTRCoreKnownDevice known_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty known devices
 
 #define NO_ADAPTER 1234
@@ -32,6 +30,72 @@ getChoice (
     scanf("%d", &mychoice);
         getchar();//suck up a newline?
     return mychoice;
+}
+
+static char*
+getEncodedSBCFile (
+    void
+) {
+    char sbcEncodedFile[1024];
+    printf("Enter SBC File location...\n");
+    scanf("%s", sbcEncodedFile);
+        getchar();//suck up a newline?
+    return strdup(sbcEncodedFile);
+}
+
+
+static void sendSBCFileOverBT (
+    char* fileLocation,
+    int fd,
+    int mtuSize
+) {
+    FILE* sbcFilePtr = fopen(fileLocation, "rb");
+    int    bytesLeft = 0;
+    void   *encoded_buf = NULL;
+    int bytesToSend = mtuSize;
+    struct pollfd pollout = { fd, POLLOUT, 0 };
+     int timeout;
+
+
+    if (!sbcFilePtr)
+        return;
+
+    printf("fileLocation %s", fileLocation);
+
+    fseek(sbcFilePtr, 0, SEEK_END);
+    bytesLeft = ftell(sbcFilePtr);
+    fseek(sbcFilePtr, 0, SEEK_SET);
+
+    printf("File size: %d bytes\n", (int)bytesLeft);
+
+    encoded_buf = malloc (mtuSize);
+
+    while (bytesLeft) {
+
+        if (bytesLeft < mtuSize)
+            bytesToSend = bytesLeft;
+
+        timeout = poll (&pollout, 1, 1000); //delay 1s to allow others to update our state
+
+        if (timeout == 0)
+            continue;
+        if (timeout < 0)
+            fprintf (stderr, "Bluetooth Write Error : %d\n", errno);
+
+        // write bluetooth
+        if (timeout > 0) {
+            fread (encoded_buf, 1, bytesToSend, sbcFilePtr);
+            write(fd, encoded_buf, bytesToSend);
+            bytesLeft -= bytesToSend;
+        }
+
+#if 1
+        usleep(17578); //1ms delay //12.5 ms can hear words
+#endif
+    }
+
+    free(encoded_buf);
+    fclose(sbcFilePtr);
 }
 
 
@@ -80,9 +144,9 @@ ShowFound (
 
 int 
 cb_unsolicited_bluetooth_status (
-    stBTRCoreDevStatusCB* p_StatusCB
+    stBTRCoreDevStateCB* p_StatusCB
 ) {
-    printf("device status change: %s\n",p_StatusCB->device_state);
+    printf("device status change: %s\n",p_StatusCB->cDeviceType);
     return 0;
 }
 
@@ -93,15 +157,15 @@ printMenu (
     printf("Bluetooth Test Menu\n\n");
     printf("1. Get Current Adapter\n");
     printf("2. Scan\n");
-    printf("3. Pair\n");
-    printf("4. Connect to Headset/Speakers\n");
-    printf("5. Show found devices\n");
+    printf("3. Show found devices\n");
+    printf("4. Pair\n");
+    printf("5. UnPair/Forget a device\n");
     printf("6. Show known devices\n");
-    printf("7. Disconnect to Headset/Speakers\n");
-    printf("8. Forget a device\n");
-    printf("9. Show all Bluetooth Adapters\n");
-    printf("10. Connect as Headset/Speakerst\n");
-    printf("11. Disconnect as Headset/Speakerst\n");
+    printf("7. Connect to Headset/Speakers\n");
+    printf("8. Disconnect to Headset/Speakers\n");
+    printf("9. Connect as Headset/Speakerst\n");
+    printf("10. Disconnect as Headset/Speakerst\n");
+    printf("11. Show all Bluetooth Adapters\n");
     printf("12. Enable Bluetooth Adapter\n");
     printf("13. Disable Bluetooth Adapter\n");
     printf("14. Set Discoverable Timeout\n");
@@ -110,6 +174,10 @@ printMenu (
     printf("17. Check for audio sink capability\n");
     printf("18. Check for existance of a service\n");
     printf("19. Find service details\n");
+    printf("20. Check if Device Paired\n");
+    printf("21. Get Connected Dev Data path\n");
+    printf("22. Release Connected Dev Data path\n");
+    printf("23. Send SBC data to BT Headset/Speakers\n");
     printf("88. debug test\n");
     printf("99. Exit\n");
 }
@@ -135,11 +203,12 @@ main (
     char myData[2048];
     int myadapter = 0;
     int bfound;
-#if 0
-    int i, pathlen;
-#else
     int i;
-#endif
+
+    int liDataPath = 0;
+    int lidataReadMTU = 0;
+    int lidataWriteMTU = 0;
+    char *sbcEncodedFileName = NULL;
     
     char myService[16];//for testing findService API
 
@@ -197,7 +266,11 @@ main (
                 BTRCore_LOG("Error, no default_adapter set\n");
             }
             break;
-        case 3: 
+        case 3:
+            printf("Show Found Devices\n");
+            ShowFound();
+            break;
+        case 4:
             printf("Pick a Device to Pair...\n");
             ShowFound();
             devnum = getChoice();
@@ -211,19 +284,14 @@ main (
             else
               printf("device pairing FAILED.\n");
             break;
-        case 4: 
-            printf("Pick a Device to Connect...\n");
+        case 5:
+            printf("UnPair/Forget a device\n");
+            printf("Pick a Device to Remove...\n");
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
-            printf(" We will connect %s\n",known_devices[devnum].bd_path);
-
-            BTRCore_ConnectDevice(&known_devices[devnum], enBTRCoreAudioSink);
-            printf("device connect process completed.\n");
-            break;
-        case 5:
-            printf("Show Found Devices\n");
-            ShowFound();
+            printf(" We will remove %s\n",known_devices[devnum].bd_path);
+            BTRCore_ForgetDevice(&known_devices[devnum]);
             break;
         case 6:
             printf("Show Known Devices...using BTRCore_ListKnownDevices\n");
@@ -231,25 +299,46 @@ main (
             BTRCore_ListKnownDevices(&GetAdapter); //TODO pass in a different structure for each adapter
             break;
         case 7:
+            printf("Pick a Device to Connect...\n");
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf(" We will connect %s\n",known_devices[devnum].bd_path);
+
+            BTRCore_ConnectDevice(&known_devices[devnum], enBTRCoreSpeakers);
+            printf("device connect process completed.\n");
+            break;
+        case 8:
             printf("Pick a Device to Disconnect...\n");
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
             printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
-            BTRCore_DisconnectDevice(&known_devices[devnum], enBTRCoreAudioSink);
+            BTRCore_DisconnectDevice(&known_devices[devnum], enBTRCoreSpeakers);
 
             printf("device disconnect process completed.\n");
             break;
-        case 8:
-            printf("Forget a device\n");
-            printf("Pick a Device to Remove...\n");
+        case 9:
+            printf("Pick a Device to Connect...\n");
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
-            printf(" We will remove %s\n",known_devices[devnum].bd_path);
-            BTRCore_ForgetDevice(&known_devices[devnum]); 
+            printf(" We will connect %s\n",known_devices[devnum].bd_path);
+
+            BTRCore_ConnectDevice(&known_devices[devnum], enBTRCoreMobileAudioIn);
+            printf("device connect process completed.\n");
             break;
-        case 9:
+        case 10:
+            printf("Pick a Device to Disonnect...\n");
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
+            BTRCore_DisconnectDevice(&known_devices[devnum], enBTRCoreMobileAudioIn);
+
+            printf("device disconnect process completed.\n");
+            break;
+        case 11:
             printf("Getting all available adapters\n");
             //START - adapter selection: if there is more than one adapter, offer choice of which adapter to use for pairing
             BTRCore_GetAdapters(&GetAdapters);
@@ -259,58 +348,9 @@ main (
                 printf("Which adapter would you like to use (0 = default)?\n");
                 myadapter = getChoice();
 
-#if 0
-                pathlen = strlen(adapter_path);
-                switch (myadapter) {
-                case 0:
-                    adapter_path[pathlen-1]='0';
-                    break;
-                case 1:
-                    adapter_path[pathlen-1]='1';
-                    break;
-                case 2:
-                    adapter_path[pathlen-1]='2';
-                    break;
-                case 3:
-                    adapter_path[pathlen-1]='3';
-                    break;
-                case 4:
-                    adapter_path[pathlen-1]='4';
-                    break;
-                case 5:
-                    adapter_path[pathlen-1]='5';
-                    break;
-                default:
-                    printf("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
-                    adapter_path[pathlen-1]='0';
-
-                    printf("Now current adatper is %s\n",adapter_path);
-                }
-#else
                 BTRCore_SetAdapter(myadapter);
-#endif
             }
             //END adapter selection
-            break;
-        case 10:
-            printf("Pick a Device to Connect...\n");
-            GetAdapter.adapter_number = myadapter;
-            BTRCore_ListKnownDevices(&GetAdapter);
-            devnum = getChoice();
-            printf(" We will connect %s\n",known_devices[devnum].bd_path);
-
-            BTRCore_ConnectDevice(&known_devices[devnum], enBTRCoreHeadSet);
-            printf("device connect process completed.\n");
-            break;
-        case 11:
-            printf("Pick a Device to Disonnect...\n");
-            GetAdapter.adapter_number = myadapter;
-            BTRCore_ListKnownDevices(&GetAdapter);
-            devnum = getChoice();
-            printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
-            BTRCore_DisconnectDevice(&known_devices[devnum], enBTRCoreHeadSet);
-
-            printf("device disconnect process completed.\n");
             break;
         case 12:
             GetAdapter.adapter_number = myadapter;
@@ -442,6 +482,40 @@ main (
                 printf("device FOUND successful.\n");
             else
               printf("device was NOT found.\n");
+            break;
+        case 21:
+            printf("Pick a Device to Get Data tranport parameters...\n");
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf(" We will Acquire Data Path for %s\n",known_devices[devnum].bd_path);
+
+            BTRCore_AcquireDeviceDataPath(&known_devices[devnum], enBTRCoreSpeakers, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
+            printf("Device Data Path = %d \n", liDataPath);
+            printf("Device Data Read MTU = %d \n", lidataReadMTU);
+            printf("Device Data Write MTU= %d \n", lidataWriteMTU);
+            break;
+        case 22:
+            printf("Pick a Device to ReleaseData tranport...\n");
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ListKnownDevices(&GetAdapter);
+            devnum = getChoice();
+            printf(" We will Release Data Path for %s\n",known_devices[devnum].bd_path);
+
+            BTRCore_ReleaseDeviceDataPath(&known_devices[devnum], enBTRCoreSpeakers);
+            break;
+        case 23:
+            printf("Enter Encoded SBC file location to send to BT Headset/Speakers...\n");
+            sbcEncodedFileName = getEncodedSBCFile ();
+            if (sbcEncodedFileName) {
+                printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, liDataPath);
+                sendSBCFileOverBT(sbcEncodedFileName, liDataPath, lidataWriteMTU);
+                free(sbcEncodedFileName);
+                sbcEncodedFileName = NULL;
+            }
+            else {
+                printf(" Invalid file location\n");
+            }
             break;
         case 88:
             test_func(&GetAdapter); 
