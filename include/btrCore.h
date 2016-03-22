@@ -198,33 +198,36 @@ enBTRCoreRet BTRCore_DiscoverServices(stBTRCoreFindService* pstFindService);
 /*BTRCore_AdvertiseService - Advertise Service on local SDP server*/
 enBTRCoreRet BTRCore_AdvertiseService(stBTRCoreAdvertiseService* pstAdvertiseService);
 
+/*BTRCore_ShowFoundDevices - Utility function to display Devices found on a Bluetooth Adapter */
+enBTRCoreRet BTRCore_ShowFoundDevices(stBTRCoreGetAdapter* pstGetAdapter);
+
 /*BTRCore_PairDevice*/
-enBTRCoreRet BTRCore_PairDevice(stBTRCoreScannedDevices* pstScannedDevice);
+enBTRCoreRet BTRCore_PairDevice(tBTRCoreDevId   aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
 /*BTRCore_FindDevice*/
-enBTRCoreRet BTRCore_FindDevice(stBTRCoreScannedDevices* pstScannedDevice);
+enBTRCoreRet BTRCore_FindDevice(tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
 /*BTRCore_ConnectDevice*/
-enBTRCoreRet BTRCore_ConnectDevice(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
+enBTRCoreRet BTRCore_ConnectDevice(tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /*BTRCore_DisconnectDevice*/
-enBTRCoreRet BTRCore_DisconnectDevice(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
+enBTRCoreRet BTRCore_DisconnectDevice(tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /*BTRCore_AcquireDeviceDataPath*/
-enBTRCoreRet BTRCore_AcquireDeviceDataPath(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
-                                            int* aidataReadMTU, int* aidataWriteMTU);
+enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
+                                            int* aidataReadMTU, int* aidataWriteMTU); //TODO: Change to a unique device Identifier
 
 /*BTRCore_ReleaseDeviceDataPath*/
-enBTRCoreRet BTRCore_ReleaseDeviceDataPath(stBTRCoreKnownDevice* pstKnownDevice, enBTRCoreDeviceType enDeviceType);
+enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /*BTRCore_ForgetDevice*/
-enBTRCoreRet BTRCore_ForgetDevice(stBTRCoreKnownDevice* pstKnownDevice);
+enBTRCoreRet BTRCore_ForgetDevice(tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
 /*BTRCore_ListKnownDevices*/
 enBTRCoreRet BTRCore_ListKnownDevices(stBTRCoreGetAdapter* pstGetAdapter); /*- list previously Paired Devices*/
 
 /*BTRCore_FindService - confirm if a given service exists on a device*/
-enBTRCoreRet BTRCore_FindService (stBTRCoreKnownDevice* pstKnownDevice, const char* UUID, char* XMLdata, int* found);
+enBTRCoreRet BTRCore_FindService (tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
 
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
 enBTRCoreRet BTRCore_RegisterStatusCallback(void * cb);

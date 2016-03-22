@@ -16,9 +16,6 @@
 void test_func(stBTRCoreGetAdapter* pstGetAdapter);
 
 
-extern stBTRCoreScannedDevices scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty scanned devices
-extern stBTRCoreKnownDevice known_devices[BTRCORE_MAX_NUM_BT_DEVICES]; //holds twenty known devices
-
 #define NO_ADAPTER 1234
 
 static int
@@ -89,8 +86,12 @@ static void sendSBCFileOverBT (
             bytesLeft -= bytesToSend;
         }
 
-#if 1
+#if 0
         usleep(17578); //1ms delay //12.5 ms can hear words
+#endif
+
+#if 1
+        usleep(26000); //1ms delay //12.5 ms can hear words
 #endif
     }
 
@@ -99,6 +100,7 @@ static void sendSBCFileOverBT (
 }
 
 
+#if 0
 static void 
 ShowSignalStrength (
     short strength
@@ -127,6 +129,7 @@ ShowSignalStrength (
 }
 
 
+
 static void 
 ShowFound (
     void
@@ -140,6 +143,7 @@ ShowFound (
         }
     }
 }
+#endif
 
 
 int 
@@ -268,18 +272,32 @@ main (
             break;
         case 3:
             printf("Show Found Devices\n");
+#if 0
             ShowFound();
+#else
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ShowFoundDevices(&GetAdapter);
+#endif
             break;
         case 4:
             printf("Pick a Device to Pair...\n");
+#if 0
             ShowFound();
+#else
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ShowFoundDevices(&GetAdapter);
+#endif
             devnum = getChoice();
-            printf(" We will pair %s\n",scanned_devices[devnum].device_name);
 
             printf(" adapter_path %s\n", GetAdapter.adapter_path);
             printf(" agent_path %s\n",agent_path);
+#if 0
+            printf(" We will pair %s\n",scanned_devices[devnum].device_name);
             printf(" address %s\n",scanned_devices[devnum].bd_address);
             if ( BTRCore_PairDevice(&scanned_devices[devnum]) == enBTRCoreSuccess)
+#else
+            if ( BTRCore_PairDevice(devnum) == enBTRCoreSuccess)
+#endif
                 printf("device pairing successful.\n");
             else
               printf("device pairing FAILED.\n");
@@ -290,8 +308,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will remove %s\n",known_devices[devnum].bd_path);
             BTRCore_ForgetDevice(&known_devices[devnum]);
+#else
+            BTRCore_ForgetDevice(devnum);
+#endif
             break;
         case 6:
             printf("Show Known Devices...using BTRCore_ListKnownDevices\n");
@@ -303,9 +325,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will connect %s\n",known_devices[devnum].bd_path);
-
             BTRCore_ConnectDevice(&known_devices[devnum], enBTRCoreSpeakers);
+#else
+            BTRCore_ConnectDevice(devnum, enBTRCoreSpeakers);
+#endif
             printf("device connect process completed.\n");
             break;
         case 8:
@@ -313,8 +338,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
             BTRCore_DisconnectDevice(&known_devices[devnum], enBTRCoreSpeakers);
+#else
+            BTRCore_DisconnectDevice(devnum, enBTRCoreSpeakers);
+#endif
 
             printf("device disconnect process completed.\n");
             break;
@@ -323,9 +352,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will connect %s\n",known_devices[devnum].bd_path);
-
             BTRCore_ConnectDevice(&known_devices[devnum], enBTRCoreMobileAudioIn);
+#else
+            BTRCore_ConnectDevice(devnum, enBTRCoreMobileAudioIn);
+#endif
             printf("device connect process completed.\n");
             break;
         case 10:
@@ -333,9 +365,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will disconnect %s\n",known_devices[devnum].bd_path);
             BTRCore_DisconnectDevice(&known_devices[devnum], enBTRCoreMobileAudioIn);
-
+#else
+            BTRCore_DisconnectDevice(devnum, enBTRCoreMobileAudioIn);
+#endif
             printf("device disconnect process completed.\n");
             break;
         case 11:
@@ -386,22 +421,22 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf("Checking for an audio sink on %s\n", known_devices[devnum].bd_path); 
-            if (BTRCore_FindService(&known_devices[devnum],BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess)
-              {
-               if (bfound)
-                {
-		  printf("Service UUID BTRCore_A2SNK is found\n");
+            if (BTRCore_FindService(&known_devices[devnum],BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
+#else
+            if (BTRCore_FindService(devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
+#endif
+                if (bfound) {
+                    printf("Service UUID BTRCore_A2SNK is found\n");
                 }
-               else
-                {
-                  printf("Service UUID BTRCore_A2SNK is NOT found\n");
+                else {
+                    printf("Service UUID BTRCore_A2SNK is NOT found\n");
                 }
-               }
-              else
-              {
-                 printf("Error on BTRCore_FindService\n");
-              }
+            }
+            else {
+                printf("Error on BTRCore_FindService\n");
+            }
             break;
         case 18:
             printf("Find a Service\n");
@@ -411,28 +446,30 @@ main (
             devnum = getChoice();
             printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
             fgets(myService,sizeof(myService),stdin);
+#if 0
             printf("Checking for service %s on %s\n",myService, known_devices[devnum].bd_path);
+#endif
             for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                   {
                 if(myService[i] == '\n')
                    myService[i] = '\0';
                 }
             bfound=0;//assume not found
-            if (BTRCore_FindService(&known_devices[devnum],myService,NULL,&bfound) == enBTRCoreSuccess)
-            {
-             if (bfound)
-                {
-		  printf("Service UUID %s is found\n",myService);
+#if 0
+            if (BTRCore_FindService(&known_devices[devnum],myService,NULL,&bfound) == enBTRCoreSuccess) {
+#else
+            if (BTRCore_FindService(devnum, myService,NULL,&bfound) == enBTRCoreSuccess) {
+#endif
+                if (bfound) {
+                    printf("Service UUID %s is found\n",myService);
                 }
-               else
-                {
-                  printf("Service UUID %s is NOT found\n",myService);
+                else {
+                    printf("Service UUID %s is NOT found\n",myService);
                 }
-             }
-             else
-             {
+            }
+            else {
                 printf("Error on BTRCore_FindService\n");
-             }
+            }
             break;
         case 19:
             printf("Find a Service and get details\n");
@@ -442,7 +479,9 @@ main (
             devnum = getChoice();
             printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
             fgets(myService,sizeof(myService),stdin);
+#if 0
             printf("Checking for service %s on %s\n",myService, known_devices[devnum].bd_path);
+#endif
             for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                   {
                 if(myService[i] == '\n')
@@ -455,30 +494,39 @@ main (
            so this usage  can provide that capability.
          In most cases, simply knowing if the service exists may suffice, in which case you can use
          the simplified option where the data pointer is NULL, and no data is copied*/
-            if (BTRCore_FindService(&known_devices[devnum],myService,myData,&bfound)  == enBTRCoreSuccess)
-              {
-              if (bfound)
-                {
-		  printf("Service UUID %s is found\n",myService);
-                  printf("Data is:\n %s \n",myData);
+#if 0
+            if (BTRCore_FindService(&known_devices[devnum],myService,myData,&bfound)  == enBTRCoreSuccess) {
+#else
+            if (BTRCore_FindService(devnum,myService,myData,&bfound)  == enBTRCoreSuccess) {
+#endif
+                if (bfound) {
+                    printf("Service UUID %s is found\n",myService);
+                    printf("Data is:\n %s \n",myData);
                 }
-               else
-                {
-                  printf("Service UUID %s is NOT found\n",myService);
+                else {
+                    printf("Service UUID %s is NOT found\n",myService);
                 }
-               }
-              else
-             {
+            }
+            else {
                 printf("Error on BTRCore_FindService\n");
-             }
+            }
             break;
          case 20:
             printf("Pick a Device to Find (see if it is already paired)...\n");
+#if 0
             ShowFound();
+#else
+            GetAdapter.adapter_number = myadapter;
+            BTRCore_ShowFoundDevices(&GetAdapter);
+#endif
             devnum = getChoice();
+#if 0
             printf(" We will try to find %s\n",scanned_devices[devnum].device_name);
             printf(" address %s\n",scanned_devices[devnum].bd_address);
             if ( BTRCore_FindDevice(&scanned_devices[devnum]) == enBTRCoreSuccess)
+#else
+            if ( BTRCore_FindDevice(devnum) == enBTRCoreSuccess)
+#endif
                 printf("device FOUND successful.\n");
             else
               printf("device was NOT found.\n");
@@ -488,9 +536,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will Acquire Data Path for %s\n",known_devices[devnum].bd_path);
-
             BTRCore_AcquireDeviceDataPath(&known_devices[devnum], enBTRCoreSpeakers, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
+#else
+            BTRCore_AcquireDeviceDataPath(devnum, enBTRCoreSpeakers, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
+#endif
             printf("Device Data Path = %d \n", liDataPath);
             printf("Device Data Read MTU = %d \n", lidataReadMTU);
             printf("Device Data Write MTU= %d \n", lidataWriteMTU);
@@ -500,9 +551,12 @@ main (
             GetAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(&GetAdapter);
             devnum = getChoice();
+#if 0
             printf(" We will Release Data Path for %s\n",known_devices[devnum].bd_path);
-
             BTRCore_ReleaseDeviceDataPath(&known_devices[devnum], enBTRCoreSpeakers);
+#else
+            BTRCore_ReleaseDeviceDataPath(devnum, enBTRCoreSpeakers);
+#endif
             break;
         case 23:
             printf("Enter Encoded SBC file location to send to BT Headset/Speakers...\n");

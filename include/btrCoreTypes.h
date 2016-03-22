@@ -14,4 +14,6 @@ typedef enum _enBTRCoreRet {
 } enBTRCoreRet;
 
 
+typedef unsigned long long int tBTRCoreDevId;
+
 #endif // __BTR_CORE_TYPES_H__
