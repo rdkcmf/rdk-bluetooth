@@ -7,8 +7,6 @@
 #include <errno.h>      //for errno handling
 #include <poll.h>
 
-#include <dbus/dbus.h>
-
 #include "btrCore.h"            //basic RDK BT functions
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
 
@@ -157,7 +155,6 @@ main (
 	stBTRCoreFindService    FindService;
 	stBTRCoreAdvertiseService AdvertiseService;
 
-	//Dbus stuff
     char  default_path[128];
     char* agent_path = NULL;
     char myData[2048];
@@ -172,7 +169,6 @@ main (
     
     char myService[16];//for testing findService API
 
-    //Init Dbus
     snprintf(default_path, sizeof(default_path), "/org/bluez/agent_%d", getpid());
 
     if (!agent_path)

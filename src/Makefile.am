@@ -9,6 +9,7 @@ AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include $(BTRCORE_DBUS_INC)
 lib_LTLIBRARIES = libbtrCore.la
 libbtrCore_la_SOURCES = btrCore.c btrCore_avMedia.c $(BTRCORE_DBUS_SRCS)
 libbtrCore_la_CFLAGS = $(INCLUDE_FILES)
+libbtrCore_la_LIBADD = $(DBUS_LIBS)
 
 # Explicitly declare the header file U want to expose out of libbtrCore.so her
 include_HEADERS = $(top_srcdir)/include/btrCore.h
