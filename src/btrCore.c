@@ -19,6 +19,8 @@
 
 static char *gBTRAdapterPath = NULL;
 
+static unsigned int gNumberOfScannedDevices = 0;
+static unsigned int gNumberOfPairedDevices = 0;
 static stBTRCoreScannedDevices  scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES];//holds twenty scanned devices
 static stBTRCoreScannedDevices  found_device;                        //a device for intermediate dbus processing
 static stBTRCoreKnownDevice     known_devices[BTRCORE_MAX_NUM_BT_DEVICES];   //holds twenty known devices
@@ -28,7 +30,9 @@ static void btrCore_InitDataSt (void);
 static void btrCore_ClearScannedDevicesList (void);
 static DBusMessage* sendMethodCall (DBusConnection* conn, const char* objectpath, const char* busname, const char* interfacename, const char* methodname);
 static int remove_paired_device (DBusConnection* conn, const char* apBTRAdapterPath, const char* fullpath);
-
+static enBTRCoreRet populateListOfPairedDevices(tBTRCoreHandle hBTRCore, const char* pAdapterPath);
+/* Discovered Device notification */
+BTRMgr_DeviceDiscoveryCallback cb_DeviceDiscovery = NULL;
 
 typedef struct _stBTRCoreHdl {
     void*           connHandle;
@@ -54,6 +58,8 @@ btrCore_InitDataSt (
         scanned_devices[i].found = FALSE;
     }
 
+    gNumberOfScannedDevices = 0;
+    gNumberOfPairedDevices = 0;
     /* Found Device */
     memset (found_device.bd_address, '\0', sizeof(BD_NAME));
     memset (found_device.device_name, '\0', sizeof(BD_NAME));
@@ -64,6 +70,7 @@ btrCore_InitDataSt (
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         memset (known_devices[i].bd_path, '\0', sizeof(BD_NAME));
         memset (known_devices[i].device_name, '\0', sizeof(BD_NAME));
+        known_devices[i].RSSI = INT_MIN;
         known_devices[i].found = FALSE;
     }
 
@@ -92,6 +99,7 @@ btrCore_ClearScannedDevicesList (
         scanned_devices[i].RSSI = INT_MIN;
         scanned_devices[i].found = FALSE;
     }
+    gNumberOfScannedDevices = 0;
 }
 
 
@@ -476,6 +484,7 @@ LoadScannedDevice (
 
         if (strcmp(found_device.bd_address, scanned_devices[i].bd_address) == 0) {
             found = TRUE;
+            found_device.found = TRUE; //mark this for callback need
             break;
         }
     }
@@ -488,6 +497,7 @@ LoadScannedDevice (
                 strcpy(scanned_devices[i].bd_address,found_device.bd_address);
                 strcpy(scanned_devices[i].device_name,found_device.device_name);
                 scanned_devices[i].RSSI = found_device.RSSI;
+                gNumberOfScannedDevices++;
                 break;
             }
         }
@@ -670,6 +680,7 @@ parse_device (
                 //printf("    name: %s\n",value);
 
                 //load the found device into our array
+                found_device.found = FALSE; //Reset the flags
                 strcpy(found_device.device_name,value);
                 strcpy(found_device.bd_address,bd_addr);
                 LoadScannedDevice(); //operates on found_device
@@ -746,6 +757,21 @@ agent_filter (
     if (dbus_message_is_signal(msg, "org.bluez.Adapter","DeviceFound")) {
         printf("Device Found!\n");
         parse_device(msg);
+
+        /* call the registered cb */
+        if (cb_DeviceDiscovery)
+        {
+            /* The device is not duplicate entry; So post it thro' callback */
+            if (FALSE == found_device.found)
+            {
+                stBTRCoreScannedDevicesCount devicelist;
+                memset (&devicelist, 0, sizeof(stBTRCoreScannedDevicesCount));
+
+                memcpy (devicelist.devices, scanned_devices, sizeof (scanned_devices));
+                devicelist.numberOfDevices = gNumberOfScannedDevices;
+                cb_DeviceDiscovery (devicelist);
+            }
+        }
     }
 
     if (dbus_message_is_signal(msg, "org.bluez.Adapter","DeviceDisappeared")) {
@@ -1073,27 +1099,11 @@ BTRCore_ListKnownDevices (
     tBTRCoreHandle       hBTRCore,
     stBTRCoreGetAdapter* pstGetAdapter
 ) {
-    DBusError e;
-    DBusMessageIter arg_i, element_i, variant_i;
-    char **paths = NULL;
-    const char * key;
-    const char *value;
-    int i;
-    int num = -1;
-    int paired;
-    int connected;
     int pathlen; //temporary variable shoud be refactored away
-
-    //const char *pcAdapterPath;
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-
     if (!hBTRCore) {
         fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreNotInitialized;
     }
-
-    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
 
     //gBTRAdapterPath = get_adapter_path(gBTRConnHandle, pstGetAdapter->adapter_number);
     pathlen = strlen(gBTRAdapterPath);
@@ -1123,11 +1133,25 @@ BTRCore_ListKnownDevices (
     }
 
     printf("adapter path is %s\n",gBTRAdapterPath);
+    return populateListOfPairedDevices (hBTRCore, gBTRAdapterPath);
+}
 
+enBTRCoreRet populateListOfPairedDevices(tBTRCoreHandle hBTRCore, const char* pAdapterPath)
+{
+    DBusError e;
+    DBusMessageIter arg_i, element_i, variant_i;
+    char **paths = NULL;
+    const char * key;
+    const char *value;
+    int i;
+    int num = -1;
+    int paired;
+    int connected;
+    stBTRCoreHdl*   pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     dbus_error_init(&e);
     //path  busname interface  method
 
-    DBusMessage* reply = sendMethodCall(pstlhBTRCore->connHandle, gBTRAdapterPath, "org.bluez", "org.bluez.Adapter", "ListDevices");
+    DBusMessage* reply = sendMethodCall(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez", "org.bluez.Adapter", "ListDevices");
     if (reply != NULL) {
         if (!dbus_message_get_args(reply, &e, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
             printf("org.bluez.Adapter.ListDevices returned an error: '%s'\n", e.message);
@@ -1138,7 +1162,7 @@ BTRCore_ListKnownDevices (
             memset(known_devices[i].bd_path,'\0',sizeof(known_devices[i].bd_path));
             strcpy(known_devices[i].bd_path, paths[i]);
         }
-
+        gNumberOfPairedDevices = num;
         dbus_message_unref(reply);
     }
 
@@ -1172,6 +1196,9 @@ BTRCore_ListKnownDevices (
                     dbus_message_iter_get_basic(&variant_i, &value);
                     printf("device: %d is %s  ", i, paths[i]);
                     printf("name: %s\n", value);
+
+                    memset(known_devices[i].device_name, '\0', sizeof(known_devices[i].device_name));
+                    strcpy(known_devices[i].device_name, value);
                 }
 
                 if (strcmp (key, "Paired") == 0) {
@@ -1444,7 +1471,6 @@ BTRCore_ConnectDevice (
 
     return enBTRCoreSuccess;
 }
-
 
 enBTRCoreRet 
 BTRCore_DisconnectDevice (
@@ -1758,3 +1784,906 @@ BTRCore_SetAdapterDeviceName (
   return enBTRCoreSuccess;
 }
 
+enBTRCoreRet BTRCore_GetListOfAdapters (tBTRCoreHandle hBTRCore, stBTRCoreListAdapters* pstListAdapters)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+
+    if ((!hBTRCore) || (!pstListAdapters))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+        {
+            DBusError err;
+            char **paths = NULL;
+            int i;
+            int num = -1;
+
+            dbus_error_init(&err);
+            DBusMessage *reply = sendMethodCall(pConnHandle, "/", "org.bluez", "org.bluez.Manager", "GetProperties");
+            if (!reply)
+            {
+                printf("%s:%d - org.bluez.Manager.GetProperties returned an error: '%s'\n", __FUNCTION__, __LINE__, err.message);
+                rc = enBTRCoreFailure;
+			    dbus_error_free(&err);
+            }
+            else
+            {
+                if (dbus_message_get_args(reply, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID))
+                {
+                    pstListAdapters->number_of_adapters = num;
+                    for (i = 0; i < num; i++)
+                    {
+                        printf("Adapter Path: %d is %s\n", i, paths[i]);
+                        memset(pstListAdapters->adapter_path[i], '\0', sizeof(pstListAdapters->adapter_path[i]));
+                        strncpy(pstListAdapters->adapter_path[i], paths[i], BD_NAME_LEN);
+                    }
+                    rc = enBTRCoreSuccess;
+                }
+                else
+                {
+                    printf("%s:%d - org.bluez.Manager.GetProperties parsing failed '%s'\n", __FUNCTION__, __LINE__, err.message);
+                    rc = enBTRCoreFailure;
+			        dbus_error_free(&err);
+                }
+
+                dbus_message_unref(reply);
+            }
+        }
+    }
+
+    return rc;
+}
+
+enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pAdapterName)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+    char name[BD_NAME_LEN + 1] = "";
+
+    memset (name, '\0', sizeof (name));
+
+    if ((!hBTRCore) || (!pAdapterPath) ||(!pAdapterName))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        strncpy(name, pAdapterName, BD_NAME_LEN);
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else if (0 != set_property(pConnHandle, pAdapterPath, "Name", DBUS_TYPE_STRING, name))
+        {
+            rc = enBTRCoreFailure;
+            printf("%s:%d - Set value for org.bluez.Adapter.Name failed\n", __FUNCTION__, __LINE__);
+        }
+        else
+        {
+            rc = enBTRCoreSuccess;
+            printf("%s:%d - Set value for org.bluez.Adapter.Name Success\n", __FUNCTION__, __LINE__);
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char powerStatus)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pAdapterPath)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else if (0 != set_property(pConnHandle, pAdapterPath, "Powered", DBUS_TYPE_BOOLEAN, &powerStatus))
+        {
+            rc = enBTRCoreFailure;
+            printf("%s:%d - Set value for org.bluez.Adapter.Powered failed\n", __FUNCTION__, __LINE__);
+        }
+        else
+        {
+            rc = enBTRCoreSuccess;
+            printf("%s:%d - Set value for org.bluez.Adapter.Powered Success\n", __FUNCTION__, __LINE__);
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned short timeout)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+    U32 givenTimeout = (U32) timeout;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pAdapterPath)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else if (0 != set_property(pConnHandle, pAdapterPath, "DiscoverableTimeout", DBUS_TYPE_UINT32, &givenTimeout))
+        {
+            rc = enBTRCoreFailure;
+            printf("%s:%d - Set value for org.bluez.Adapter.DiscoverableTimeout failed\n", __FUNCTION__, __LINE__);
+        }
+        else
+        {
+            rc = enBTRCoreSuccess;
+            printf("%s:%d - Set value for org.bluez.Adapter.DiscoverableTimeout Success\n", __FUNCTION__, __LINE__);
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char discoverable)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pAdapterPath)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else if (0 != set_property(pConnHandle, pAdapterPath, "Discoverable", DBUS_TYPE_UINT32, &discoverable))
+        {
+            rc = enBTRCoreFailure;
+            printf("%s:%d - Set value for org.bluez.Adapter.Discoverable failed\n", __FUNCTION__, __LINE__);
+        }
+        else
+        {
+            rc = enBTRCoreSuccess;
+            printf("%s:%d - Set value for org.bluez.Adapter.Discoverable Success\n", __FUNCTION__, __LINE__);
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet get_property (DBusConnection* pConnection, const char* pDevicePath, const char *pInterface, const char* pKey, int type, void* pValue)
+{
+    enBTRCoreRet rc = enBTRCoreFailure;
+
+    if ((!pConnection) || (!pDevicePath) || (!pInterface) || (!pKey) || (!pValue))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        DBusMessage *reply = NULL;
+        DBusMessageIter arg_i, element_i, variant_i;
+        DBusError err;
+        const char *pParsedKey = NULL;
+        const char *pParsedValueString = NULL;
+        int parsedValueNumber = 0;
+        U32 parsedValueUnsignedNumber = 0;
+
+
+        /* */
+        dbus_error_init(&err);
+        reply = sendMethodCall(pConnection, pDevicePath, "org.bluez", pInterface, "GetProperties");
+        if (!reply)
+        {
+            printf("%s:%d - %s.GetProperties returned an error: '%s'\n", __FUNCTION__, __LINE__, pInterface, err.message);
+            rc = enBTRCoreFailure;
+            dbus_error_free(&err);
+        }
+        else
+        {
+            if (!dbus_message_iter_init(reply, &arg_i))
+            {
+                printf("GetProperties reply has no arguments.");
+                rc = enBTRCoreFailure;
+            }
+            else if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY)
+            {
+                printf("GetProperties argument is not an array.");
+                rc = enBTRCoreFailure;
+            }
+            else
+            {
+                dbus_message_iter_recurse(&arg_i, &element_i);
+                while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID)
+                {
+                    if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY)
+                    {
+                        DBusMessageIter dict_i;
+                        dbus_message_iter_recurse(&element_i, &dict_i);
+                        dbus_message_iter_get_basic(&dict_i, &pParsedKey);
+
+                        if ((pParsedKey) && (strcmp (pParsedKey, pKey) == 0))
+                        {
+                            dbus_message_iter_next(&dict_i);
+                            dbus_message_iter_recurse(&dict_i, &variant_i);
+                            if (type == DBUS_TYPE_STRING)
+                            {
+                                dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
+                                printf("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
+                                strncpy (pValue, pParsedValueString, BD_NAME_LEN);
+                            }
+                            else if (type == DBUS_TYPE_UINT32)
+                            {
+                                unsigned int *ptr = (unsigned int*) pValue;
+                                dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedNumber);
+                                printf("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
+                                *ptr = parsedValueUnsignedNumber;
+                            }
+                            else /* As of now ints and bools are used. This function has to be extended for array if needed */
+                            {
+                                int *ptr = (int*) pValue;
+                                dbus_message_iter_get_basic(&variant_i, &parsedValueNumber);
+                                printf("Key is %s and the value is %d\n", pParsedKey, parsedValueNumber);
+                                *ptr = parsedValueNumber;
+                            }
+                            rc = enBTRCoreSuccess;
+                            break;
+                        }
+                    }
+
+                    if (!dbus_message_iter_next(&element_i))
+                        break;
+                }
+            }
+
+            if (dbus_error_is_set(&err))
+            {
+                printf("%s:%d - Some failure noticed and the err message is %s\n", __FUNCTION__, __LINE__, err.message);
+                dbus_error_free(&err);
+            }
+
+            dbus_message_unref(reply);
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_GetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, char* pAdapterName)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+    char name[BD_NAME_LEN + 1] = "";
+
+    memset (name, '\0', sizeof (name));
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pAdapterName))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+
+        rc = get_property (pConnHandle, pAdapterPath, "org.bluez.Adapter", "Name", DBUS_TYPE_STRING, name);
+        if (enBTRCoreSuccess == rc)
+        {
+            printf("%s:%d - Get value for org.bluez.Adapter.Name = %s\n", __FUNCTION__, __LINE__, name);
+            strcpy(pAdapterName, name);
+        }
+        else
+            printf("%s:%d - Get value for org.bluez.Adapter.Name failed\n", __FUNCTION__, __LINE__);
+    }
+
+  return rc;
+}
+
+enBTRCoreRet BTRCore_GetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char* pAdapterPower)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+    unsigned char powerStatus = 0;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pAdapterPower))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+
+        rc = get_property (pConnHandle, pAdapterPath, "org.bluez.Adapter", "powered", DBUS_TYPE_BOOLEAN, &powerStatus);
+        if (enBTRCoreSuccess == rc)
+        {
+            printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
+            *pAdapterPower = powerStatus;
+        }
+        else
+            printf("%s:%d - Get value for org.bluez.Adapter.powered failed\n", __FUNCTION__, __LINE__);
+    }
+
+  return rc;
+}
+
+enBTRCoreRet BTRCore_GetAdapterDiscoverableStatus (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char* pDiscoverable)
+{
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    DBusConnection* pConnHandle = NULL;
+    unsigned char discoverable = 0;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pDiscoverable))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+
+        rc = get_property (pConnHandle, pAdapterPath, "org.bluez.Adapter", "Discoverable", DBUS_TYPE_BOOLEAN, &discoverable);
+        if (enBTRCoreSuccess == rc)
+        {
+            printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
+            *pDiscoverable = discoverable;
+        }
+        else
+            printf("%s:%d - Get value for org.bluez.Adapter.powered failed\n", __FUNCTION__, __LINE__);
+    }
+
+  return rc;
+}
+
+
+enBTRCoreRet BTRCore_StartDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath)
+{
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    DBusConnection* pConnHandle = NULL;
+    char* pAgentPath = NULL;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pAdapterPath)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+        pAgentPath = pstlhBTRCore->agentPath;
+
+        if ((!pConnHandle) || (!pAgentPath))
+        {
+            printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+        {
+            btrCore_ClearScannedDevicesList();
+            rc = BtrCore_BTStartDiscovery(pConnHandle, pAdapterPath, pAgentPath);
+        }
+    }
+
+    return rc;
+}
+
+enBTRCoreRet BTRCore_StopDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath)
+{
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    DBusConnection* pConnHandle = NULL;
+    char* pAgentPath = NULL;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pAdapterPath)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+        pAgentPath = pstlhBTRCore->agentPath;
+
+        if ((!pConnHandle) || (!pAgentPath))
+        {
+            printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+            rc = BtrCore_BTStopDiscovery(pConnHandle, pAdapterPath, pAgentPath);
+    }
+    return rc;
+}
+
+const char* getScannedDeviceAddress (const char* pDeviceName)
+{
+    int loop = 0;
+    if (!pDeviceName)
+        return NULL;
+
+    if (gNumberOfScannedDevices)
+    {
+        for (loop = 0; loop < gNumberOfScannedDevices; loop++)
+        {
+            if (strcmp(pDeviceName, scanned_devices[loop].device_name) == 0)
+             return scanned_devices[loop].bd_address;
+        }
+    }
+
+    return NULL;
+}
+
+const char* getKnownDeviceAddress(const char* pDeviceName)
+{
+    int loop = 0;
+    if (!pDeviceName)
+        return NULL;
+
+    if (gNumberOfPairedDevices)
+    {
+        for (loop = 0; loop < gNumberOfPairedDevices; loop++)
+        {
+            if (strcmp(pDeviceName, known_devices[loop].device_name) == 0)
+             return known_devices[loop].bd_path;
+        }
+    }
+
+    return NULL;
+}
+
+enBTRCoreRet BTRCore_PairDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName)
+{
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    DBusConnection* pConnHandle = NULL;
+    char* pAgentPath = NULL;
+    /* We can enhance the BTRCore with passcode support later point in time */
+    const char *pCapabilities = "NoInputNoOutput";
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pDeviceName))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+        pAgentPath = pstlhBTRCore->agentPath;
+
+        if ((!pConnHandle) || (!pAgentPath))
+        {
+            printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+        {
+            const char *pDeviceAddress = getScannedDeviceAddress(pDeviceName);
+            if (pDeviceAddress)
+            {
+                if (create_paired_device(pConnHandle, pAdapterPath, pAgentPath, pCapabilities, pDeviceAddress) < 0)
+                {
+                    printf("%s:%d - Failed to pair a device\n", __FUNCTION__, __LINE__);
+                    rc = enBTRCorePairingFailed;
+                }
+                else
+                {
+                    rc = enBTRCoreSuccess;
+                    printf("%s:%d - Pairing Success\n", __FUNCTION__, __LINE__);
+
+                    /* Keep the list upto date */
+                    populateListOfPairedDevices (hBTRCore, pAdapterPath);
+                }
+            }
+            else
+            {
+                printf("%s:%d - Failed to find a instance in the scanned list\n", __FUNCTION__, __LINE__);
+                rc = enBTRCorePairingFailed;
+            }
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_GetListOfPairedDevices (tBTRCoreHandle hBTRCore, const char* pAdapterPath, stBTRCorePairedDevicesCount *pListOfDevices)
+{
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pListOfDevices))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else if (enBTRCoreSuccess ==  populateListOfPairedDevices (hBTRCore, pAdapterPath))
+    {
+        pListOfDevices->numberOfDevices = gNumberOfPairedDevices;
+        memcpy (pListOfDevices->devices, known_devices, sizeof (known_devices));
+        rc = enBTRCoreSuccess;
+        printf("%s:%d - Copied all the known devices\n", __FUNCTION__, __LINE__);
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_GetListOfScannedDevices (tBTRCoreHandle hBTRCore, const char* pAdapterPath, stBTRCoreScannedDevicesCount *pListOfScannedDevices)
+{
+    enBTRCoreRet rc = enBTRCoreInvalidArg;
+
+    if ((!hBTRCore) || (!pAdapterPath) || (!pListOfScannedDevices))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        memset (pListOfScannedDevices, 0, sizeof(stBTRCoreScannedDevicesCount));
+        memcpy (pListOfScannedDevices->devices, scanned_devices, sizeof (scanned_devices));
+        pListOfScannedDevices->numberOfDevices = gNumberOfScannedDevices;
+        printf("%s:%d - Copied all scanned devices\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreSuccess;
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName)
+{
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    DBusConnection* pConnHandle = NULL;
+    /* We can enhance the BTRCore with passcode support later point in time */
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pDeviceName))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+        {
+            if (0 == gNumberOfPairedDevices)
+            {
+                printf("%s:%d - Possibly the list is not populated\n", __FUNCTION__, __LINE__);
+                /* Keep the list upto date */
+                populateListOfPairedDevices (hBTRCore, pAdapterPath);
+            }
+
+            if (gNumberOfPairedDevices)
+            {
+                const char *pDeviceAddress = getKnownDeviceAddress(pDeviceName);
+                if (pDeviceAddress)
+                {
+                    if (0 != remove_paired_device(pConnHandle, pAdapterPath, pDeviceAddress))
+                    {
+                        printf("%s:%d - Failed to unpair a device\n", __FUNCTION__, __LINE__);
+                        rc = enBTRCorePairingFailed;
+                    }
+                    else
+                    {
+                        rc = enBTRCoreSuccess;
+                        printf("%s:%d - UnPairing Success\n", __FUNCTION__, __LINE__);
+
+                        /* Keep the list upto date */
+                        populateListOfPairedDevices (hBTRCore, pAdapterPath);
+                    }
+                }
+                else
+                {
+                    printf("%s:%d - Failed to find a instance in the paired devices list\n", __FUNCTION__, __LINE__);
+                    rc = enBTRCorePairingFailed;
+                }
+            }
+            else
+            {
+                printf("%s:%d - There is no device paried for this adapter\n", __FUNCTION__, __LINE__);
+                rc = enBTRCoreFailure;
+            }
+
+        }
+    }
+    return rc;
+}
+
+void BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRMgr_DeviceDiscoveryCallback cb)
+{
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+    }
+
+    if (cb_DeviceDiscovery)
+    {
+        cb_DeviceDiscovery = cb;
+        printf("%s:%d - Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+    }
+
+    return;
+}
+
+enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType)
+{
+    enBTRCoreRet rc = enBTRCoreFailure;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    DBusConnection* pConnHandle = NULL;
+    enBTDeviceType lenBTDeviceType = enBTDevUnknown;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if ((!pAdapterPath) || (!pDeviceName))
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+        {
+            if (0 == gNumberOfPairedDevices)
+            {
+                printf("%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
+                /* Keep the list upto date */
+                populateListOfPairedDevices (hBTRCore, pAdapterPath);
+            }
+
+            if (gNumberOfPairedDevices)
+            {
+                const char *pDeviceAddress = getKnownDeviceAddress(pDeviceName);
+                if (pDeviceAddress)
+                {
+                    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
+                    // before making the connect call
+                    switch (aenBTRCoreDevType)
+                    {
+                        case enBTRCoreSpeakers:
+                        case enBTRCoreHeadSet:
+                            lenBTDeviceType = enBTDevAudioSink;
+                            break;
+                        case enBTRCoreMobileAudioIn:
+                        case enBTRCorePCAudioIn:
+                            lenBTDeviceType = enBTDevAudioSource;
+                            break;
+                        case enBTRCoreUnknown:
+                        default:
+                            lenBTDeviceType = enBTDevUnknown;
+                            break;
+                    }
+                    if (0 == BtrCore_BTConnectDevice(pConnHandle, pDeviceAddress, lenBTDeviceType))
+                    {
+                        rc = enBTRCoreSuccess;
+                        printf("%s:%d - Connected to device Successfully. Lets start Play the audio\n", __FUNCTION__, __LINE__);
+                        /* TODO */
+                    }
+                    else
+                        printf("%s:%d - Connect to device failed\n", __FUNCTION__, __LINE__);
+                }
+                else
+                {
+                    printf("%s:%d - Failed to find a instance in the paired devices list\n", __FUNCTION__, __LINE__);
+                }
+            }
+            else
+            {
+                printf("%s:%d - There is no device paried for this adapter\n", __FUNCTION__, __LINE__);
+            }
+        }
+    }
+    return rc;
+}
+
+enBTRCoreRet BTRCore_DisconnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType)
+{
+    enBTRCoreRet rc = enBTRCoreFailure;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    DBusConnection* pConnHandle = NULL;
+    enBTDeviceType lenBTDeviceType = enBTDevUnknown;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pDeviceName)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        /* Get the handle */
+        pConnHandle = pstlhBTRCore->connHandle;
+
+        if (!pConnHandle)
+        {
+            printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+            rc = enBTRCoreNotInitialized;
+        }
+        else
+        {
+            if (gNumberOfPairedDevices)
+            {
+                const char *pDeviceAddress = getKnownDeviceAddress(pDeviceName);
+                if (pDeviceAddress)
+                {
+
+                    /* TODO */
+                    /* Stop the audio playback before disconnect */
+
+                    switch (aenBTRCoreDevType)
+                    {
+                        case enBTRCoreSpeakers:
+                        case enBTRCoreHeadSet:
+                            lenBTDeviceType = enBTDevAudioSink;
+                            break;
+                        case enBTRCoreMobileAudioIn:
+                        case enBTRCorePCAudioIn:
+                            lenBTDeviceType = enBTDevAudioSource;
+                            break;
+                        case enBTRCoreUnknown:
+                        default:
+                            lenBTDeviceType = enBTDevUnknown;
+                            break;
+                    }
+                    if (0 == BtrCore_BTDisconnectDevice(pConnHandle, pDeviceAddress, lenBTDeviceType))
+                    {
+                        rc = enBTRCoreSuccess;
+                        printf("%s:%d - DisConnected from device Successfully.\n", __FUNCTION__, __LINE__);
+                    }
+                    else
+                        printf("%s:%d - DisConnect from device failed\n", __FUNCTION__, __LINE__);
+                }
+                else
+                {
+                    printf("%s:%d - Failed to find a instance in the paired devices list\n", __FUNCTION__, __LINE__);
+                }
+            }
+            else
+            {
+                printf("%s:%d - There is no device paried for this adapter\n", __FUNCTION__, __LINE__);
+            }
+        }
+    }
+    return rc;
+}
+/* End of File */
