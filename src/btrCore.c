@@ -1813,7 +1813,7 @@ enBTRCoreRet BTRCore_GetListOfAdapters (tBTRCoreHandle hBTRCore, stBTRCoreListAd
             int num = -1;
 
             dbus_error_init(&err);
-            DBusMessage *reply = sendMethodCall(pConnHandle, "/", "org.bluez", "org.bluez.Manager", "GetProperties");
+            DBusMessage *reply = sendMethodCall(pConnHandle, "/", "org.bluez", "org.bluez.Manager", "ListAdapters");
             if (!reply)
             {
                 printf("%s:%d - org.bluez.Manager.GetProperties returned an error: '%s'\n", __FUNCTION__, __LINE__, err.message);
