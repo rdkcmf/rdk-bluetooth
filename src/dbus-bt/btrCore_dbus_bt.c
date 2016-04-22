@@ -376,6 +376,99 @@ BtrCore_BTGetAdapterPath (
 
 
 int
+BtrCore_BTSetAdapterProp (
+    void*           apBtConn,
+    const char*     apBtAdapter,
+    enBTAdapterProp aenBTAdapterProp,
+    void*           apvVal
+) {
+
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusMessageIter lDBusMsgIter;
+    DBusMessageIter lDBusMsgIterValue;
+    DBusError       lDBusErr;
+    int             lDBusType;
+    const char*     lDBusTypeAsString;
+    const char*     lDBusKey;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apvVal)
+        return -1;
+
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apBtAdapter,
+                                            "org.bluez.Adapter",
+                                            "SetProperty");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    switch (aenBTAdapterProp) {
+    case enBTAdPropName:
+        lDBusType = DBUS_TYPE_STRING;
+        lDBusKey  = "Name";
+        break;
+    case enBTAdPropPowered:
+        lDBusType = DBUS_TYPE_BOOLEAN;
+        lDBusKey  = "Powered";
+        break;
+    case enBTAdPropDiscoverable:
+        lDBusType = DBUS_TYPE_BOOLEAN;
+        lDBusKey  = "Discoverable";
+        break;
+    case enBTAdPropDiscoverableTimeOut:
+        lDBusType = DBUS_TYPE_UINT32;
+        lDBusKey  = "DiscoverableTimeout";
+        break;
+    case enBTAdPropUnknown:
+    default:
+        fprintf(stderr, "Invalid Adaptre Property\n");
+        return -1;
+    }
+
+    switch (lDBusType) {
+    case DBUS_TYPE_BOOLEAN:
+        lDBusTypeAsString = DBUS_TYPE_BOOLEAN_AS_STRING;
+        break;
+    case DBUS_TYPE_UINT32:
+        lDBusTypeAsString = DBUS_TYPE_UINT32_AS_STRING;
+        break;
+    case DBUS_TYPE_STRING:
+        lDBusTypeAsString = DBUS_TYPE_STRING_AS_STRING;
+        break;
+    default:
+        fprintf(stderr, "Invalid DBus Type\n");
+        return -1;
+    }
+
+    dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &lDBusKey);
+    dbus_message_iter_open_container(&lDBusMsgIter, DBUS_TYPE_VARIANT, lDBusTypeAsString, &lDBusMsgIterValue);
+        dbus_message_iter_append_basic(&lDBusMsgIterValue, lDBusType, apvVal);
+    dbus_message_iter_close_container(&lDBusMsgIter, &lDBusMsgIterValue);
+
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lpDBusReply) {
+        fprintf(stderr, "Reply Null\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    dbus_message_unref(lpDBusReply);
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
+
+int
 BtrCore_BTStartDiscovery (
     void*       apBtConn,
     const char* apBtAdapter,

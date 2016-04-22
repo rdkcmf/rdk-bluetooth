@@ -17,8 +17,6 @@
 
 
 
-static char *gBTRAdapterPath = NULL;
-
 static unsigned int gNumberOfScannedDevices = 0;
 static unsigned int gNumberOfPairedDevices = 0;
 static stBTRCoreScannedDevices  scanned_devices[BTRCORE_MAX_NUM_BT_DEVICES];//holds twenty scanned devices
@@ -31,6 +29,7 @@ static void btrCore_ClearScannedDevicesList (void);
 static DBusMessage* sendMethodCall (DBusConnection* conn, const char* objectpath, const char* busname, const char* interfacename, const char* methodname);
 static int remove_paired_device (DBusConnection* conn, const char* apBTRAdapterPath, const char* fullpath);
 static enBTRCoreRet populateListOfPairedDevices(tBTRCoreHandle hBTRCore, const char* pAdapterPath);
+
 /* Discovered Device notification */
 BTRMgr_DeviceDiscoveryCallback cb_DeviceDiscovery = NULL;
 
@@ -308,69 +307,6 @@ remove_paired_device (
     dbus_connection_flush(conn);
 
     return 0;
-}
-
-
-static int 
-set_property (
-    DBusConnection* conn, 
-    const char*     apBTRAdapterPath,
-    const char*     key, 
-    int             type, 
-    void*           val
-) {
-	DBusMessage *message, *reply;
-	DBusMessageIter array, value;
-	DBusError error;
-	const char *signature;
-
-	message = dbus_message_new_method_call( "org.bluez", 
-                                            apBTRAdapterPath,
-                                            "org.bluez.Adapter",
-                                            "SetProperty");
-
-	if (!message)
-		return -ENOMEM;
-
-	switch (type) {
-        case DBUS_TYPE_BOOLEAN:
-            signature = DBUS_TYPE_BOOLEAN_AS_STRING;
-            break;
-        case DBUS_TYPE_UINT32:
-            signature = DBUS_TYPE_UINT32_AS_STRING;
-            break;
-        case DBUS_TYPE_STRING:
-            signature = DBUS_TYPE_STRING_AS_STRING;
-            break;
-        default:
-            return -EILSEQ;
-	}
-
-	dbus_message_iter_init_append(message, &array);
-	dbus_message_iter_append_basic(&array, DBUS_TYPE_STRING, &key);
-	dbus_message_iter_open_container(&array, DBUS_TYPE_VARIANT, signature, &value);
-	dbus_message_iter_append_basic(&value, type, val);
-	dbus_message_iter_close_container(&array, &value);
-	dbus_error_init(&error);
-
-	reply = dbus_connection_send_with_reply_and_block(conn,	message, -1, &error);
-	dbus_message_unref(message);
-
-	if (!reply) {
-		if (dbus_error_is_set(&error) == TRUE) {
-			fprintf(stderr, "%s\n", error.message);
-			dbus_error_free(&error);
-		} 
-        else {
-			fprintf(stderr, "Failed to set property\n");
-        }
-
-		return -EIO;
-	}
-
-	dbus_message_unref(reply);
-//	BTRCore_LOG("Set property %s for %s\n", key, adapter);
-	return 0;
 }
 
 
@@ -894,9 +830,6 @@ BTRCore_Init (
 
 
     pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHandle, NULL); //mikek hard code to default adapter for now
-
-    gBTRAdapterPath = pstlhBTRCore->curAdapterPath;
-
     if (!pstlhBTRCore->curAdapterPath) {
         fprintf(stderr, "%s:%d:%s - Failed to get BT Adapter - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
@@ -999,13 +932,13 @@ BTRCore_StartDiscovery (
     btrCore_ClearScannedDevicesList();
 
 
-    if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHandle, gBTRAdapterPath, pstlhBTRCore->agentPath)) {
+    if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
         return enBTRCoreDiscoveryFailure;
     }
 
     sleep(pstStartDiscovery->duration); //TODO: Better to setup a timer which calls BTStopDiscovery
 
-    if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHandle, gBTRAdapterPath, pstlhBTRCore->agentPath)) {
+    if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
         return enBTRCoreDiscoveryFailure;
     }
 
@@ -1028,20 +961,20 @@ BTRCore_GetAdapter (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
 
-    if (gBTRAdapterPath) {
-        free(gBTRAdapterPath);
-        gBTRAdapterPath = NULL;
+    if (pstlhBTRCore->curAdapterPath) {
+        free(pstlhBTRCore->curAdapterPath);
+        pstlhBTRCore->curAdapterPath = NULL;
     }
 
-    gBTRAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHandle, NULL); //mikek hard code to default adapter for now
-    if (!gBTRAdapterPath) {
+    pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHandle, NULL); //mikek hard code to default adapter for now
+    if (!pstlhBTRCore->curAdapterPath) {
         fprintf(stderr, "Failed to get BT Adapter");
         return enBTRCoreInvalidAdapter;
     }
 
     if (pstGetAdapter) {
         pstGetAdapter->adapter_number   = 0; //hard code to default adapter for now
-        pstGetAdapter->pcAdapterPath    = gBTRAdapterPath;
+        pstGetAdapter->pcAdapterPath    = pstlhBTRCore->curAdapterPath;
         pstGetAdapter->pcAdapterDevName = NULL;
     }
 
@@ -1067,28 +1000,28 @@ BTRCore_SetAdapter (
     pathlen = strlen(pstlhBTRCore->curAdapterPath);
     switch (adapter_number) {
         case 0:
-            gBTRAdapterPath[pathlen-1]='0';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='0';
             break;
         case 1:
-            gBTRAdapterPath[pathlen-1]='1';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='1';
             break;
         case 2:
-            gBTRAdapterPath[pathlen-1]='2';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='2';
             break;
         case 3:
-            gBTRAdapterPath[pathlen-1]='3';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='3';
             break;
         case 4:
-            gBTRAdapterPath[pathlen-1]='4';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='4';
             break;
         case 5:
-            gBTRAdapterPath[pathlen-1]='5';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='5';
             break;
         default:
             printf("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
-            gBTRAdapterPath[pathlen-1]='0';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='0';
     }
-    printf("Now current adatper is %s\n",gBTRAdapterPath);
+    printf("Now current adatper is %s\n", pstlhBTRCore->curAdapterPath);
 
     return enBTRCoreSuccess;
 }
@@ -1100,40 +1033,44 @@ BTRCore_ListKnownDevices (
     stBTRCoreGetAdapter* pstGetAdapter
 ) {
     int pathlen; //temporary variable shoud be refactored away
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
     if (!hBTRCore) {
         fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreNotInitialized;
     }
 
-    //gBTRAdapterPath = get_adapter_path(gBTRConnHandle, pstGetAdapter->adapter_number);
-    pathlen = strlen(gBTRAdapterPath);
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+
+    pathlen = strlen(pstlhBTRCore->curAdapterPath);
 
     switch (pstGetAdapter->adapter_number) {
         case 0:
-            gBTRAdapterPath[pathlen-1]='0';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='0';
             break;
         case 1:
-            gBTRAdapterPath[pathlen-1]='1';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='1';
             break;
         case 2:
-            gBTRAdapterPath[pathlen-1]='2';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='2';
             break;
         case 3:
-            gBTRAdapterPath[pathlen-1]='3';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='3';
             break;
         case 4:
-            gBTRAdapterPath[pathlen-1]='4';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='4';
             break;
         case 5:
-            gBTRAdapterPath[pathlen-1]='5';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='5';
             break;
         default:
             printf("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
-            gBTRAdapterPath[pathlen-1]='0';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='0';
     }
 
-    printf("adapter path is %s\n",gBTRAdapterPath);
-    return populateListOfPairedDevices (hBTRCore, gBTRAdapterPath);
+    printf("adapter path is %s\n", pstlhBTRCore->curAdapterPath);
+    return populateListOfPairedDevices (hBTRCore, pstlhBTRCore->curAdapterPath);
 }
 
 enBTRCoreRet populateListOfPairedDevices(tBTRCoreHandle hBTRCore, const char* pAdapterPath)
@@ -1270,7 +1207,7 @@ BTRCore_ForgetDevice (
 
     printf(" We will remove %s\n",known_devices[aBTRCoreDevId].bd_path);
 
-    remove_paired_device(pstlhBTRCore->connHandle, gBTRAdapterPath, pstKnownDevice->bd_path);
+    remove_paired_device(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstKnownDevice->bd_path);
 
     return enBTRCoreSuccess;
 }
@@ -1326,34 +1263,33 @@ BTRCore_ShowFoundDevices (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    //gBTRAdapterPath = get_adapter_path(gBTRConnHandle, pstGetAdapter->adapter_number);
     pathlen = strlen(pstlhBTRCore->curAdapterPath);
 
     switch (pstGetAdapter->adapter_number) {
         case 0:
-            gBTRAdapterPath[pathlen-1]='0';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='0';
             break;
         case 1:
-            gBTRAdapterPath[pathlen-1]='1';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='1';
             break;
         case 2:
-            gBTRAdapterPath[pathlen-1]='2';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='2';
             break;
         case 3:
-            gBTRAdapterPath[pathlen-1]='3';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='3';
             break;
         case 4:
-            gBTRAdapterPath[pathlen-1]='4';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='4';
             break;
         case 5:
-            gBTRAdapterPath[pathlen-1]='5';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='5';
             break;
         default:
             printf("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
-            gBTRAdapterPath[pathlen-1]='0';
+            pstlhBTRCore->curAdapterPath[pathlen-1]='0';
     }
 
-    printf("adapter path is %s\n",gBTRAdapterPath);
+    printf("adapter path is %s\n", pstlhBTRCore->curAdapterPath);
 
 
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
@@ -1389,7 +1325,7 @@ BTRCore_PairDevice (
     printf(" We will pair %s\n",scanned_devices[aBTRCoreDevId].device_name);
     printf(" address %s\n",scanned_devices[aBTRCoreDevId].bd_address);
 
-    if (create_paired_device(pstlhBTRCore->connHandle, gBTRAdapterPath, pstlhBTRCore->agentPath, capabilities, pstScannedDevice->bd_address) < 0) {
+    if (create_paired_device(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities, pstScannedDevice->bd_address) < 0) {
         BTRCore_LOG("pairing ERROR occurred\n");
         return enBTRCorePairingFailed;
     }
@@ -1418,7 +1354,7 @@ BTRCore_FindDevice (
     printf(" We will try to find %s\n",scanned_devices[aBTRCoreDevId].device_name);
     printf(" address %s\n",scanned_devices[aBTRCoreDevId].bd_address);
 
-    if (find_paired_device(pstlhBTRCore->connHandle, gBTRAdapterPath, pstScannedDevice->bd_address) < 0) {
+    if (find_paired_device(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstScannedDevice->bd_address) < 0) {
        // BTRCore_LOG("device not found\n");
         return enBTRCoreFailure;
     }
@@ -1471,6 +1407,7 @@ BTRCore_ConnectDevice (
 
     return enBTRCoreSuccess;
 }
+
 
 enBTRCoreRet 
 BTRCore_DisconnectDevice (
@@ -1673,7 +1610,12 @@ BTRCore_EnableAdapter (
 
     pstGetAdapter->enable = TRUE;//does this even mean anything?
 
-    set_property(pstlhBTRCore->connHandle, gBTRAdapterPath, "Powered", DBUS_TYPE_BOOLEAN, &powered);
+
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
+        BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
+        return enBTRCoreFailure;
+    }
+
     return enBTRCoreSuccess;
 }
 
@@ -1699,7 +1641,13 @@ BTRCore_DisableAdapter (
 
 
     pstGetAdapter->enable = FALSE;
-    set_property(pstlhBTRCore->connHandle, gBTRAdapterPath, "Powered", DBUS_TYPE_BOOLEAN, &powered);
+
+
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
+        BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
+        return enBTRCoreFailure;
+    }
+
     return enBTRCoreSuccess;
 }
 
@@ -1721,7 +1669,11 @@ BTRCore_SetDiscoverableTimeout (
 
     timeout = pstGetAdapter->DiscoverableTimeout;
 
-    set_property(pstlhBTRCore->connHandle, gBTRAdapterPath, "DiscoverableTimeout", DBUS_TYPE_UINT32, &timeout);
+
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &timeout)) {
+        BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
+        return enBTRCoreFailure;
+    }
 
     return enBTRCoreSuccess;
 }
@@ -1745,7 +1697,11 @@ BTRCore_SetDiscoverable (
 
     discoverable = pstGetAdapter->discoverable;
 
-    set_property(pstlhBTRCore->connHandle, gBTRAdapterPath, "Discoverable", DBUS_TYPE_BOOLEAN, &discoverable);
+
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
+        BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
+        return enBTRCoreFailure;
+    }
 
     return enBTRCoreSuccess;
 }
@@ -1777,11 +1733,14 @@ BTRCore_SetAdapterDeviceName (
 		pstGetAdapter->pcAdapterDevName = NULL;
 	}
 
-  pstGetAdapter->pcAdapterDevName = strdup(apcAdapterDeviceName); //TODO: Free this memory
+    pstGetAdapter->pcAdapterDevName = strdup(apcAdapterDeviceName); //TODO: Free this memory
 
-  set_property(pstlhBTRCore->connHandle, gBTRAdapterPath, "Name", DBUS_TYPE_STRING, &(pstGetAdapter->pcAdapterDevName));
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropName, &(pstGetAdapter->pcAdapterDevName))) {
+        BTRCore_LOG("Set Adapter Property enBTAdPropName - FAILED\n");
+        return enBTRCoreFailure;
+    }
 
-  return enBTRCoreSuccess;
+    return enBTRCoreSuccess;
 }
 
 enBTRCoreRet BTRCore_GetListOfAdapters (tBTRCoreHandle hBTRCore, stBTRCoreListAdapters* pstListAdapters)
@@ -1852,7 +1811,6 @@ enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapt
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
-    DBusConnection* pConnHandle = NULL;
     char name[BD_NAME_LEN + 1] = "";
 
     memset (name, '\0', sizeof (name));
@@ -1864,19 +1822,11 @@ enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapt
     }
     else
     {
-        /* Get the handle */
-        pConnHandle = pstlhBTRCore->connHandle;
-
         strncpy(name, pAdapterName, BD_NAME_LEN);
-        if (!pConnHandle)
-        {
-            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
-            rc = enBTRCoreNotInitialized;
-        }
-        else if (0 != set_property(pConnHandle, pAdapterPath, "Name", DBUS_TYPE_STRING, name))
-        {
+
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropName, &name)) {
+            BTRCore_LOG("Set Adapter Property enBTAdPropName - FAILED\n");
             rc = enBTRCoreFailure;
-            printf("%s:%d - Set value for org.bluez.Adapter.Name failed\n", __FUNCTION__, __LINE__);
         }
         else
         {
@@ -1891,7 +1841,6 @@ enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
-    DBusConnection* pConnHandle = NULL;
 
     if (!hBTRCore)
     {
@@ -1905,18 +1854,9 @@ enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
     }
     else
     {
-        /* Get the handle */
-        pConnHandle = pstlhBTRCore->connHandle;
-
-        if (!pConnHandle)
-        {
-            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
-            rc = enBTRCoreNotInitialized;
-        }
-        else if (0 != set_property(pConnHandle, pAdapterPath, "Powered", DBUS_TYPE_BOOLEAN, &powerStatus))
-        {
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powerStatus)) {
+            BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
             rc = enBTRCoreFailure;
-            printf("%s:%d - Set value for org.bluez.Adapter.Powered failed\n", __FUNCTION__, __LINE__);
         }
         else
         {
@@ -1931,7 +1871,6 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, con
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
-    DBusConnection* pConnHandle = NULL;
     U32 givenTimeout = (U32) timeout;
 
     if (!hBTRCore)
@@ -1946,18 +1885,9 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, con
     }
     else
     {
-        /* Get the handle */
-        pConnHandle = pstlhBTRCore->connHandle;
-
-        if (!pConnHandle)
-        {
-            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
-            rc = enBTRCoreNotInitialized;
-        }
-        else if (0 != set_property(pConnHandle, pAdapterPath, "DiscoverableTimeout", DBUS_TYPE_UINT32, &givenTimeout))
-        {
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &givenTimeout)) {
+            BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
             rc = enBTRCoreFailure;
-            printf("%s:%d - Set value for org.bluez.Adapter.DiscoverableTimeout failed\n", __FUNCTION__, __LINE__);
         }
         else
         {
@@ -1972,7 +1902,6 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
-    DBusConnection* pConnHandle = NULL;
 
     if (!hBTRCore)
     {
@@ -1986,18 +1915,9 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char
     }
     else
     {
-        /* Get the handle */
-        pConnHandle = pstlhBTRCore->connHandle;
-
-        if (!pConnHandle)
-        {
-            printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
-            rc = enBTRCoreNotInitialized;
-        }
-        else if (0 != set_property(pConnHandle, pAdapterPath, "Discoverable", DBUS_TYPE_UINT32, &discoverable))
-        {
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
+            BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
             rc = enBTRCoreFailure;
-            printf("%s:%d - Set value for org.bluez.Adapter.Discoverable failed\n", __FUNCTION__, __LINE__);
         }
         else
         {

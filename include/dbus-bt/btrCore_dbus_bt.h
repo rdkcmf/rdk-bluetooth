@@ -14,6 +14,14 @@ typedef enum _enBTDeviceType {
     enBTDevUnknown
 } enBTDeviceType;
 
+typedef enum _enBTAdapterProp {
+    enBTAdPropName,
+    enBTAdPropPowered,
+    enBTAdPropDiscoverable,
+    enBTAdPropDiscoverableTimeOut,
+    enBTAdPropUnknown
+} enBTAdapterProp;
+
 
 /*
  * Callbacks
@@ -27,6 +35,7 @@ void* BtrCore_BTInitGetConnection (void);
 char* BtrCore_BTGetAgentPath (void);
 char* BtrCore_BTGetDefaultAdapterPath (void* apBtConn);
 char* BtrCore_BTGetAdapterPath (void* apBtConn, const char* apBtAdapter);
+int   BtrCore_BTSetAdapterProp (void* apBtConn, const char* apBtAdapter, enBTAdapterProp aenBTAdapterProp, void* apvVal);
 int   BtrCore_BTStartDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTStopDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTConnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType enBTDevType);
