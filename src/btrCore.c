@@ -1811,9 +1811,6 @@ enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapt
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
-    char name[BD_NAME_LEN + 1] = "";
-
-    memset (name, '\0', sizeof (name));
 
     if ((!hBTRCore) || (!pAdapterPath) ||(!pAdapterName))
     {
@@ -1822,9 +1819,8 @@ enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapt
     }
     else
     {
-        strncpy(name, pAdapterName, BD_NAME_LEN);
 
-        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropName, &name)) {
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropName, &pAdapterName)) {
             BTRCore_LOG("Set Adapter Property enBTAdPropName - FAILED\n");
             rc = enBTRCoreFailure;
         }
@@ -1841,6 +1837,7 @@ enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
+    int power = powerStatus;
 
     if (!hBTRCore)
     {
@@ -1854,7 +1851,7 @@ enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
     }
     else
     {
-        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powerStatus)) {
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &power)) {
             BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
             rc = enBTRCoreFailure;
         }
@@ -1902,6 +1899,7 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char
 {
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
+    int isDiscoverable = (int) discoverable;
 
     if (!hBTRCore)
     {
@@ -1915,7 +1913,7 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char
     }
     else
     {
-        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
+        if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &isDiscoverable)) {
             BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
             rc = enBTRCoreFailure;
         }
@@ -2074,7 +2072,7 @@ enBTRCoreRet BTRCore_GetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
     DBusConnection* pConnHandle = NULL;
-    unsigned char powerStatus = 0;
+    int powerStatus = 0;
 
     if (!hBTRCore)
     {
@@ -2097,11 +2095,11 @@ enBTRCoreRet BTRCore_GetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
             rc = enBTRCoreNotInitialized;
         }
 
-        rc = get_property (pConnHandle, pAdapterPath, "org.bluez.Adapter", "powered", DBUS_TYPE_BOOLEAN, &powerStatus);
+        rc = get_property (pConnHandle, pAdapterPath, "org.bluez.Adapter", "Powered", DBUS_TYPE_BOOLEAN, &powerStatus);
         if (enBTRCoreSuccess == rc)
         {
             printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
-            *pAdapterPower = powerStatus;
+            *pAdapterPower = (unsigned char) powerStatus;
         }
         else
             printf("%s:%d - Get value for org.bluez.Adapter.powered failed\n", __FUNCTION__, __LINE__);
@@ -2115,7 +2113,7 @@ enBTRCoreRet BTRCore_GetAdapterDiscoverableStatus (tBTRCoreHandle hBTRCore, cons
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet rc = enBTRCoreNotInitialized;
     DBusConnection* pConnHandle = NULL;
-    unsigned char discoverable = 0;
+    int discoverable = 0;
 
     if (!hBTRCore)
     {
@@ -2142,7 +2140,7 @@ enBTRCoreRet BTRCore_GetAdapterDiscoverableStatus (tBTRCoreHandle hBTRCore, cons
         if (enBTRCoreSuccess == rc)
         {
             printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
-            *pDiscoverable = discoverable;
+            *pDiscoverable = (unsigned char) discoverable;
         }
         else
             printf("%s:%d - Get value for org.bluez.Adapter.powered failed\n", __FUNCTION__, __LINE__);
@@ -2183,7 +2181,10 @@ enBTRCoreRet BTRCore_StartDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* 
         else
         {
             btrCore_ClearScannedDevicesList();
-            rc = BtrCore_BTStartDiscovery(pConnHandle, pAdapterPath, pAgentPath);
+            if (0 == BtrCore_BTStartDiscovery(pConnHandle, pAdapterPath, pAgentPath))
+                rc = enBTRCoreSuccess;
+            else
+                printf("%s:%d - Failed to Start\n", __FUNCTION__, __LINE__);
         }
     }
 
@@ -2219,7 +2220,12 @@ enBTRCoreRet BTRCore_StopDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* p
             rc = enBTRCoreNotInitialized;
         }
         else
-            rc = BtrCore_BTStopDiscovery(pConnHandle, pAdapterPath, pAgentPath);
+        {
+            if (0 ==  BtrCore_BTStopDiscovery(pConnHandle, pAdapterPath, pAgentPath))
+                rc = enBTRCoreSuccess;
+            else
+                printf("%s:%d - Failed to Stop\n", __FUNCTION__, __LINE__);
+        }
     }
     return rc;
 }
@@ -2442,7 +2448,7 @@ void BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRMgr_DeviceD
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
     }
 
-    if (cb_DeviceDiscovery)
+    if (!cb_DeviceDiscovery)
     {
         cb_DeviceDiscovery = cb;
         printf("%s:%d - Callback Registered Successfully\n", __FUNCTION__, __LINE__);
