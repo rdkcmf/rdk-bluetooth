@@ -79,18 +79,16 @@ typedef struct _stBTRCoreDevStateCB {
 
 void (*p_Status_callback) ();
 
-/*BT getAdapter*/
-typedef struct _stBTRCoreGetAdapter {
+/*BT Adapter*/
+typedef struct _stBTRCoreAdapter {
     U8      adapter_number;
     char*   pcAdapterPath;
     char*   pcAdapterDevName;
     BOOLEAN enable;
     BOOLEAN discoverable;
-    BOOLEAN connectable;
-    BOOLEAN first_available; /*search for first available BT adapater*/
+    BOOLEAN bFirstAvailable; /*search for first available BT adapater*/
     U32 DiscoverableTimeout;
-    int (*p_callback) ();//delete this later TODO
-} stBTRCoreGetAdapter;
+} stBTRCoreAdapter;
 
 /*BT find service*/
 typedef struct _stBTRCoreFindService {
@@ -157,25 +155,25 @@ enBTRCoreRet BTRCore_GetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
 enBTRCoreRet BTRCore_GetAdapters(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapters* pstGetAdapters);
 
 /*BTRCore_GetAdapter get info about a specific adatper*/
-enBTRCoreRet BTRCore_GetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_GetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /*BTRCore_SetAdapter Set Current Bluetotth Adapter to use*/
 enBTRCoreRet BTRCore_SetAdapter(tBTRCoreHandle hBTRCore, int adapter_number);
 
 /* BTRCore_EnableAdapter enable specific adapter*/
-enBTRCoreRet BTRCore_EnableAdapter(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_EnableAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /* BTRCore_DisableAdapter disable specific adapter*/
-enBTRCoreRet BTRCore_DisableAdapter(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_DisableAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /* BTRCore_SetDiscoverable set adapter as discoverable or not discoverable*/
-enBTRCoreRet BTRCore_SetDiscoverable(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_SetDiscoverable(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /* BTRCore_SetAdapterDiscoverable set adapter as discoverable or not discoverable*/
 enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char discoverable);
 
 /* BTRCore_SetDiscoverableTimeout set how long the adapter is discoverable*/
-enBTRCoreRet BTRCore_SetDiscoverableTimeout(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_SetDiscoverableTimeout(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /* BTRCore_SetAdapterDiscoverableTimeout set how long the adapter is discoverable*/
 enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned short timeout);
@@ -184,7 +182,7 @@ enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, con
 enBTRCoreRet BTRCore_GetAdapterDiscoverableStatus (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char* pDiscoverable);
 
 /* BTRCore_SetAdapterDeviceName set friendly name of BT adapter*/
-enBTRCoreRet BTRCore_SetAdapterDeviceName(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter, char* apcAdapterDeviceName);
+enBTRCoreRet BTRCore_SetAdapterDeviceName(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter, char* apcAdapterDeviceName);
 
 /* BTRCore_SetAdapterName sets friendly name of BT adapter*/
 enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pAdapterName);
@@ -193,10 +191,10 @@ enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapt
 enBTRCoreRet BTRCore_GetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, char* pAdapterName);
 
 /* BTRCore_ResetAdapter reset specific adapter*/
-enBTRCoreRet BTRCore_ResetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_ResetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /*BTRCore_ConfigureAdapter... set a particular attribute for the adapter*/
-enBTRCoreRet BTRCore_ConfigureAdapter(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_ConfigureAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /* BTRCore_StartDiscovery - start the discovery process*/
 enBTRCoreRet BTRCore_StartDiscovery(tBTRCoreHandle hBTRCore, stBTRCoreStartDiscovery* pstStartDiscovery);
@@ -223,7 +221,7 @@ enBTRCoreRet BTRCore_DiscoverServices(tBTRCoreHandle hBTRCore, stBTRCoreFindServ
 enBTRCoreRet BTRCore_AdvertiseService(tBTRCoreHandle hBTRCore, stBTRCoreAdvertiseService* pstAdvertiseService);
 
 /*BTRCore_ShowFoundDevices - Utility function to display Devices found on a Bluetooth Adapter */
-enBTRCoreRet BTRCore_ShowFoundDevices(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter);
+enBTRCoreRet BTRCore_ShowFoundDevices(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /*BTRCore_PairDevice*/
 enBTRCoreRet BTRCore_PairDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
@@ -253,6 +251,9 @@ enBTRCoreRet BTRCore_DisconnectDeviceByName (tBTRCoreHandle hBTRCore, const char
 enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
                                             int* aidataReadMTU, int* aidataWriteMTU); //TODO: Change to a unique device Identifier
 
+/* BTRCore_GetDeviceDataPath */
+enBTRCoreRet BTRCore_GetDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName, int* pDeviceFD, int* pDeviceReadMTU, int* pDeviceWriteMTU);
+
 /*BTRCore_ReleaseDeviceDataPath*/
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
@@ -263,7 +264,7 @@ enBTRCoreRet BTRCore_ForgetDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCor
 enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName);
 
 /*BTRCore_ListKnownDevices*/
-enBTRCoreRet BTRCore_ListKnownDevices(tBTRCoreHandle hBTRCore, stBTRCoreGetAdapter* pstGetAdapter); /*- list previously Paired Devices*/
+enBTRCoreRet BTRCore_ListKnownDevices(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter); /*- list previously Paired Devices*/
 
 /*BTRCore_FindService - confirm if a given service exists on a device*/
 enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
