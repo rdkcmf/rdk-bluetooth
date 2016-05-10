@@ -2656,6 +2656,7 @@ enBTRCoreRet BTRCore_GetDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pAd
                     *pDeviceFD = liDataPath;
                     *pDeviceReadMTU = lidataReadMTU;
                     *pDeviceWriteMTU = lidataWriteMTU;
+                    rc = enBTRCoreSuccess;
                 }
             }
             else
@@ -2667,6 +2668,49 @@ enBTRCoreRet BTRCore_GetDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pAd
         {
             printf("%s:%d - There is no device paried for this adapter\n", __FUNCTION__, __LINE__);
         }
+    }
+
+    return rc;
+}
+
+
+enBTRCoreRet BTRCore_FreeDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pDeviceName)
+{
+    enBTRCoreRet rc = enBTRCoreFailure;
+    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (!hBTRCore)
+    {
+        printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreNotInitialized;
+    }
+    else if (!pDeviceName)
+    {
+        printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
+        rc = enBTRCoreInvalidArg;
+    }
+    else
+    {
+        if (gNumberOfPairedDevices)
+        {
+            const char *pDeviceAddress = getKnownDeviceAddress(pDeviceName);
+            if (pDeviceAddress)
+            {
+                if(enBTRCoreSuccess != BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->connHandle, pDeviceAddress))
+                {
+                    BTRCore_LOG("AVMedia_ReleaseDataPath ERROR occurred\n");
+                }
+                else
+                {
+                    BTRCore_LOG("AVMedia_ReleaseDataPath Success\n");
+                    rc = enBTRCoreSuccess;
+                }
+            }
+            else
+                BTRCore_LOG("Given device is Not found\n");
+        }
+        else
+            BTRCore_LOG("No device is found\n");
     }
 
     return rc;

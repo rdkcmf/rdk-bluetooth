@@ -257,6 +257,9 @@ enBTRCoreRet BTRCore_GetDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pAd
 /*BTRCore_ReleaseDeviceDataPath*/
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
+/* BTRCore_FreeDeviceDataPath */
+enBTRCoreRet BTRCore_FreeDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pDeviceName);
+
 /*BTRCore_ForgetDevice*/
 enBTRCoreRet BTRCore_ForgetDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
