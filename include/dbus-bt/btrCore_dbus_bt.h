@@ -27,7 +27,7 @@ typedef enum _enBTAdapterProp {
  * Callbacks
  */
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps);
-typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath);
+typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps);
 
 
 /* Interfaces */

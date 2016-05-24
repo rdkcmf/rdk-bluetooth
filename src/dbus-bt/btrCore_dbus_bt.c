@@ -198,7 +198,7 @@ btrCore_BTMediaEndpointSetConfiguration (
     gpcDevTransportPath = strdup(lDevTransportPath);
 
     if (gfpcBTransportPathMedia) {
-        if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath))) {
+        if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, config))) {
             fprintf(stderr, "Stored - Transport Path 0x%8x:%s\n", (unsigned int)lStoredDevTransportPath, lStoredDevTransportPath);
         }
     }
@@ -229,7 +229,7 @@ btrCore_BTMediaEndpointClearConfiguration (
     }
 
     if (gfpcBTransportPathMedia) {
-        if(!(lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath))) {
+        if(!(lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, NULL))) {
             fprintf(stderr, "Cleared - Transport Path %s\n", lDevTransportPath);
         }
     }

@@ -37,7 +37,7 @@ static char*        gpcAVMediaTransportPath = NULL;
 
 /* Callbacks */
 static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps);
-static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath);
+static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath, void* apBtMediaCaps);
 
 
 //////////////////
@@ -246,7 +246,7 @@ btrCore_AVMedia_NegotiateMedia_cb (
     a2dp_sbc_t* apBtMediaSBCCaps = NULL;
     a2dp_sbc_t  lstBTMediaSBCConfig;
 
-   if (!apBtMediaCaps) {
+    if (!apBtMediaCaps) {
         fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: Invalid input MT Media Capabilities\n");
         return NULL;
     } 
@@ -339,7 +339,8 @@ btrCore_AVMedia_NegotiateMedia_cb (
 
 static const char*
 btrCore_AVMedia_TransportPath_cb (
-    const char* apBtMediaTransportPath
+    const char* apBtMediaTransportPath,
+    void*       apBtMediaCaps
 ) {
     if (!apBtMediaTransportPath) {
         fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Invalid transport path\n");
@@ -356,6 +357,48 @@ btrCore_AVMedia_TransportPath_cb (
     }
     else {
         gpcAVMediaTransportPath = strdup(apBtMediaTransportPath);
+    }
+
+    if (apBtMediaCaps) {
+        a2dp_sbc_t* apBtMediaSBCCaps = NULL;
+        a2dp_sbc_t  lstBTMediaSBCConfig;
+
+        apBtMediaSBCCaps = (a2dp_sbc_t*)apBtMediaCaps;
+
+        lstBTMediaSBCConfig.channel_mode        =   apBtMediaSBCCaps->channel_mode;
+        lstBTMediaSBCConfig.frequency           =   apBtMediaSBCCaps->frequency;
+        lstBTMediaSBCConfig.allocation_method   =   apBtMediaSBCCaps->allocation_method;
+        lstBTMediaSBCConfig.subbands            =   apBtMediaSBCCaps->subbands;
+        lstBTMediaSBCConfig.block_length        =   apBtMediaSBCCaps->block_length;
+        lstBTMediaSBCConfig.min_bitpool         =   apBtMediaSBCCaps->min_bitpool;
+        lstBTMediaSBCConfig.max_bitpool         =   apBtMediaSBCCaps->max_bitpool;
+
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Set Configuration\n");
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
+        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
+
+        //TODO: Mutex protect this
+        {
+            gpBTMediaSBCConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
+            gpBTMediaSBCConfig->frequency           =  lstBTMediaSBCConfig.frequency;
+            gpBTMediaSBCConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
+            gpBTMediaSBCConfig->subbands            =  lstBTMediaSBCConfig.subbands;
+            gpBTMediaSBCConfig->block_length        =  lstBTMediaSBCConfig.block_length;
+            gpBTMediaSBCConfig->min_bitpool         =  lstBTMediaSBCConfig.min_bitpool;
+            gpBTMediaSBCConfig->max_bitpool         =  lstBTMediaSBCConfig.max_bitpool;
+        }
+    }
+    else {
+        //TODO: Mutex protect this
+        if (gpBTMediaSBCConfig) {
+            free(gpBTMediaSBCConfig);
+            gpBTMediaSBCConfig = NULL;
+        }
     }
 
     return gpcAVMediaTransportPath;
