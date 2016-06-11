@@ -77,6 +77,7 @@ BTRCore_AVMedia_Init (
         return enBTRCoreInitFailure;
 
     //TODO: Mutex protect this
+    memcpy(gpBTMediaSBCConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
     gpcAVMediaTransportPath = NULL;
 
     lBtAVMediaRegisterRet = BtrCore_BTRegisterMedia(apBtConn,
@@ -323,7 +324,7 @@ btrCore_AVMedia_NegotiateMedia_cb (
     fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
     //TODO: Mutex protect this
-    {
+    if (gpBTMediaSBCConfig) {
         gpBTMediaSBCConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
         gpBTMediaSBCConfig->frequency           =  lstBTMediaSBCConfig.frequency;
         gpBTMediaSBCConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
@@ -383,7 +384,7 @@ btrCore_AVMedia_TransportPath_cb (
         fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
         //TODO: Mutex protect this
-        {
+        if (gpBTMediaSBCConfig) {
             gpBTMediaSBCConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
             gpBTMediaSBCConfig->frequency           =  lstBTMediaSBCConfig.frequency;
             gpBTMediaSBCConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
@@ -394,10 +395,22 @@ btrCore_AVMedia_TransportPath_cb (
         }
     }
     else {
+        a2dp_sbc_t lstBtA2dpCapabilities;
+
+        lstBtA2dpCapabilities.channel_mode       = BT_A2DP_CHANNEL_MODE_MONO | BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
+                                                   BT_A2DP_CHANNEL_MODE_STEREO | BT_A2DP_CHANNEL_MODE_JOINT_STEREO;
+        lstBtA2dpCapabilities.frequency          = BT_SBC_SAMPLING_FREQ_16000 | BT_SBC_SAMPLING_FREQ_32000 |
+                                                   BT_SBC_SAMPLING_FREQ_44100 | BT_SBC_SAMPLING_FREQ_48000;
+        lstBtA2dpCapabilities.allocation_method  = BT_A2DP_ALLOCATION_SNR | BT_A2DP_ALLOCATION_LOUDNESS;
+        lstBtA2dpCapabilities.subbands           = BT_A2DP_SUBBANDS_4 | BT_A2DP_SUBBANDS_8;
+        lstBtA2dpCapabilities.block_length       = BT_A2DP_BLOCK_LENGTH_4 | BT_A2DP_BLOCK_LENGTH_8 |
+                                                   BT_A2DP_BLOCK_LENGTH_12 | BT_A2DP_BLOCK_LENGTH_16;
+        lstBtA2dpCapabilities.min_bitpool        = MIN_BITPOOL;
+        lstBtA2dpCapabilities.max_bitpool        = MAX_BITPOOL;
+
         //TODO: Mutex protect this
         if (gpBTMediaSBCConfig) {
-            free(gpBTMediaSBCConfig);
-            gpBTMediaSBCConfig = NULL;
+            memcpy(gpBTMediaSBCConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
         }
     }
 

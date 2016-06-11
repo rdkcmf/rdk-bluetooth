@@ -227,6 +227,7 @@ enBTRCoreRet BTRCore_ShowFoundDevices(tBTRCoreHandle hBTRCore, stBTRCoreAdapter*
 enBTRCoreRet BTRCore_PairDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
 /* BTRCore_PairDeviceByName */
+// TODO: Remove this interface in the near future as btrCore will not support ByName Ops.
 enBTRCoreRet BTRCore_PairDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName);
 
 /* BTRCore_GetListOfPairedDevices - gets the paired devices list */
@@ -239,12 +240,14 @@ enBTRCoreRet BTRCore_FindDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreD
 enBTRCoreRet BTRCore_ConnectDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* BTRCore_ConnectDeviceByName */
+// TODO: Remove this interface in the near future as btrCore will not support ByName Ops.
 enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType);
 
 /*BTRCore_DisconnectDevice*/
 enBTRCoreRet BTRCore_DisconnectDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* BTRCore_DisconnectDeviceByName */
+// TODO: Remove this interface in the near future as btrCore will not support ByName Ops.
 enBTRCoreRet BTRCore_DisconnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType);
 
 /*BTRCore_AcquireDeviceDataPath*/
@@ -252,18 +255,21 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
                                             int* aidataReadMTU, int* aidataWriteMTU); //TODO: Change to a unique device Identifier
 
 /* BTRCore_GetDeviceDataPath */
+// TODO: Remove this interface in the near future as btrCore will not support ByName Ops.
 enBTRCoreRet BTRCore_GetDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName, int* pDeviceFD, int* pDeviceReadMTU, int* pDeviceWriteMTU);
 
 /*BTRCore_ReleaseDeviceDataPath*/
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* BTRCore_FreeDeviceDataPath */
+// TODO: Remove this interface in the near future as btrCore will not support ByName Ops.
 enBTRCoreRet BTRCore_FreeDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pDeviceName);
 
 /*BTRCore_ForgetDevice*/
 enBTRCoreRet BTRCore_ForgetDevice(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
 /* BTRCore_UnPairDeviceByName is similar to BTRCore_ForgetDevice */
+// TODO: Remove this interface in the near future as btrCore will not support ByName Ops.
 enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName);
 
 /*BTRCore_ListKnownDevices*/
