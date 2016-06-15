@@ -44,9 +44,10 @@ typedef struct _stBTRCoreHdl {
 
 
 static void btrCore_InitDataSt (stBTRCoreHdl* apsthBTRCore);
+static tBTRCoreDevHandle generateUniqueHandle (const char* pDeviceAddress);
 static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
-static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, const char* pDeviceName);
-static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, const char* pDeviceName);
+static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevHandle handle);
+static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevHandle handle);
 static int btrCore_ParseDevice (stBTRCoreHdl* apsthBTRCore, DBusMessage* apDBusMsg);
 static int btrCore_ParsePropChange (stBTRCoreHdl* apsthBTRCore, DBusMessage* apDBusMsg); 
 
@@ -64,6 +65,7 @@ btrCore_InitDataSt (
 
     /* Scanned Devices */
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        apsthBTRCore->stScannedDevicesArr[i].device_handle = 0;
         memset (apsthBTRCore->stScannedDevicesArr[i].bd_address, '\0', sizeof(BD_NAME));
         memset (apsthBTRCore->stScannedDevicesArr[i].device_name, '\0', sizeof(BD_NAME));
         apsthBTRCore->stScannedDevicesArr[i].RSSI = INT_MIN;
@@ -81,6 +83,8 @@ btrCore_InitDataSt (
 
     /* Known Devices */
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        apsthBTRCore->stKnownDevicesArr[i].device_handle = 0;
+        apsthBTRCore->stKnownDevicesArr[i].device_connected = 0;
         memset (apsthBTRCore->stKnownDevicesArr[i].bd_path, '\0', sizeof(BD_NAME));
         memset (apsthBTRCore->stKnownDevicesArr[i].device_name, '\0', sizeof(BD_NAME));
         apsthBTRCore->stKnownDevicesArr[i].RSSI = INT_MIN;
@@ -110,6 +114,7 @@ btrCore_ClearScannedDevicesList (
     int i;
 
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
+        apsthBTRCore->stScannedDevicesArr[i].device_handle = 0;
         memset (apsthBTRCore->stScannedDevicesArr[i].device_name, '\0', sizeof(apsthBTRCore->stScannedDevicesArr[i].device_name));
         memset (apsthBTRCore->stScannedDevicesArr[i].bd_address,  '\0', sizeof(apsthBTRCore->stScannedDevicesArr[i].bd_address));
         apsthBTRCore->stScannedDevicesArr[i].RSSI = INT_MIN;
@@ -370,6 +375,36 @@ find_paired_device (
     return 0;
 }
 
+static tBTRCoreDevHandle generateUniqueHandle (const char* pDeviceAddress)
+{
+    tBTRCoreDevHandle handle = 0;
+    char array[50] = "";
+
+    if (pDeviceAddress)
+    {
+        array[0] = pDeviceAddress[0];
+        array[1] = pDeviceAddress[1];
+
+        array[2] = pDeviceAddress[3];
+        array[3] = pDeviceAddress[4];
+
+        array[4] = pDeviceAddress[6];
+        array[5] = pDeviceAddress[7];
+
+        array[6] = pDeviceAddress[9];
+        array[7] = pDeviceAddress[10];
+
+        array[8] = pDeviceAddress[12];
+        array[9] = pDeviceAddress[13];
+
+        array[10] = pDeviceAddress[15];
+        array[11] = pDeviceAddress[16];
+        array[12] = '\0';
+
+        handle = (tBTRCoreDevHandle) strtoll(array, NULL, 16);
+    }
+    return handle;
+}
 
 static int 
 create_paired_device (
@@ -425,11 +460,10 @@ LoadScannedDevice (
     stBTRCoreHdl* apsthBTRCore
 ) {
     int i;
-    int found;
-    int last;
 
-    found = FALSE;
-    last = 0;
+#if 0  /* Not needed as it is already taken care */
+    int found = FALSE;
+    int last = 0;
 
     //printf("LoadScannedDevice processing %s-%s\n", apsthBTRCore->stFoundDevice.bd_address, apsthBTRCore->stFoundDevice.device_name);
     for ( i = 0; i < 15; i++) {
@@ -443,7 +477,10 @@ LoadScannedDevice (
         }
     }
 
-    if (found == FALSE) { //device wasnt there, we got to add it
+    //device wasnt there, we got to add it
+    if (found == FALSE)
+#else
+    {
         for (i = 0; i < 15; i++) {
             if (!apsthBTRCore->stScannedDevicesArr[i].found) {
                 //printf("adding %s at location %d\n",apsthBTRCore->stFoundDevice.bd_address,i);
@@ -451,11 +488,14 @@ LoadScannedDevice (
                 strcpy(apsthBTRCore->stScannedDevicesArr[i].bd_address, apsthBTRCore->stFoundDevice.bd_address);
                 strcpy(apsthBTRCore->stScannedDevicesArr[i].device_name, apsthBTRCore->stFoundDevice.device_name);
                 apsthBTRCore->stScannedDevicesArr[i].RSSI = apsthBTRCore->stFoundDevice.RSSI;
+                apsthBTRCore->stScannedDevicesArr[i].device_paired = apsthBTRCore->stFoundDevice.device_paired;
+                apsthBTRCore->stScannedDevicesArr[i].device_handle = generateUniqueHandle(apsthBTRCore->stFoundDevice.bd_address);
                 apsthBTRCore->numOfScannedDevices++;
                 break;
             }
         }
     }
+#endif
 }
 
 
@@ -585,11 +625,15 @@ btrCore_ParseDevice (
     DBusMessage*  apDBusMsg
 ) {
     DBusMessageIter arg_i, element_i, variant_i;
-    const char* key;
-    const char* value;
-    const char* bd_addr;
-    short rssi;
+    const char* key = NULL;
+    const char* value = NULL;
+    const char* pAlias = NULL;
+    const char* bd_addr = NULL;
+    short rssi = 0;
     int dbus_type;
+    int paired;
+    tBTRCoreDevHandle temp = 0;
+    BOOLEAN proceedToAdd = FALSE;
 
     //printf("\n\n\nBLUETOOTH DEVICE FOUND:\n");
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
@@ -603,62 +647,104 @@ btrCore_ParseDevice (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    // printf(" Address: %s\n",bd_addr);
-    //TODO provide some indication, callback to app of devices being found in real time
-    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
-    //printf("type is %d\n",dbus_type);
+    /* To avoid parsing repeatedly */
+    temp = generateUniqueHandle(bd_addr);
+    if (NULL != btrCore_GetScannedDeviceAddress(apsthBTRCore, temp))
+        printf ("Already we have a entry in the list; Skip Parsing now \n");
+    else
+    {
+        //printf ("New Entry.. Lets Parse it \n");
+        memset (&apsthBTRCore->stFoundDevice, 0, sizeof(apsthBTRCore->stFoundDevice));
+        apsthBTRCore->stFoundDevice.RSSI = INT_MIN;
 
-    if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
-        //printf("GetProperties argument is not a DBUS_TYPE_ARRAY... get next\n");
-        dbus_message_iter_next(&arg_i);
+        //TODO provide some indication, callback to app of devices being found in real time
         dbus_type = dbus_message_iter_get_arg_type(&arg_i);
         //printf("type is %d\n",dbus_type);
 
         if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
-            //printf("GetProperties argument is STILL not DBUS_TYPE_ARRAY... \n");
+            //printf("GetProperties argument is not a DBUS_TYPE_ARRAY... get next\n");
+            dbus_message_iter_next(&arg_i);
+            dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+            //printf("type is %d\n",dbus_type);
+
+            if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
+                //printf("GetProperties argument is STILL not DBUS_TYPE_ARRAY... \n");
+            }
         }
-        
-    }
 
-    dbus_message_iter_recurse(&arg_i, &element_i);
+        dbus_message_iter_recurse(&arg_i, &element_i);
 
-    while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
-        if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
-            DBusMessageIter dict_i;
+        while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+            if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+                DBusMessageIter dict_i;
 
-            dbus_message_iter_recurse(&element_i, &dict_i);
-            dbus_message_iter_get_basic(&dict_i, &key);
+                dbus_message_iter_recurse(&element_i, &dict_i);
+                dbus_message_iter_get_basic(&dict_i, &key);
 
             //printf("     %s\n",key);
-            if (strcmp (key, "RSSI") == 0) {
-                dbus_message_iter_next(&dict_i);
-                dbus_message_iter_recurse(&dict_i, &variant_i);
-                dbus_message_iter_get_basic(&variant_i, &rssi);
-                //printf("RSSI is type %d\n",dbus_message_iter_get_arg_type(&variant_i));
-                //printf("    rssi: %d\n",rssi);
-                apsthBTRCore->stFoundDevice.RSSI = rssi;
+                if (strcmp (key, "RSSI") == 0) {
+                    dbus_message_iter_next(&dict_i);
+                    dbus_message_iter_recurse(&dict_i, &variant_i);
+                    dbus_message_iter_get_basic(&variant_i, &rssi);
+                    //printf("RSSI is type %d\n",dbus_message_iter_get_arg_type(&variant_i));
+                    //printf("    rssi: %d\n",rssi);
+                    apsthBTRCore->stFoundDevice.RSSI = rssi;
+                }
+                else if (strcmp (key, "Paired") == 0) {
+                    dbus_message_iter_next(&dict_i);
+                    dbus_message_iter_recurse(&dict_i, &variant_i);
+                    dbus_message_iter_get_basic(&variant_i, &paired);
+                    //printf("paired: %d\n", paired);
+                    apsthBTRCore->stFoundDevice.device_paired = paired;
+                }
+                else if (strcmp (key, "Address") == 0) {
+                    dbus_message_iter_next(&dict_i);
+                    dbus_message_iter_recurse(&dict_i, &variant_i);
+                    dbus_message_iter_get_basic(&variant_i, &value);
+                    //printf("Address : %s\n",value);
+                }
+                else if (strcmp (key, "Alias") == 0)
+                {
+                    dbus_message_iter_next(&dict_i);
+                    dbus_message_iter_recurse(&dict_i, &variant_i);
+                    dbus_message_iter_get_basic(&variant_i, &pAlias);
+                    //printf("Alias: %s\n", pAlias);
+
+                    /* If the Name & Alias present, The Alias must be used. Handle this before calling LoadScannedDevice() */
+                }
+                else if (strcmp (key, "Name") == 0)
+                {
+                    dbus_message_iter_next(&dict_i);
+                    dbus_message_iter_recurse(&dict_i, &variant_i);
+                    dbus_message_iter_get_basic(&variant_i, &value);
+
+                    //printf("    name: %s\n",value);
+
+                    //load the found device into our array
+                    proceedToAdd = TRUE;
+                    apsthBTRCore->stFoundDevice.found = FALSE; //Reset the flags
+                    strcpy(apsthBTRCore->stFoundDevice.device_name, value);
+                    strcpy(apsthBTRCore->stFoundDevice.bd_address, bd_addr);
+                }
             }
 
-            if (strcmp (key, "Name") == 0) {
-                dbus_message_iter_next(&dict_i);
-                dbus_message_iter_recurse(&dict_i, &variant_i);
-                dbus_message_iter_get_basic(&variant_i, &value);
-            
-                //printf("    name: %s\n",value);
-
-                //load the found device into our array
-                apsthBTRCore->stFoundDevice.found = FALSE; //Reset the flags
-                strcpy(apsthBTRCore->stFoundDevice.device_name,value);
-                strcpy(apsthBTRCore->stFoundDevice.bd_address,bd_addr);
-                LoadScannedDevice(apsthBTRCore); //operates on stFoundDevice
-            }
+            //load the new device into our list of scanned devices
+            if (!dbus_message_iter_next(&element_i))
+                break;
         }
 
-        //load the new device into our list of scanned devices
-        if (!dbus_message_iter_next(&element_i))
-            break;
+        /* Load with all the params parsed and populated */
+        if (TRUE == proceedToAdd)
+        {
+            if (pAlias)
+            {
+                /* May be Name & Alias are same; but no worries; Just copy it. */
+                strcpy(apsthBTRCore->stFoundDevice.device_name, pAlias);
+            }
+            LoadScannedDevice(apsthBTRCore); //operates on stFoundDevice
+        }
     }
-
+    //printf ("Done with %s\n", __FUNCTION__);
     (void)dbus_type;
 
     return DBUS_HANDLER_RESULT_HANDLED;
@@ -1179,15 +1265,20 @@ populateListOfPairedDevices (
                     memset(pstlhBTRCore->stKnownDevicesArr[i].device_name, '\0', sizeof(pstlhBTRCore->stKnownDevicesArr[i].device_name));
                     strcpy(pstlhBTRCore->stKnownDevicesArr[i].device_name, value);
                 }
-
-                if (strcmp (key, "Paired") == 0) {
+                else if (strcmp (key, "Address") == 0) {
+                    dbus_message_iter_next(&dict_i);
+                    dbus_message_iter_recurse(&dict_i, &variant_i);
+                    dbus_message_iter_get_basic(&variant_i, &value);
+                    printf(" address: %s\n", value);
+                    pstlhBTRCore->stKnownDevicesArr[i].device_handle = generateUniqueHandle(value);
+                }
+                else if (strcmp (key, "Paired") == 0) {
                     dbus_message_iter_next(&dict_i);
                     dbus_message_iter_recurse(&dict_i, &variant_i);
                     dbus_message_iter_get_basic(&variant_i, &paired);
                     printf(" paired: %d\n", paired);
                 }
-
-                if (strcmp (key, "Connected") == 0) {
+                else if (strcmp (key, "Connected") == 0) {
                     dbus_message_iter_next(&dict_i);
                     dbus_message_iter_recurse(&dict_i, &variant_i);
                     dbus_message_iter_get_basic(&variant_i, &connected);
@@ -1351,7 +1442,7 @@ BTRCore_ShowFoundDevices (
 
 
 enBTRCoreRet
-BTRCore_PairDevice (
+BTRCore_PairDeviceByIndex (
     tBTRCoreHandle  hBTRCore,
     tBTRCoreDevId   aBTRCoreDevId
 ) {
@@ -1411,7 +1502,7 @@ BTRCore_FindDevice (
 
 /*BTRCore_ConnectDevice*/
 enBTRCoreRet
-BTRCore_ConnectDevice (
+BTRCore_ConnectDeviceByIndex (
     tBTRCoreHandle      hBTRCore,
     tBTRCoreDevId       aBTRCoreDevId,
     enBTRCoreDeviceType aenBTRCoreDevType
@@ -1451,13 +1542,14 @@ BTRCore_ConnectDevice (
         BTRCore_LOG("connection ERROR occurred\n");
         return enBTRCoreFailure;
     }
+    pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected = TRUE;
 
     return enBTRCoreSuccess;
 }
 
 
 enBTRCoreRet 
-BTRCore_DisconnectDevice (
+BTRCore_DisconnectDeviceByIndex (
     tBTRCoreHandle      hBTRCore,
     tBTRCoreDevId       aBTRCoreDevId,
     enBTRCoreDeviceType aenBTRCoreDevType
@@ -1497,6 +1589,7 @@ BTRCore_DisconnectDevice (
         BTRCore_LOG("disconnection ERROR occurred\n");
         return enBTRCoreFailure;
     }
+    pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected = FALSE;
 
     return enBTRCoreSuccess;
 }
@@ -2277,17 +2370,17 @@ enBTRCoreRet BTRCore_StopDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* p
 static const char*
 btrCore_GetScannedDeviceAddress (
     stBTRCoreHdl*   apsthBTRCore,
-    const char*     pDeviceName
+    tBTRCoreDevHandle handle
 ) {
     int loop = 0;
 
-    if (!pDeviceName || !apsthBTRCore)
+    if ((0 == handle) || (!apsthBTRCore))
         return NULL;
 
     if (apsthBTRCore->numOfScannedDevices) {
         for (loop = 0; loop < apsthBTRCore->numOfScannedDevices; loop++) {
-            if (strcmp(pDeviceName, apsthBTRCore->stScannedDevicesArr[loop].device_name) == 0)
-                return apsthBTRCore->stScannedDevicesArr[loop].bd_address;
+            if (handle == apsthBTRCore->stScannedDevicesArr[loop].device_handle)
+             return apsthBTRCore->stScannedDevicesArr[loop].bd_address;
         }
     }
 
@@ -2297,29 +2390,25 @@ btrCore_GetScannedDeviceAddress (
 static const char*
 btrCore_GetKnownDeviceAddress (
     stBTRCoreHdl*   apsthBTRCore,
-    const char*     pDeviceName
+    tBTRCoreDevHandle handle
 ) {
     int loop = 0;
 
-    if (!pDeviceName || !apsthBTRCore)
+    if ((0 == handle) || (!apsthBTRCore))
         return NULL;
 
     if (apsthBTRCore->numOfPairedDevices) {
         for (loop = 0; loop < apsthBTRCore->numOfPairedDevices; loop++) {
-            if (strcmp(pDeviceName, apsthBTRCore->stKnownDevicesArr[loop].device_name) == 0)
-                return apsthBTRCore->stKnownDevicesArr[loop].bd_path;
+            if (handle == apsthBTRCore->stKnownDevicesArr[loop].device_handle)
+             return apsthBTRCore->stKnownDevicesArr[loop].bd_path;
         }
     }
 
     return NULL;
 }
 
-enBTRCoreRet
-BTRCore_PairDeviceByName (
-    tBTRCoreHandle  hBTRCore,
-    const char*     pAdapterPath,
-    const char*     pDeviceName
-) {
+enBTRCoreRet BTRCore_PairDevice (tBTRCoreHandle hBTRCore, const char* pAdapterPath, tBTRCoreDevHandle handle)
+{
     enBTRCoreRet rc = enBTRCoreNotInitialized;
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     DBusConnection* pConnHandle = NULL;
@@ -2332,7 +2421,7 @@ BTRCore_PairDeviceByName (
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if ((!pAdapterPath) || (!pDeviceName))
+    else if ((!pAdapterPath) || (0 == handle))
     {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
@@ -2350,7 +2439,7 @@ BTRCore_PairDeviceByName (
         }
         else
         {
-            const char *pDeviceAddress = btrCore_GetScannedDeviceAddress(pstlhBTRCore, pDeviceName);
+            const char *pDeviceAddress = btrCore_GetScannedDeviceAddress(pstlhBTRCore, handle);
             if (pDeviceAddress)
             {
                 if (create_paired_device(pConnHandle, pAdapterPath, pAgentPath, pCapabilities, pDeviceAddress) < 0)
@@ -2369,7 +2458,7 @@ BTRCore_PairDeviceByName (
             }
             else
             {
-                printf("%s:%d - Failed to find a instance in the scanned list\n", __FUNCTION__, __LINE__);
+                printf("%s:%d - Failed to find a %llu in the scanned list\n", __FUNCTION__, __LINE__, handle);
                 rc = enBTRCorePairingFailed;
             }
         }
@@ -2377,24 +2466,23 @@ BTRCore_PairDeviceByName (
     return rc;
 }
 
-enBTRCoreRet
-BTRCore_GetListOfPairedDevices (
-    tBTRCoreHandle               hBTRCore,
-    const char*                  pAdapterPath,
-    stBTRCorePairedDevicesCount* pListOfDevices
-) {
-    enBTRCoreRet    rc = enBTRCoreNotInitialized;
+enBTRCoreRet BTRCore_GetListOfPairedDevices (tBTRCoreHandle hBTRCore, const char* pAdapterPath, stBTRCorePairedDevicesCount *pListOfDevices)
+{
+    enBTRCoreRet rc = enBTRCoreNotInitialized;
     stBTRCoreHdl*   pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!hBTRCore) {
+    if (!hBTRCore)
+    {
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if ((!pAdapterPath) || (!pListOfDevices)) {
+    else if ((!pAdapterPath) || (!pListOfDevices))
+    {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
     }
-    else if (enBTRCoreSuccess ==  populateListOfPairedDevices (hBTRCore, pAdapterPath)) {
+    else if (enBTRCoreSuccess ==  populateListOfPairedDevices (hBTRCore, pAdapterPath))
+    {
         pListOfDevices->numberOfDevices = pstlhBTRCore->numOfPairedDevices;
         memcpy (pListOfDevices->devices, pstlhBTRCore->stKnownDevicesArr, sizeof (pstlhBTRCore->stKnownDevicesArr));
         rc = enBTRCoreSuccess;
@@ -2403,13 +2491,8 @@ BTRCore_GetListOfPairedDevices (
     return rc;
 }
 
-
-enBTRCoreRet
-BTRCore_GetListOfScannedDevices (
-    tBTRCoreHandle                  hBTRCore,
-    const char*                     pAdapterPath,
-    stBTRCoreScannedDevicesCount*   pListOfScannedDevices
-) {
+enBTRCoreRet BTRCore_GetListOfScannedDevices (tBTRCoreHandle hBTRCore, const char* pAdapterPath, stBTRCoreScannedDevicesCount *pListOfScannedDevices)
+{
     stBTRCoreHdl*   pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     enBTRCoreRet    rc = enBTRCoreInvalidArg;
 
@@ -2423,13 +2506,13 @@ BTRCore_GetListOfScannedDevices (
         memset (pListOfScannedDevices, 0, sizeof(stBTRCoreScannedDevicesCount));
         memcpy (pListOfScannedDevices->devices, pstlhBTRCore->stScannedDevicesArr, sizeof (pstlhBTRCore->stScannedDevicesArr));
         pListOfScannedDevices->numberOfDevices = pstlhBTRCore->numOfScannedDevices;
-        printf("%s:%d - Copied all scanned devices\n", __FUNCTION__, __LINE__);
+        printf("%s:%d - Copied scanned details of %d devices\n", __FUNCTION__, __LINE__, pstlhBTRCore->numOfScannedDevices);
         rc = enBTRCoreSuccess;
     }
     return rc;
 }
 
-enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName)
+enBTRCoreRet BTRCore_UnPairDevice (tBTRCoreHandle hBTRCore, const char* pAdapterPath, tBTRCoreDevHandle handle)
 {
     enBTRCoreRet rc = enBTRCoreNotInitialized;
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
@@ -2441,7 +2524,7 @@ enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pA
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if ((!pAdapterPath) || (!pDeviceName))
+    else if ((!pAdapterPath) || (0 == handle))
     {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
@@ -2467,7 +2550,7 @@ enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pA
 
             if (pstlhBTRCore->numOfPairedDevices)
             {
-                const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, pDeviceName);
+                const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, handle);
                 if (pDeviceAddress)
                 {
                     if (0 != remove_paired_device(pConnHandle, pAdapterPath, pDeviceAddress))
@@ -2553,20 +2636,20 @@ BTRCore_RegisterStatusCallback (
     return enBTRCoreSuccess;
 }
 
-
-enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType)
+enBTRCoreRet BTRCore_ConnectDevice (tBTRCoreHandle hBTRCore, const char* pAdapterPath, tBTRCoreDevHandle handle, enBTRCoreDeviceType aenBTRCoreDevType)
 {
     enBTRCoreRet rc = enBTRCoreFailure;
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     DBusConnection* pConnHandle = NULL;
     enBTDeviceType lenBTDeviceType = enBTDevUnknown;
+    int loop = 0;
 
     if (!hBTRCore)
     {
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if ((!pAdapterPath) || (!pDeviceName))
+    else if ((!pAdapterPath) || (0 == handle))
     {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
@@ -2592,7 +2675,7 @@ enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* p
 
             if (pstlhBTRCore->numOfPairedDevices)
             {
-                const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, pDeviceName);
+                const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, handle);
                 if (pDeviceAddress)
                 {
                     // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
@@ -2616,7 +2699,11 @@ enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* p
                     {
                         rc = enBTRCoreSuccess;
                         printf("%s:%d - Connected to device Successfully. Lets start Play the audio\n", __FUNCTION__, __LINE__);
-                        /* TODO */
+                        for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++)
+                        {
+                            if (handle == pstlhBTRCore->stKnownDevicesArr[loop].device_handle)
+                                pstlhBTRCore->stKnownDevicesArr[loop].device_connected = TRUE;
+                        }
                     }
                     else
                         printf("%s:%d - Connect to device failed\n", __FUNCTION__, __LINE__);
@@ -2635,37 +2722,44 @@ enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* p
     return rc;
 }
 
-enBTRCoreRet BTRCore_DisconnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType)
+enBTRCoreRet BTRCore_DisconnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevHandle handle, enBTRCoreDeviceType aenBTRCoreDevType)
 {
     enBTRCoreRet rc = enBTRCoreFailure;
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     DBusConnection* pConnHandle = NULL;
     enBTDeviceType lenBTDeviceType = enBTDevUnknown;
+    int loop = 0;
 
-    if (!hBTRCore) {
+    if (!hBTRCore)
+    {
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if (!pDeviceName) {
+    else if (0 == handle)
+    {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
     }
-    else {
+    else
+    {
         /* Get the handle */
         pConnHandle = pstlhBTRCore->connHandle;
 
-        if (!pConnHandle) {
+        if (!pConnHandle)
+        {
             printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
             rc = enBTRCoreNotInitialized;
         }
-        else {
+        else
+        {
             if (pstlhBTRCore->numOfPairedDevices) {
-                const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, pDeviceName);
+                const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, handle);
                 if (pDeviceAddress) {
                     /* TODO */
                     /* Stop the audio playback before disconnect */
 
-                    switch (aenBTRCoreDevType) {
+                    switch (aenBTRCoreDevType)
+                    {
                         case enBTRCoreSpeakers:
                         case enBTRCoreHeadSet:
                             lenBTDeviceType = enBTDevAudioSink;
@@ -2680,18 +2774,26 @@ enBTRCoreRet BTRCore_DisconnectDeviceByName (tBTRCoreHandle hBTRCore, const char
                             break;
                     }
 
-                    if (0 == BtrCore_BTDisconnectDevice(pConnHandle, pDeviceAddress, lenBTDeviceType)) {
+                    if (0 == BtrCore_BTDisconnectDevice(pConnHandle, pDeviceAddress, lenBTDeviceType))
+                    {
                         rc = enBTRCoreSuccess;
                         printf("%s:%d - DisConnected from device Successfully.\n", __FUNCTION__, __LINE__);
+                        for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++)
+                        {
+                            if (handle == pstlhBTRCore->stKnownDevicesArr[loop].device_handle)
+                                pstlhBTRCore->stKnownDevicesArr[loop].device_connected = FALSE;
+                        }
                     }
                     else
                         printf("%s:%d - DisConnect from device failed\n", __FUNCTION__, __LINE__);
                 }
-                else {
+                else
+                {
                     printf("%s:%d - Failed to find a instance in the paired devices list\n", __FUNCTION__, __LINE__);
                 }
             }
-            else {
+            else
+            {
                 printf("%s:%d - There is no device paried for this adapter\n", __FUNCTION__, __LINE__);
             }
         }
@@ -2699,55 +2801,58 @@ enBTRCoreRet BTRCore_DisconnectDeviceByName (tBTRCoreHandle hBTRCore, const char
     return rc;
 }
 
-enBTRCoreRet
-BTRCore_GetDeviceDataPath (
-    tBTRCoreHandle  hBTRCore,
-    const char*     pAdapterPath,
-    const char*     pDeviceName,
-    int*            pDeviceFD,
-    int*            pDeviceReadMTU,
-    int*            pDeviceWriteMTU
-) {
+enBTRCoreRet BTRCore_GetDeviceDataPath (tBTRCoreHandle hBTRCore, const char* pAdapterPath, tBTRCoreDevHandle handle, int* pDeviceFD, int* pDeviceReadMTU, int* pDeviceWriteMTU)
+{
     enBTRCoreRet rc = enBTRCoreFailure;
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     int liDataPath = 0;
     int lidataReadMTU = 0;
     int lidataWriteMTU = 0;
 
-    if (!hBTRCore) {
+    if (!hBTRCore)
+    {
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if ((!pAdapterPath) || (!pDeviceName) || (!pDeviceFD) || (!pDeviceReadMTU) || (!pDeviceWriteMTU)) {
+    else if ((!pAdapterPath) || (0 == handle) || (!pDeviceFD) || (!pDeviceReadMTU) || (!pDeviceWriteMTU))
+    {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
     }
-    else {
-        if (0 == pstlhBTRCore->numOfPairedDevices) {
+    else
+    {
+        if (0 == pstlhBTRCore->numOfPairedDevices)
+        {
             printf("%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
             /* Keep the list upto date */
             populateListOfPairedDevices (hBTRCore, pAdapterPath);
         }
 
-        if (pstlhBTRCore->numOfPairedDevices) {
-            const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, pDeviceName);
-            if (pDeviceAddress) {
-                if(enBTRCoreSuccess != BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->connHandle, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU)) {
+        if (pstlhBTRCore->numOfPairedDevices)
+        {
+            const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, handle);
+            if (pDeviceAddress)
+            {
+                if(enBTRCoreSuccess != BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->connHandle, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU))
+                {
                     BTRCore_LOG("AVMedia_AcquireDataPath ERROR occurred\n");
                     rc = enBTRCoreFailure;
                 }
-                else {
+                else
+                {
                     *pDeviceFD = liDataPath;
                     *pDeviceReadMTU = lidataReadMTU;
                     *pDeviceWriteMTU = lidataWriteMTU;
                     rc = enBTRCoreSuccess;
                 }
             }
-            else {
+            else
+            {
                 printf("%s:%d - Failed to find a instance in the paired devices list\n", __FUNCTION__, __LINE__);
             }
         }
-        else {
+        else
+        {
             printf("%s:%d - There is no device paried for this adapter\n", __FUNCTION__, __LINE__);
         }
     }
@@ -2756,30 +2861,34 @@ BTRCore_GetDeviceDataPath (
 }
 
 
-enBTRCoreRet
-BTRCore_FreeDeviceDataPath (
-    tBTRCoreHandle  hBTRCore,
-    const char*     pDeviceName
-) {
+enBTRCoreRet BTRCore_FreeDeviceDataPath (tBTRCoreHandle hBTRCore, tBTRCoreDevHandle handle)
+{
     enBTRCoreRet rc = enBTRCoreFailure;
     stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!hBTRCore) {
+    if (!hBTRCore)
+    {
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreNotInitialized;
     }
-    else if (!pDeviceName) {
+    else if (0 == handle)
+    {
         printf("%s:%d - enBTRCoreInvalidArg\n", __FUNCTION__, __LINE__);
         rc = enBTRCoreInvalidArg;
     }
-    else {
-        if (pstlhBTRCore->numOfPairedDevices) {
-            const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, pDeviceName);
-            if (pDeviceAddress) {
-                if(enBTRCoreSuccess != BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->connHandle, pDeviceAddress)) {
+    else
+    {
+        if (pstlhBTRCore->numOfPairedDevices)
+        {
+            const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, handle);
+            if (pDeviceAddress)
+            {
+                if(enBTRCoreSuccess != BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->connHandle, pDeviceAddress))
+                {
                     BTRCore_LOG("AVMedia_ReleaseDataPath ERROR occurred\n");
                 }
-                else {
+                else
+                {
                     BTRCore_LOG("AVMedia_ReleaseDataPath Success\n");
                     rc = enBTRCoreSuccess;
                 }

@@ -21,6 +21,7 @@ typedef void* tBTRCoreHandle;
 
 
 typedef unsigned long long int tBTRCoreDevId;
+typedef unsigned long long int tBTRCoreDevHandle;
 
 
 typedef enum _enBTRCoreRet {
