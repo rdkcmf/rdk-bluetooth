@@ -17,40 +17,43 @@
 
 
 typedef struct _stBTRCoreHdl {
-    void*                   connHandle;
-    char*                   agentPath;
+    void*                       connHandle;
+    char*                       agentPath;
 
-    char*                   curAdapterPath;
-    unsigned int            numOfAdapters;
+    char*                       curAdapterPath;
+    unsigned int                numOfAdapters;
 
-    unsigned int            numOfScannedDevices;
-    stBTRCoreScannedDevices stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    unsigned int                numOfScannedDevices;
+    stBTRCoreScannedDevices     stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
-    unsigned int            numOfPairedDevices;
-    stBTRCoreKnownDevice    stKnownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    unsigned int                numOfPairedDevices;
+    stBTRCoreKnownDevice        stKnownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
-    stBTRCoreScannedDevices stFoundDevice;
+    stBTRCoreScannedDevices     stFoundDevice;
 
-    pthread_t               dispatchThread;
-    pthread_mutex_t         dispatchMutex;
-    BOOLEAN                 dispatchThreadQuit;
+    stBTRCoreDevStateCB         stDevStateCbInfo;
+
+
+    BTRCore_DeviceDiscoveryCb   fptrBTRCoreDeviceDiscoveryCB;
+    BTRCore_StatusCb            fptrBTRCoreStatusCB;
+
+    pthread_t                   dispatchThread;
+    pthread_mutex_t             dispatchMutex;
+    BOOLEAN                     dispatchThreadQuit;
 } stBTRCoreHdl;
 
-
-static stBTRCoreDevStateCB      gstBTRCoreDevStateCbInfo;               //holds info for a callback
 
 static void btrCore_InitDataSt (stBTRCoreHdl* apsthBTRCore);
 static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
 static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, const char* pDeviceName);
 static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, const char* pDeviceName);
-static int btrCore_ParseDevice (stBTRCoreHdl* apsthBTRCore, DBusMessage* msg);
+static int btrCore_ParseDevice (stBTRCoreHdl* apsthBTRCore, DBusMessage* apDBusMsg);
+static int btrCore_ParsePropChange (stBTRCoreHdl* apsthBTRCore, DBusMessage* apDBusMsg); 
 
 static DBusMessage* sendMethodCall (DBusConnection* conn, const char* objectpath, const char* interfacename, const char* methodname);
 static int remove_paired_device (DBusConnection* conn, const char* apBTRAdapterPath, const char* fullpath);
 static enBTRCoreRet populateListOfPairedDevices(tBTRCoreHandle hBTRCore, const char* pAdapterPath);
 
-/* Discovered Device notification */
-BTRMgr_DeviceDiscoveryCallback cb_DeviceDiscovery = NULL;
 
 
 static void
@@ -85,13 +88,16 @@ btrCore_InitDataSt (
     }
 
     /* Callback Info */
-    memset(gstBTRCoreDevStateCbInfo.cDeviceType, '\0', sizeof(gstBTRCoreDevStateCbInfo.cDeviceType));
-    memset(gstBTRCoreDevStateCbInfo.cDevicePrevState, '\0', sizeof(gstBTRCoreDevStateCbInfo.cDevicePrevState));
-    memset(gstBTRCoreDevStateCbInfo.cDeviceCurrState, '\0', sizeof(gstBTRCoreDevStateCbInfo.cDeviceCurrState));
+    memset(apsthBTRCore->stDevStateCbInfo.cDeviceType, '\0', sizeof(apsthBTRCore->stDevStateCbInfo.cDeviceType));
+    memset(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, '\0', sizeof(apsthBTRCore->stDevStateCbInfo.cDevicePrevState));
+    memset(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState, '\0', sizeof(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState));
 
-    strncpy(gstBTRCoreDevStateCbInfo.cDeviceType, "Bluez", BTRCORE_STRINGS_MAX_LEN - 1);
-    strncpy(gstBTRCoreDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
-    strncpy(gstBTRCoreDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
+    strncpy(apsthBTRCore->stDevStateCbInfo.cDeviceType, "Bluez", BTRCORE_STRINGS_MAX_LEN - 1);
+    strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
+    strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
+
+    apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB = NULL;
+    apsthBTRCore->fptrBTRCoreStatusCB = NULL;
 
     /* Always safer to initialze Global variables, init if any left or added */
 }
@@ -455,14 +461,26 @@ LoadScannedDevice (
 
 void
 test_func (
+    tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter
 ) {
-    if (p_Status_callback != NULL) {
-        p_Status_callback();
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        return;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (pstlhBTRCore->fptrBTRCoreStatusCB != NULL) {
+        pstlhBTRCore->fptrBTRCoreStatusCB(&pstlhBTRCore->stDevStateCbInfo);
     }
     else {
         printf("no callback installed\n");
     }
+
+    return;
 }
 
 
@@ -564,7 +582,7 @@ GetAdapters (
 static int 
 btrCore_ParseDevice (
     stBTRCoreHdl* apsthBTRCore,
-    DBusMessage*  msg
+    DBusMessage*  apDBusMsg
 ) {
     DBusMessageIter arg_i, element_i, variant_i;
     const char* key;
@@ -574,11 +592,11 @@ btrCore_ParseDevice (
     int dbus_type;
 
     //printf("\n\n\nBLUETOOTH DEVICE FOUND:\n");
-    if (!dbus_message_iter_init(msg, &arg_i)) {
+    if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
        printf("GetProperties reply has no arguments.");
     }
 
-    if (!dbus_message_get_args( msg, NULL,
+    if (!dbus_message_get_args( apDBusMsg, NULL,
                                 DBUS_TYPE_STRING, &bd_addr,
                                 DBUS_TYPE_INVALID)) {
         fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
@@ -646,9 +664,11 @@ btrCore_ParseDevice (
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
+
 static int 
-parse_change (
-    DBusMessage* msg
+btrCore_ParsePropChange (
+    stBTRCoreHdl*   apsthBTRCore, 
+    DBusMessage*    apDBusMsg
 ) {
     DBusMessageIter arg_i, variant_i;
     const char* value;
@@ -656,11 +676,11 @@ parse_change (
     int dbus_type;
 
    // printf("\n\n\nBLUETOOTH DEVICE STATUS CHANGE:\n");
-    if (!dbus_message_iter_init(msg, &arg_i)) {
+    if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
        printf("GetProperties reply has no arguments.");
     }
 
-    if (!dbus_message_get_args( msg, NULL,
+    if (!dbus_message_get_args( apDBusMsg, NULL,
                                 DBUS_TYPE_STRING, &bd_addr,
                                 DBUS_TYPE_INVALID)) {
         fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
@@ -677,12 +697,12 @@ parse_change (
             dbus_message_iter_recurse(&arg_i, &variant_i);
             dbus_message_iter_get_basic(&variant_i, &value);      
             //  printf("    the new state is: %s\n",value);
-            strncpy(gstBTRCoreDevStateCbInfo.cDeviceType, "Bluez", BTRCORE_STRINGS_MAX_LEN - 1);
-            strncpy(gstBTRCoreDevStateCbInfo.cDevicePrevState, gstBTRCoreDevStateCbInfo.cDeviceCurrState, BTRCORE_STRINGS_MAX_LEN - 1);
-            strncpy(gstBTRCoreDevStateCbInfo.cDeviceCurrState, value, BTRCORE_STRINGS_MAX_LEN - 1);
+            strncpy(apsthBTRCore->stDevStateCbInfo.cDeviceType, "Bluez", BTRCORE_STRINGS_MAX_LEN - 1);
+            strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, apsthBTRCore->stDevStateCbInfo.cDeviceCurrState, BTRCORE_STRINGS_MAX_LEN - 1);
+            strncpy(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState, value, BTRCORE_STRINGS_MAX_LEN - 1);
 
-            if (p_Status_callback) {
-                p_Status_callback(&gstBTRCoreDevStateCbInfo);
+            if (apsthBTRCore->fptrBTRCoreStatusCB) {
+                apsthBTRCore->fptrBTRCoreStatusCB(&apsthBTRCore->stDevStateCbInfo);
             }
         }
     }
@@ -713,7 +733,7 @@ btrCore_DBusAgentFilter_cb (
         btrCore_ParseDevice(apsthBTRCore, apDBusMsg);
 
         /* call the registered cb */
-        if (cb_DeviceDiscovery)
+        if (apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB)
         {
             /* The device is not duplicate entry; So post it thro' callback */
             if (FALSE == apsthBTRCore->stFoundDevice.found)
@@ -726,7 +746,7 @@ btrCore_DBusAgentFilter_cb (
                 if (apsthBTRCore)
                     devicelist.numberOfDevices = apsthBTRCore->numOfScannedDevices;
 
-                cb_DeviceDiscovery (devicelist);
+                apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB (devicelist);
             }
         }
     }
@@ -757,12 +777,12 @@ btrCore_DBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
-        parse_change(apDBusMsg);
+        btrCore_ParsePropChange(apsthBTRCore, apDBusMsg);
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
-        parse_change(apDBusMsg);
+        btrCore_ParsePropChange(apsthBTRCore, apDBusMsg);
     }
 
 
@@ -796,8 +816,6 @@ BTRCore_Init (
     stBTRCoreHdl*   pstlhBTRCore = NULL; 
 
     BTRCore_LOG(("BTRCore_Init\n"));
-    p_Status_callback = NULL;//set callbacks to NULL, later an app can register callbacks
-
 
     if (!phBTRCore) {
         fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg\n", __FILE__, __LINE__, __FUNCTION__);
@@ -1600,25 +1618,6 @@ BTRCore_ReleaseDeviceDataPath (
 }
 
 
-enBTRCoreRet
-BTRCore_RegisterStatusCallback (
-    tBTRCoreHandle  hBTRCore,
-    void*           cb
-) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-
-    if (!hBTRCore) {
-        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
-        return enBTRCoreNotInitialized;
-    }
-
-    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
-    (void)pstlhBTRCore;
-
-  p_Status_callback = cb;
-  return enBTRCoreSuccess;
-}
 
 
 enBTRCoreRet
@@ -2502,21 +2501,58 @@ enBTRCoreRet BTRCore_UnPairDeviceByName (tBTRCoreHandle hBTRCore, const char* pA
     return rc;
 }
 
-void BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRMgr_DeviceDiscoveryCallback cb)
-{
-    if (!hBTRCore)
-    {
+
+enBTRCoreRet
+BTRCore_RegisterDiscoveryCallback (
+    tBTRCoreHandle              hBTRCore, 
+    BTRCore_DeviceDiscoveryCb   afptrBTRCoreDeviceDiscoveryCB
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
+    if (!hBTRCore) {
         printf("%s:%d - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        return enBTRCoreNotInitialized;
     }
 
-    if (!cb_DeviceDiscovery)
-    {
-        cb_DeviceDiscovery = cb;
-        printf("%s:%d - Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (!pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB) {
+        pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB = afptrBTRCoreDeviceDiscoveryCB;
+        printf("%s:%d - Device Discovery Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+    }
+    else {
+        printf("%s:%d - Device Discovery Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
     }
 
-    return;
+    return enBTRCoreSuccess;
 }
+
+
+enBTRCoreRet
+BTRCore_RegisterStatusCallback (
+    tBTRCoreHandle     hBTRCore,
+    BTRCore_StatusCb   afptrBTRCoreStatusCB
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (!pstlhBTRCore->fptrBTRCoreStatusCB) {
+        pstlhBTRCore->fptrBTRCoreStatusCB = afptrBTRCoreStatusCB;
+        printf("%s:%d - BT Status Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+    }
+    else {
+        printf("%s:%d - BT Status Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+    }
+
+    return enBTRCoreSuccess;
+}
+
 
 enBTRCoreRet BTRCore_ConnectDeviceByName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pDeviceName, enBTRCoreDeviceType aenBTRCoreDevType)
 {

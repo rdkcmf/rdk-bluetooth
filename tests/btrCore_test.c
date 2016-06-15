@@ -92,12 +92,12 @@ static void sendSBCFileOverBT (
 }
 
 
-int 
+void
 cb_unsolicited_bluetooth_status (
     stBTRCoreDevStateCB* p_StatusCB
 ) {
     printf("device status change: %s\n",p_StatusCB->cDeviceType);
-    return 0;
+    return;
 }
 
 static void

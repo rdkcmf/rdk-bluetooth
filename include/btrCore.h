@@ -77,8 +77,6 @@ typedef struct _stBTRCoreDevStateCB {
    char cDeviceCurrState[BTRCORE_STRINGS_MAX_LEN];
 } stBTRCoreDevStateCB;
 
-void (*p_Status_callback) ();
-
 /*BT Adapter*/
 typedef struct _stBTRCoreAdapter {
     U8      adapter_number;
@@ -133,7 +131,8 @@ typedef struct _stBTRCorePairedDevicesCount
     stBTRCoreKnownDevice devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCorePairedDevicesCount;
 
-typedef void (*BTRMgr_DeviceDiscoveryCallback) (stBTRCoreScannedDevicesCount);
+typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevicesCount astBTRCoreScannedDevicesCount);
+typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCB* apstDevStateCbInfo);
 
 /* Generic call to init any needed stack.. may be called during powerup*/
 enBTRCoreRet BTRCore_Init(tBTRCoreHandle* hBTRCore);
@@ -211,8 +210,6 @@ enBTRCoreRet BTRCore_StopDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* p
 /* BTRCore_GetListOfScannedDevices - gets the discovered devices list */
 enBTRCoreRet BTRCore_GetListOfScannedDevices (tBTRCoreHandle hBTRCore, const char* pAdapterPath, stBTRCoreScannedDevicesCount *pListOfScannedDevices);
 
-/* Callback to notify the application every time when a new device is found and added to discovery list */
-void BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRMgr_DeviceDiscoveryCallback cb);
 
 /*BTRCore_DiscoverServices - finds a service amongst discovered devices*/
 enBTRCoreRet BTRCore_DiscoverServices(tBTRCoreHandle hBTRCore, stBTRCoreFindService* pstFindService);
@@ -278,8 +275,10 @@ enBTRCoreRet BTRCore_ListKnownDevices(tBTRCoreHandle hBTRCore, stBTRCoreAdapter*
 /*BTRCore_FindService - confirm if a given service exists on a device*/
 enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
 
-/*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
-enBTRCoreRet BTRCore_RegisterStatusCallback(tBTRCoreHandle hBTRCore, void * cb);
+/* Callback to notify the application every time when a new device is found and added to discovery list */
+enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB);
 
+/*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
+enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afptrBTRCoreStatusCB);
 
 #endif // __BTR_CORE_H__
