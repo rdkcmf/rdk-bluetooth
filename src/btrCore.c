@@ -718,7 +718,7 @@ btrCore_ParseDevice (
                     dbus_message_iter_recurse(&dict_i, &variant_i);
                     dbus_message_iter_get_basic(&variant_i, &value);
 
-                    //printf("    name: %s\n",value);
+                    printf("    name: %s\n",value);
 
                     //load the found device into our array
                     proceedToAdd = TRUE;
