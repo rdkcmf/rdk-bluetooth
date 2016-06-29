@@ -29,6 +29,7 @@ AC_PROG_CC
 AC_CHECK_HEADERS([stdlib.h unistd.h])
 
 PKG_CHECK_MODULES([DBUS], [dbus-1])
+PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.32.0])
 
 BTR_CORE_SRC="src"
 BTR_CORE_TEST="tests"

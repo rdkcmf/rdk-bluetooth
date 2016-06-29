@@ -48,7 +48,7 @@ typedef struct _stBTRCoreGetAdapters {
 
 typedef struct _stBTRCoreListAdapters {
    U8 number_of_adapters;
-   BD_NAME adapter_path[BTRCORE_MAX_NUM_BT_DEVICES];
+   BD_NAME adapter_path[BTRCORE_MAX_NUM_BT_ADAPTERS];
 } stBTRCoreListAdapters;
 
 /*BT AdvertiseService*/
@@ -138,9 +138,15 @@ typedef struct _stBTRCorePairedDevicesCount
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevicesCount astBTRCoreScannedDevicesCount);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCB* apstDevStateCbInfo);
 
+
+/*
+ * Interfaces
+ */
+// TODO: Reduce the number of interfaces exposed to the outside world
+// TODO: Combine interfaces which perform the same functionality
+
 /* Generic call to init any needed stack.. may be called during powerup*/
 enBTRCoreRet BTRCore_Init(tBTRCoreHandle* hBTRCore);
-
 
 /* Deinitialze and free BTRCore */
 enBTRCoreRet BTRCore_DeInit(tBTRCoreHandle hBTRCore);

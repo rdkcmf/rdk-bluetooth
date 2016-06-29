@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 /* External Library Headers */
 #include <dbus/dbus.h>
@@ -15,25 +16,38 @@
 /* Local Headers */
 #include "btrCore_dbus_bt.h"
 
-
+#define BD_NAME_LEN     248
 
 /* Static Function Prototypes */
 static int btrCore_BTHandleDusError(DBusError* aDBusErr, const char* aErrfunc, int aErrline);
+
+static DBusHandlerResult btrCore_BTDBusAgentFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 static DBusHandlerResult btrCore_BTMediaEndpointHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata); 
-static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage *apDBusMsg);
-static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage *apDBusMsg);
-static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage *apDBusMsg);
+
+static char* btrCore_BTGetDefaultAdapterPath (void);
+static int btrCore_BTReleaseDefaultAdapterPath (void);
+static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
+static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
+static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage* apDBusMsg);
+static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage* apDBusMsg);
+static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDBusMsg);
+
 
 
 /* Static Global Variables Defs */
 static DBusConnection*  gpDBusConn = NULL;
-static char*            gpcDevTransportPath = NULL;
+static char* gpcBTAgentPath = NULL;
+static char* gpcBTDAdapterPath = NULL;
+static char* gpcBTAdapterPath = NULL;
+static char* gpcDevTransportPath = NULL;
+static void* gpcBUserData = NULL;
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
 };
 
 
 /* Callbacks */
+static fPtr_BtrCore_BTDevStatusUpdate_cB gfpcBDevStatusUpdate = NULL;
 static fPtr_BtrCore_BTNegotiateMedia_cB gfpcBNegotiateMedia = NULL;
 static fPtr_BtrCore_BTTransportPathMedia_cB gfpcBTransportPathMedia = NULL;
 
@@ -55,15 +69,134 @@ int btrCore_BTHandleDusError (
 
 
 static DBusHandlerResult
+btrCore_BTDBusAgentFilter_cb (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
+    const char *name, *old, *new;
+    int             i32OpRet = -1;
+    stBTDeviceInfo  lstBTDeviceInfo;
+
+    memset (&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
+    lstBTDeviceInfo.i32RSSI = INT_MIN;
+
+    //printf("agent filter activated....\n");
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter", "DeviceCreated")) {
+        printf("Device Created!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStPaired, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter", "DeviceFound")) {
+        printf("Device Found!\n");
+
+        i32OpRet = btrCore_BTParseDevice(apDBusMsg, &lstBTDeviceInfo);
+        if (gfpcBDevStatusUpdate && !i32OpRet) {
+            if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStFound, &lstBTDeviceInfo, gpcBUserData)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter","DeviceDisappeared")) {
+        printf("Device DeviceDisappeared!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStLost, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter","DeviceRemoved")) {
+        printf("Device Removed!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStUnPaired, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","Connected")) {
+        printf("Device Connected - AudioSink!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStConnected, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","Disconnected")) {
+        printf("Device Disconnected - AudioSink!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStDisconnected, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","PropertyChanged")) {
+        printf("Device PropertyChanged!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","Connected")) {
+        printf("Device Connected - Headset!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset,enBTDevStConnected, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","Disconnected")) {
+        printf("Device Disconnected - Headset!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStDisconnected, NULL, NULL)) {
+            }
+        }
+    }
+    
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","PropertyChanged")) {
+        printf("Device PropertyChanged!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (!dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+    if (!dbus_message_get_args( apDBusMsg, NULL,
+                                DBUS_TYPE_STRING, &name,
+                                DBUS_TYPE_STRING, &old,
+                                DBUS_TYPE_STRING, &new,
+                                DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+
+    if (!strcmp(name, "org.bluez") && *new == '\0') {
+        fprintf(stderr, "Agent has been terminated\n");
+    }
+
+    if (!i32OpRet)
+        return DBUS_HANDLER_RESULT_HANDLED;
+    else
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+
+static DBusHandlerResult
 btrCore_BTMediaEndpointHandler_cb (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
     DBusMessage*    lpDBusReply = NULL;
-    DBusMessage *r = NULL;
-    DBusError e;
-    const char *path;
+    DBusMessage*    r = NULL;
+    DBusError       e;
+    const char*     path;
 
     path = dbus_message_get_path(apDBusMsg);
     dbus_error_init(&e);
@@ -96,6 +229,286 @@ btrCore_BTMediaEndpointHandler_cb (
     }
 
     return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+
+static char*
+btrCore_BTGetDefaultAdapterPath (
+    void
+) {
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusError       lDBusErr;
+    const char*     lpReplyPath;
+    dbus_bool_t     lDBusOp;
+
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             "/",
+                                             "org.bluez.Manager",
+                                             "DefaultAdapter");
+
+    if (!lpDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return NULL;
+    }
+
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lpDBusReply) {
+        fprintf(stderr, "Can't find Default adapter\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return NULL;
+    }
+
+    lDBusOp = dbus_message_get_args(lpDBusReply, &lDBusErr, DBUS_TYPE_OBJECT_PATH, &lpReplyPath, DBUS_TYPE_INVALID);
+    dbus_message_unref(lpDBusReply);
+
+    if (!lDBusOp) {
+        fprintf(stderr, "Can't get reply arguments\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        return NULL;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    if (gpcBTDAdapterPath) {
+        free(gpcBTDAdapterPath);
+        gpcBTDAdapterPath = NULL;
+    }
+
+    gpcBTDAdapterPath = strdup(lpReplyPath);
+    return gpcBTDAdapterPath;
+}
+
+
+static int
+btrCore_BTReleaseDefaultAdapterPath (
+    void
+) {
+    if (gpcBTDAdapterPath) {
+        free(gpcBTDAdapterPath);
+        gpcBTDAdapterPath = NULL;
+    }
+
+    return 0;
+}
+
+
+static DBusMessage*
+btrCore_BTSendMethodCall (
+    const char*     objectpath,
+    const char*     interfacename,
+    const char*     methodname
+) {
+    const char*     busname = "org.bluez";
+
+    DBusPendingCall* pending;
+    DBusMessage*     reply;
+    DBusMessage*     methodcall = dbus_message_new_method_call( busname,
+                                                                objectpath,
+                                                                interfacename,
+                                                                methodname);
+
+    if (methodcall == NULL) {
+        printf("Cannot allocate DBus message!\n");
+        return NULL;
+    }
+
+    //Now do a sync call
+    if (!dbus_connection_send_with_reply(gpDBusConn, methodcall, &pending, -1)) { //Send and expect reply using pending call object
+        printf("failed to send message!\n");
+    }
+
+    dbus_connection_flush(gpDBusConn);
+    dbus_message_unref(methodcall);
+    methodcall = NULL;
+
+    dbus_pending_call_block(pending);               //Now block on the pending call
+    reply = dbus_pending_call_steal_reply(pending); //Get the reply message from the queue
+    dbus_pending_call_unref(pending);               //Free pending call handle
+
+    if (dbus_message_get_type(reply) ==  DBUS_MESSAGE_TYPE_ERROR) {
+        printf("Error : %s\n\n", dbus_message_get_error_name(reply));
+        dbus_message_unref(reply);
+        reply = NULL;
+    }
+
+    return reply;
+}
+
+
+static int
+btrCore_BTParseDevice (
+    DBusMessage*    apDBusMsg,
+    stBTDeviceInfo* apstBTDeviceInfo
+) {
+    DBusMessageIter arg_i;
+    DBusMessageIter element_i;
+    DBusMessageIter variant_i;
+    const char*     pcKey = NULL;
+    const char*     pcBTDevAddr = NULL;
+    int             dbus_type;
+    int             bPaired = 0;
+    int             bConnected = 0;
+    int             bTrusted = 0;
+    int             bBlocked = 0;
+    unsigned short  ui16Vendor = 0;
+    unsigned short  ui16VendorSource = 0;
+    unsigned short  ui16Product = 0;
+    unsigned short  ui16Version = 0;
+    unsigned int    ui32Class = 0;
+    short           i16RSSI = 0;
+    const char*     pcName = NULL;
+    const char*     pcAddress = NULL;
+    const char*     pcAlias = NULL;
+    const char*     pcIcon = NULL;
+
+    if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
+        fprintf(stderr, "%s:%d:%s - dbus_message_iter_init Failed\n", __FILE__, __LINE__, __FUNCTION__);
+        return -1;
+    }
+
+    if (!dbus_message_get_args( apDBusMsg, NULL,
+                                DBUS_TYPE_STRING, &pcBTDevAddr,
+                                DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "%s:%d:%s - dbus_message_get_args Failed\n", __FILE__, __LINE__, __FUNCTION__);
+        return -1;
+    }
+
+    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+    if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
+        dbus_message_iter_next(&arg_i);
+        dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+
+        if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
+            fprintf(stderr, "%s:%d:%s - Unknown Prop structure from Bluez\n", __FILE__, __LINE__, __FUNCTION__);
+            return -1;
+        }
+    }
+
+    dbus_message_iter_recurse(&arg_i, &element_i);
+    while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+        if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+            DBusMessageIter dict_i;
+
+            dbus_message_iter_recurse(&element_i, &dict_i);
+            dbus_message_iter_get_basic(&dict_i, &pcKey);
+
+            if (strcmp (pcKey, "Address") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &pcAddress);
+                strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN);
+                printf("apstBTDeviceInfo->pcAddress : %s\n", apstBTDeviceInfo->pcAddress);
+            }
+            else if (strcmp (pcKey, "Name") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &pcName);
+                strncpy(apstBTDeviceInfo->pcName, pcName, BT_MAX_STR_LEN);
+                printf("apstBTDeviceInfo->pcName: %s\n", apstBTDeviceInfo->pcName);
+
+            }
+            else if (strcmp (pcKey, "Vendor") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &ui16Vendor);
+                apstBTDeviceInfo->ui16Vendor = ui16Vendor;
+                printf("apstBTDeviceInfo->ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
+            }
+            else if (strcmp (pcKey, "VendorSource") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &ui16VendorSource);
+                apstBTDeviceInfo->ui16VendorSource = ui16VendorSource;
+                printf("apstBTDeviceInfo->ui16VendorSource = %d\n", apstBTDeviceInfo->ui16VendorSource);
+            }
+            else if (strcmp (pcKey, "Product") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &ui16Product);
+                apstBTDeviceInfo->ui16Product = ui16Product;
+                printf("apstBTDeviceInfo->ui16Product = %d\n", apstBTDeviceInfo->ui16Product);
+            }
+            else if (strcmp (pcKey, "Version") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &ui16Version);
+                apstBTDeviceInfo->ui16Version = ui16Version;
+                printf("apstBTDeviceInfo->ui16Version = %d\n", apstBTDeviceInfo->ui16Version);
+            }
+            else if (strcmp (pcKey, "Icon") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &pcIcon);
+                strncpy(apstBTDeviceInfo->pcIcon, pcIcon, BT_MAX_STR_LEN);
+                printf("apstBTDeviceInfo->pcIcon: %s\n", apstBTDeviceInfo->pcIcon);
+            }
+            else if (strcmp (pcKey, "Class") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &ui32Class);
+                apstBTDeviceInfo->ui32Class = ui32Class;
+                printf("apstBTDeviceInfo->ui32Class: %d\n", apstBTDeviceInfo->ui32Class);
+            }
+            else if (strcmp (pcKey, "Paired") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &bPaired);
+                apstBTDeviceInfo->bPaired = bPaired;
+                printf("apstBTDeviceInfo->bPaired = %d\n", apstBTDeviceInfo->bPaired);
+            }
+            else if (strcmp (pcKey, "Connected") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &bConnected);
+                apstBTDeviceInfo->bConnected = bConnected;
+                printf("apstBTDeviceInfo->bConnected = %d\n", apstBTDeviceInfo->bConnected);
+            }
+            else if (strcmp (pcKey, "Trusted") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &bTrusted);
+                apstBTDeviceInfo->bTrusted = bTrusted;
+                printf("apstBTDeviceInfo->bTrusted = %d\n", apstBTDeviceInfo->bTrusted);
+            }
+            else if (strcmp (pcKey, "Blocked") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &bBlocked);
+                apstBTDeviceInfo->bBlocked = bBlocked;
+                printf("apstBTDeviceInfo->bBlocked = %d\n", apstBTDeviceInfo->bBlocked);
+            }
+            else if (strcmp (pcKey, "Alias") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &pcAlias);
+                strncpy(apstBTDeviceInfo->pcAlias, pcAlias, BT_MAX_STR_LEN);
+                printf("apstBTDeviceInfo->pcAlias: %s\n", apstBTDeviceInfo->pcAlias);
+            }
+            else if (strcmp (pcKey, "RSSI") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &i16RSSI);
+                apstBTDeviceInfo->i32RSSI = i16RSSI;
+                printf("apstBTDeviceInfo->i32RSSI = %d i16RSSI = %d\n", apstBTDeviceInfo->i32RSSI, i16RSSI);
+            }
+        }
+
+        if (!dbus_message_iter_next(&element_i))
+            break;
+    }
+
+    (void)dbus_type;
+
+    if ((apstBTDeviceInfo->pcName == NULL) || !strlen(apstBTDeviceInfo->pcName)) {
+        if (apstBTDeviceInfo->pcAlias != NULL && strlen(apstBTDeviceInfo->pcAlias)) 
+            strncpy(apstBTDeviceInfo->pcName, apstBTDeviceInfo->pcAlias, strlen(apstBTDeviceInfo->pcAlias));
+    }
+
+    return 0;
 }
 
 
@@ -133,9 +546,9 @@ static DBusMessage*
 btrCore_BTMediaEndpointSetConfiguration (
     DBusMessage *apDBusMsg
 ) {
-    const char *lDevTransportPath = NULL;
-    const char *lStoredDevTransportPath = NULL;
-    const char *dev_path = NULL, *uuid = NULL;
+    const char* lDevTransportPath = NULL;
+    const char* lStoredDevTransportPath = NULL;
+    const char* dev_path = NULL, *uuid = NULL;
     unsigned char* config = NULL;
     int size = 0; 
 
@@ -209,7 +622,7 @@ btrCore_BTMediaEndpointSetConfiguration (
 
 static DBusMessage* 
 btrCore_BTMediaEndpointClearConfiguration (
-    DBusMessage *apDBusMsg
+    DBusMessage*    apDBusMsg
 ) {
 
     DBusMessage*    lpDBusReply;
@@ -259,65 +672,125 @@ BtrCore_BTInitGetConnection (
     fprintf(stderr, "DBus Debug DBus Connection Name %s\n", dbus_bus_get_unique_name (lpDBusConn));
     gpDBusConn = lpDBusConn;
 
+    if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusAgentFilter_cb, NULL, NULL)) {
+        fprintf(stderr, "%s:%d:%s - Can't add signal filter - BtrCore_BTInitGetConnection\n", __FILE__, __LINE__, __FUNCTION__);
+        BtrCore_BTDeInitReleaseConnection(lpDBusConn);
+        return NULL;
+    }
+
+    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL);
+
+    gpcBUserData            = NULL;
+    gfpcBDevStatusUpdate    = NULL;
+    gfpcBNegotiateMedia     = NULL;
+    gfpcBTransportPathMedia = NULL;
+
     return (void*)gpDBusConn;
+}
+
+
+int
+BtrCore_BTDeInitReleaseConnection (
+    void* apBtConn
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    gfpcBTransportPathMedia = NULL;
+    gfpcBNegotiateMedia     = NULL;
+    gfpcBDevStatusUpdate    = NULL;
+    gpcBUserData            = NULL;
+
+    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL);
+
+    dbus_connection_remove_filter(gpDBusConn, btrCore_BTDBusAgentFilter_cb, NULL);
+
+    gpDBusConn = NULL;
+
+    return 0;
 }
 
 
 char*
 BtrCore_BTGetAgentPath (
-    void
-) {
-    char lDefaultBTPath[128];
-    snprintf(lDefaultBTPath, sizeof(lDefaultBTPath), "/org/bluez/agent_%d", getpid());
-    return strdup(lDefaultBTPath);
-}
-
-
-char*
-BtrCore_BTGetDefaultAdapterPath (
     void* apBtConn
 ) {
-    DBusMessage*    lpDBusMsg;
-    DBusMessage*    lpDBusReply;
-    DBusError       lDBusErr;
-    const char*     lpReplyPath;
-    dbus_bool_t     lDBusOp;
+    char lDefaultBTPath[128] = {'\0'};
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return NULL;
 
-    lpDBusMsg = dbus_message_new_method_call("org.bluez",
-                                             "/",
-                                             "org.bluez.Manager",
-                                             "DefaultAdapter");
+    snprintf(lDefaultBTPath, sizeof(lDefaultBTPath), "/org/bluez/agent_%d", getpid());
 
-    if (!lpDBusMsg) {
-        fprintf(stderr, "Can't allocate new method call\n");
-        return NULL;
+    if (gpcBTAgentPath) {
+        free(gpcBTAgentPath);
+        gpcBTAgentPath = NULL;
     }
 
-    dbus_error_init(&lDBusErr);
-    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
-    dbus_message_unref(lpDBusMsg);
+    gpcBTAgentPath = strdup(lDefaultBTPath);
+    return gpcBTAgentPath;
+}
 
-    if (!lpDBusReply) {
-        fprintf(stderr, "Can't find Default adapter\n");
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
-        return NULL;
+
+int
+BtrCore_BTReleaseAgentPath (
+    void* apBtConn
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (gpcBTAgentPath) {
+        free(gpcBTAgentPath);
+        gpcBTAgentPath = NULL;
     }
 
-    lDBusOp = dbus_message_get_args(lpDBusReply, &lDBusErr, DBUS_TYPE_OBJECT_PATH, &lpReplyPath, DBUS_TYPE_INVALID);
-    dbus_message_unref(lpDBusReply);
+    return 0;
+}
 
-    if (!lDBusOp) {
-        fprintf(stderr, "Can't get reply arguments\n");
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
-        return NULL;
+
+int
+BtrCore_BTGetAdapterList (
+    void*           apBtConn,
+    unsigned int*   apBtNumAdapters,
+    char**          apcArrBtAdapterPath
+) {
+    DBusError err;
+    char **paths = NULL;
+    int i, rc = -1;
+    int num = -1;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+    
+    dbus_error_init(&err);
+    DBusMessage *reply = btrCore_BTSendMethodCall("/", "org.bluez.Manager", "ListAdapters");
+    if (!reply) {
+        printf("%s:%d - org.bluez.Manager.ListAdapters returned an error: '%s'\n", __FUNCTION__, __LINE__, err.message);
+        dbus_error_free(&err);
+    }
+    else {
+        if (dbus_message_get_args(reply, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
+            if (apBtNumAdapters && apcArrBtAdapterPath) {
+                *apBtNumAdapters = num;
+
+                for (i = 0; i < num; i++) {
+                    if (*(apcArrBtAdapterPath + i)) {
+                        printf("Adapter Path: %d is %s\n", i, paths[i]);
+                        strncpy(*(apcArrBtAdapterPath + i), paths[i], BD_NAME_LEN);
+                        rc = 0;
+                    }
+                }
+            }
+        }
+        else {
+            printf("%s:%d - org.bluez.Manager.GetProperties parsing failed '%s'\n", __FUNCTION__, __LINE__, err.message);
+            dbus_error_free(&err);
+        }
+
+        dbus_message_unref(reply);
     }
 
-    dbus_connection_flush(gpDBusConn);
-
-    return strdup(lpReplyPath); //Caller Should free the pointer returned
+    return rc;
 }
 
 
@@ -336,7 +809,7 @@ BtrCore_BTGetAdapterPath (
         return NULL;
 
     if (!apBtAdapter)
-        return BtrCore_BTGetDefaultAdapterPath(gpDBusConn);
+        return btrCore_BTGetDefaultAdapterPath();
 
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
                                              "/",
@@ -371,7 +844,156 @@ BtrCore_BTGetAdapterPath (
 
     dbus_connection_flush(gpDBusConn);
 
-    return strdup(lpReplyPath); //Caller Should free the pointer returned
+    if (gpcBTAdapterPath) {
+        free(gpcBTAdapterPath);
+        gpcBTAdapterPath = NULL;
+    }
+
+    gpcBTAdapterPath = strdup(lpReplyPath);
+    return gpcBTAdapterPath;
+}
+
+
+int
+BtrCore_BTReleaseAdapterPath (
+    void*       apBtConn,
+    const char* apBtAdapter
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apBtAdapter) {
+        return btrCore_BTReleaseDefaultAdapterPath();
+    }
+
+    if (gpcBTAdapterPath) {
+
+         if (gpcBTAdapterPath != apBtAdapter)
+            fprintf(stderr, "ERROR: Looks like Adapter path has been changed by User\n");
+
+        free(gpcBTAdapterPath);
+        gpcBTAdapterPath = NULL;
+    }
+    
+    return 0;
+}
+
+
+int
+BtrCore_BTGetProp (
+    void*           apBtConn,
+    const char*     pDevicePath,
+    const char*     pInterface,
+    const char*     pKey,
+    void*           pValue
+) {
+    int             rc = 0;
+    int             type;
+    DBusMessage*    reply = NULL;
+    DBusMessageIter arg_i;
+    DBusMessageIter element_i;
+    DBusMessageIter variant_i;
+    DBusError       err;
+    const char*     pParsedKey = NULL;
+    const char*     pParsedValueString = NULL;
+    int             parsedValueNumber = 0;
+    unsigned int    parsedValueUnsignedNumber = 0;
+
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if ((!pDevicePath) || (!pInterface) || (!pKey) || (!pValue)) {
+        printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
+        return -1;
+    }
+
+    if (!strcmp(pKey, "Name")) {
+        type = DBUS_TYPE_STRING;
+    }
+    else if (!strcmp(pKey, "Address")) {
+        type = DBUS_TYPE_STRING;
+    }
+    else if (!strcmp(pKey, "Powered")) {
+        type = DBUS_TYPE_BOOLEAN;
+    }
+    else if (!strcmp(pKey, "Paired")) {
+        type = DBUS_TYPE_BOOLEAN;
+    }
+    else if (!strcmp(pKey, "Connected")) {
+        type = DBUS_TYPE_BOOLEAN;
+    }
+    else if (!strcmp(pKey, "Discoverable")) {
+        type = DBUS_TYPE_BOOLEAN;
+    }
+    else {
+        type = DBUS_TYPE_INVALID;
+        return -1;
+    }
+
+    dbus_error_init(&err);
+    reply = btrCore_BTSendMethodCall(pDevicePath, pInterface, "GetProperties");
+    if (!reply) {
+        printf("%s:%d - %s.GetProperties returned an error: '%s'\n", __FUNCTION__, __LINE__, pInterface, err.message);
+        rc = -1;
+        dbus_error_free(&err);
+    }
+    else {
+        if (!dbus_message_iter_init(reply, &arg_i)) {
+            printf("GetProperties reply has no arguments.");
+            rc = -1;
+        }
+        else if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
+            printf("GetProperties argument is not an array.");
+            rc = -1;
+        }
+        else {
+            dbus_message_iter_recurse(&arg_i, &element_i);
+            while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+                if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+                    DBusMessageIter dict_i;
+                    dbus_message_iter_recurse(&element_i, &dict_i);
+                    dbus_message_iter_get_basic(&dict_i, &pParsedKey);
+
+                    if ((pParsedKey) && (strcmp (pParsedKey, pKey) == 0)) {
+                        dbus_message_iter_next(&dict_i);
+                        dbus_message_iter_recurse(&dict_i, &variant_i);
+                        if (type == DBUS_TYPE_STRING) {
+                            dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
+                            //printf("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
+                            strncpy (pValue, pParsedValueString, BD_NAME_LEN);
+                        }
+                        else if (type == DBUS_TYPE_UINT32) {
+                            unsigned int* ptr = (unsigned int*) pValue;
+                            dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedNumber);
+                            //printf("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
+                            *ptr = parsedValueUnsignedNumber;
+                        }
+                        else { /* As of now ints and bools are used. This function has to be extended for array if needed */
+                            int* ptr = (int*) pValue;
+                            dbus_message_iter_get_basic(&variant_i, &parsedValueNumber);
+                            //printf("Key is %s and the value is %d\n", pParsedKey, parsedValueNumber);
+                            *ptr = parsedValueNumber;
+                        }
+                        rc = 0;
+                        break;
+                    }
+                }
+
+                if (!dbus_message_iter_next(&element_i))
+                    break;
+            }
+        }
+
+        if (dbus_error_is_set(&err)) {
+            printf("%s:%d - Some failure noticed and the err message is %s\n", __FUNCTION__, __LINE__, err.message);
+            dbus_error_free(&err);
+        }
+
+        dbus_message_unref(reply);
+    }
+
+    return rc;
 }
 
 
@@ -467,7 +1089,6 @@ BtrCore_BTSetAdapterProp (
 }
 
 
-
 int
 BtrCore_BTStartDiscovery (
     void*       apBtConn,
@@ -535,6 +1156,231 @@ BtrCore_BTStopDiscovery (
     }
 
     dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
+int
+BtrCore_BTGetPairedDevices (
+    void*           apBtConn,
+    const char*     apBtAdapter,
+    unsigned int*   apui32PairedDevCnt,
+    char**          apcArrPairedDevPath
+) {
+    int         rc = -1;
+    int         i = 0;
+    int         num = 0;
+    char**      paths = NULL;
+    DBusError   lDBusErr;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apui32PairedDevCnt || !apcArrPairedDevPath)
+        return -1;
+
+    dbus_error_init(&lDBusErr);
+    //path  busname interface  method
+
+    DBusMessage* reply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
+    if (reply != NULL) {
+        if (!dbus_message_get_args(reply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
+            printf("org.bluez.Adapter.ListDevices returned an error: '%s'\n", lDBusErr.message);
+        }
+
+        for ( i = 0; i < num; i++) {
+            if (apcArrPairedDevPath[i])
+                strcpy(apcArrPairedDevPath[i], paths[i]);
+        }
+
+        *apui32PairedDevCnt = num;
+        dbus_message_unref(reply);
+
+        rc = 0;
+    }
+
+    return rc;
+}
+
+
+int 
+BtrCore_BTDiscoverDeviceServices (
+    void*           apBtConn,
+    const char*     apcDevPath,
+    const char*     apcSearchString,
+    char*           apcDataString
+) {
+    DBusMessage *msg, *reply;
+    DBusMessageIter arg_i, element_i;
+    DBusMessageIter dict_i;
+    int dbus_type;
+    DBusError err;
+    int match;
+    const char* value;
+    char* ret;
+        
+   //BTRCore_LOG("apcDevPath is %s\n and service UUID is %s", apcDevPath, apcSearchString);
+    msg = dbus_message_new_method_call( "org.bluez",
+                                        apcDevPath,
+                                        "org.bluez.Device",
+                                        "DiscoverServices");
+    
+    if (!msg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+    
+    match = 0; //assume it does not match
+    dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcSearchString, DBUS_TYPE_INVALID);
+    dbus_error_init(&err);
+    reply = dbus_connection_send_with_reply_and_block(apBtConn, msg, -1, &err);
+    
+    dbus_message_unref(msg);
+    
+    if (!reply) {
+        fprintf(stderr, "Failure attempting to Discover Services\n");
+
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
+
+        return -1;
+    }
+
+    if (!dbus_message_iter_init(reply, &arg_i)) {
+       printf("DiscoverServices reply has no information.");
+       return -1;
+    }
+
+    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+    // printf("type is %d\n", dbus_type);
+    
+    dbus_message_iter_recurse(&arg_i, &element_i);
+    dbus_type = dbus_message_iter_get_arg_type(&element_i);
+    //printf("checking the type, it is %d\n",dbus_type);
+
+    while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+        dbus_type = dbus_message_iter_get_arg_type(&element_i);
+        //printf("next element_i type is %d\n",dbus_type);
+
+        if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+
+            dbus_message_iter_recurse(&element_i, &dict_i);
+            dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+            // printf("checking the dict subtype, it is %d\n",dbus_type);
+
+            dbus_message_iter_next(&dict_i);
+            dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+            // printf("interating the dict subtype, it is %d\n",dbus_type);
+            dbus_message_iter_get_basic(&dict_i, &value);
+            
+            // printf("Services: %s\n",value);
+            if (apcDataString != NULL) {
+                strcpy(apcDataString, value);
+            }
+
+            // lets strstr to see if "uuid value="<UUID>" is there
+            ret =  strstr(value, apcSearchString);
+            if (ret !=NULL) {
+                match = 1;//assume it does match
+                // printf("match\n");
+            }
+            else {
+                //printf("NO match\n");
+                match = 0;//assume it does not match
+            }
+        }
+
+        //load the new device into our list of scanned devices
+        if (!dbus_message_iter_next(&element_i))
+            break;
+
+    }
+
+    (void)dbus_type;
+    
+    return match;
+}
+
+
+int
+BtrCore_BTPerformDeviceOp (
+    void*           apBtConn,
+    const char*     apBtAdapter,
+    const char*     apBtAgentPath,
+    const char*     apcDevPath,
+    enBTDeviceOp    aenBTDevOp
+) {
+    DBusMessage* msg;
+    DBusMessage* reply;
+    DBusError err;
+    char deviceOpString[64] = {'\0'}; 
+    int rc = 0;
+
+    /* We can enhance the BTRCore with passcode support later point in time */
+    const char *capabilities = "NoInputNoOutput";
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTDevOp == enBTDevOpUnknown))
+        return -1;
+
+
+    switch (aenBTDevOp) {
+        case enBTDevOpFindPairedDev:
+            strcpy(deviceOpString, "FindDevice");
+            break;
+        case enBTDevOpCreatePairedDev:
+            strcpy(deviceOpString, "CreatePairedDevice");
+            break;
+        case enBTDevOpRemovePairedDev:
+            strcpy(deviceOpString, "RemoveDevice");
+            break;
+        case enBTDevOpUnknown:
+        default:
+            rc = -1;  
+            break;
+    }
+
+    if (rc == -1)
+        return rc;
+
+    msg = dbus_message_new_method_call( "org.bluez",
+                                        apBtAdapter,
+                                        "org.bluez.Adapter",
+                                        deviceOpString);
+
+    if (!msg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    if (aenBTDevOp == enBTDevOpFindPairedDev) {
+        dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcDevPath, DBUS_TYPE_INVALID);
+    }
+    else if (aenBTDevOp == enBTDevOpRemovePairedDev) {
+        dbus_message_append_args(msg, DBUS_TYPE_OBJECT_PATH, &apcDevPath, DBUS_TYPE_INVALID);
+    }
+    else if (aenBTDevOp == enBTDevOpCreatePairedDev) {
+        dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcDevPath,
+                              DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,
+                              DBUS_TYPE_STRING, &capabilities,
+                              DBUS_TYPE_INVALID);
+    }
+
+    dbus_error_init(&err);
+
+    reply = dbus_connection_send_with_reply_and_block(gpDBusConn, msg, -1, &err);
+
+    dbus_message_unref(msg);
+
+    if (!reply) {
+
+        fprintf(stderr, "Pairing failed...\n");
+
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
+        return -1;
+    }
 
     return 0;
 }
@@ -697,8 +1543,8 @@ BtrCore_BTRegisterMedia (
     dbus_message_iter_open_container (&lDBusMsgIter, DBUS_TYPE_ARRAY, "{sv}", &lDBusMsgIterArr);
     {
         DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
-        char *key = "UUID";
-        int  type = DBUS_TYPE_STRING;
+        char*   key = "UUID";
+        int     type = DBUS_TYPE_STRING;
 
         dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
             dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
@@ -709,8 +1555,8 @@ BtrCore_BTRegisterMedia (
     }
     {
         DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
-        char *key = "Codec";
-        int  type = DBUS_TYPE_BYTE;
+        char*   key = "Codec";
+        int     type = DBUS_TYPE_BYTE;
 
         dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
             dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
@@ -721,8 +1567,8 @@ BtrCore_BTRegisterMedia (
     }
     {
         DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant, lDBusMsgIterSubArray;
-        char *key = "Capabilities";
-        int  type = DBUS_TYPE_BYTE;
+        char*   key = "Capabilities";
+        int     type = DBUS_TYPE_BYTE;
 
         char array_type[5] = "a";
         strncat (array_type, (char*)&type, sizeof(array_type));
@@ -916,6 +1762,41 @@ BtrCore_BTReleaseDevDataPath (
 
     return 0;
 }
+
+
+int 
+BtrCore_BTSendReceiveMessages (
+    void*   apBtConn
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if(dbus_connection_read_write_dispatch(gpDBusConn, 25) != TRUE) {
+        return -1;
+    }
+    
+    return 0;
+}
+
+
+int
+BtrCore_BTRegisterDevStatusUpdatecB (
+    void*       apBtConn,
+    fPtr_BtrCore_BTDevStatusUpdate_cB afpcBDevStatusUpdate,
+    void*       apUserData
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!afpcBDevStatusUpdate)
+        return -1;
+
+    gfpcBDevStatusUpdate = afpcBDevStatusUpdate;
+    gpcBUserData = apUserData;
+
+    return 0;
+}
+
 
 
 int
