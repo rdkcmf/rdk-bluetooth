@@ -374,7 +374,6 @@ btrCore_BTParseDevice (
                                 DBUS_TYPE_STRING, &pcBTDevAddr,
                                 DBUS_TYPE_INVALID)) {
         fprintf(stderr, "%s:%d:%s - dbus_message_get_args Failed\n", __FILE__, __LINE__, __FUNCTION__);
-        return -1;
     }
 
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
@@ -503,10 +502,8 @@ btrCore_BTParseDevice (
 
     (void)dbus_type;
 
-    if ((apstBTDeviceInfo->pcName == NULL) || !strlen(apstBTDeviceInfo->pcName)) {
-        if (apstBTDeviceInfo->pcAlias != NULL && strlen(apstBTDeviceInfo->pcAlias)) 
-            strncpy(apstBTDeviceInfo->pcName, apstBTDeviceInfo->pcAlias, strlen(apstBTDeviceInfo->pcAlias));
-    }
+    if (strlen(apstBTDeviceInfo->pcAlias))
+        strncpy(apstBTDeviceInfo->pcName, apstBTDeviceInfo->pcAlias, strlen(apstBTDeviceInfo->pcAlias));
 
     return 0;
 }
@@ -898,6 +895,7 @@ BtrCore_BTGetProp (
     const char*     pParsedValueString = NULL;
     int             parsedValueNumber = 0;
     unsigned int    parsedValueUnsignedNumber = 0;
+    unsigned short  parsedValueUnsignedShort = 0;
 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
@@ -925,6 +923,9 @@ BtrCore_BTGetProp (
     }
     else if (!strcmp(pKey, "Discoverable")) {
         type = DBUS_TYPE_BOOLEAN;
+    }
+    else if (!strcmp(pKey, "Vendor")) {
+        type = DBUS_TYPE_UINT16;
     }
     else {
         type = DBUS_TYPE_INVALID;
@@ -962,6 +963,12 @@ BtrCore_BTGetProp (
                             dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
                             //printf("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
                             strncpy (pValue, pParsedValueString, BD_NAME_LEN);
+                        }
+                        else if (type == DBUS_TYPE_UINT16) {
+                            unsigned short* ptr = (unsigned short*) pValue;
+                            dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedShort);
+                            //printf("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
+                            *ptr = parsedValueUnsignedShort;
                         }
                         else if (type == DBUS_TYPE_UINT32) {
                             unsigned int* ptr = (unsigned int*) pValue;
@@ -1161,6 +1168,56 @@ BtrCore_BTStopDiscovery (
 }
 
 
+int BtrCore_BTGetPairedDeviceInfo (void* apBtConn, const char* apBtAdapter, stBTPairedDeviceInfo *pPairedDeviceInfo)
+{
+    int         i = 0;
+    int         num = 0;
+    char**      paths = NULL;
+    DBusError   lDBusErr;
+    stBTDeviceInfo apstBTDeviceInfo;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !pPairedDeviceInfo)
+        return -1;
+
+    memset (pPairedDeviceInfo, 0, sizeof (stBTPairedDeviceInfo));
+
+    dbus_error_init(&lDBusErr);
+    DBusMessage* reply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
+    if (reply != NULL) {
+        if (!dbus_message_get_args(reply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
+            printf("org.bluez.Adapter.ListDevices returned an error: '%s'\n", lDBusErr.message);
+        }
+
+        /* Update the number of devices */
+        pPairedDeviceInfo->numberOfDevices = num;
+
+        /* Update the paths of these devices */
+        for ( i = 0; i < num; i++) {
+            strcpy(pPairedDeviceInfo->devicePath[i], paths[i]);
+        }
+        dbus_message_unref(reply);
+    }
+
+    for ( i = 0; i < num; i++) {
+        reply = btrCore_BTSendMethodCall(pPairedDeviceInfo->devicePath[i], "org.bluez.Device", "GetProperties");
+        if (reply != NULL) {
+            memset (&apstBTDeviceInfo, 0, sizeof(apstBTDeviceInfo));
+            if (0 != btrCore_BTParseDevice(reply, &apstBTDeviceInfo))
+            {
+                printf ("Parsing the device %s failed..\n", pPairedDeviceInfo->devicePath[i]);
+                dbus_message_unref(reply);
+                return -1;
+            }
+            else
+            {
+                memcpy (&pPairedDeviceInfo->deviceInfo[i], &apstBTDeviceInfo, sizeof(apstBTDeviceInfo));
+            }
+        }
+        dbus_message_unref(reply);
+    }
+    return 0;
+}
+
 int
 BtrCore_BTGetPairedDevices (
     void*           apBtConn,
@@ -1200,9 +1257,132 @@ BtrCore_BTGetPairedDevices (
     return rc;
 }
 
+int BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, stBTDeviceSupportedServiceList *pProfileList)
+{
+    DBusMessage *msg, *reply;
+    DBusMessageIter arg_i, element_i;
+    DBusMessageIter dict_i;
+    int dbus_type;
+    DBusError err;
+    const char* value;
+    char* ret;
+
+    int count = 0;
+    char* pSearchString = "";
+    char* pUUIDValue = "uuid value=\"0x";
+    char* pProfileName = "text value=\"";
+    int lengthOfUUID = strlen (pUUIDValue);
+    int lengthOfProfile = strlen (pProfileName);
+    char buff[10] = "";
+
+    int isUUIDFound = 0;
+    int isProfileFound = 0;
+    msg = dbus_message_new_method_call( "org.bluez", apcDevPath, "org.bluez.Device", "DiscoverServices");
+
+    if (!msg) {
+        fprintf(stderr, "Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_append_args(msg, DBUS_TYPE_STRING, &pSearchString, DBUS_TYPE_INVALID);
+    dbus_error_init(&err);
+    reply = dbus_connection_send_with_reply_and_block(apBtConn, msg, -1, &err);
+
+    dbus_message_unref(msg);
+
+    if (!reply) {
+        fprintf(stderr, "Failure attempting to Discover Services\n");
+
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
+
+        return -1;
+    }
+
+    if (!dbus_message_iter_init(reply, &arg_i)) {
+       printf("DiscoverServices reply has no information.");
+       return -1;
+    }
+
+    dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+    // printf("type is %d\n", dbus_type);
+
+    dbus_message_iter_recurse(&arg_i, &element_i);
+    dbus_type = dbus_message_iter_get_arg_type(&element_i);
+    //printf("checking the type, it is %d\n",dbus_type);
+
+    while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
+        dbus_type = dbus_message_iter_get_arg_type(&element_i);
+        //printf("next element_i type is %d\n",dbus_type);
+
+        if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
+            isUUIDFound = 0;
+            isProfileFound = 0;
+
+            dbus_message_iter_recurse(&element_i, &dict_i);
+            dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+            // printf("checking the dict subtype, it is %d\n",dbus_type);
+
+            dbus_message_iter_next(&dict_i);
+            dbus_type = dbus_message_iter_get_arg_type(&dict_i);
+            // printf("interating the dict subtype, it is %d\n",dbus_type);
+            dbus_message_iter_get_basic(&dict_i, &value);
+
+            //printf("Services: %s\n",value);
+            ret =  strstr(value, pUUIDValue);
+            if (ret != NULL) {
+                ret += lengthOfUUID;
+
+                buff[0] = ret[0];
+                buff[1] = ret[1];
+                buff[2] = ret[2];
+                buff[3] = ret[3];
+                buff[4] = '\0';
+                pProfileList->profile[count].uuid_value = strtol(buff, NULL, 16);
+                isUUIDFound = 1;
+            }
+
+            ret =  strstr(value, pProfileName);
+            if (ret != NULL) {
+                char *ptr = NULL;
+                int index = 0;
+                ret += lengthOfProfile;
+                ptr = strchr(ret, '"');
+                if (ptr != NULL)
+                {
+                    /* shorten the string */
+                    index = ptr - ret;
+                    if (index < BT_MAX_STR_LEN)
+                    {
+                        strncpy (pProfileList->profile[count].profile_name, ret, index);
+                        isProfileFound = 1;
+                    }
+                }
+            }
+
+            /* increase the Profile/Service Count by 1 */
+            if ((isUUIDFound) && (isProfileFound))
+            {
+                count++;
+                pProfileList->numberOfService = count;
+            }
+        }
+
+        //load the new device into our list of scanned devices
+        if (!dbus_message_iter_next(&element_i))
+            break;
+
+    }
+
+    (void)dbus_type;
+
+    return 0;
+}
 
 int 
-BtrCore_BTDiscoverDeviceServices (
+BtrCore_BTFindServiceSupported (
     void*           apBtConn,
     const char*     apcDevPath,
     const char*     apcSearchString,

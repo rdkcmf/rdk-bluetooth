@@ -12,6 +12,7 @@
 #define BTRCORE_MAX_NUM_BT_ADAPTERS 4   // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
 #define BTRCORE_STRINGS_MAX_LEN     32
+#define BTRCORE_MAX_DEVICE_PROFILE  32
 
 
 typedef enum _enBTRCoreDeviceType {
@@ -107,20 +108,19 @@ typedef struct _stBTRCoreStartDiscovery {
 
 typedef struct _stBTRCoreScannedDevices {
    tBTRCoreDevHandle device_handle;
-   BD_NAME bd_address;
+   BD_NAME device_address;
    BD_NAME device_name;
    int RSSI;
-   BOOLEAN device_paired;
+   unsigned int vendor_id;
    BOOLEAN found;
 } stBTRCoreScannedDevices;
 
 typedef struct _stBTRCoreKnownDevice {
    tBTRCoreDevHandle device_handle;
-   BD_NAME bd_path;
    BD_NAME device_name;
-   int RSSI;
-   BOOLEAN found;
-   BOOLEAN device_connected;
+   BD_NAME device_address;
+   BD_NAME bd_path;
+   unsigned int vendor_id;
 } stBTRCoreKnownDevice;
 
 typedef struct _stBTRCoreScannedDevicesCount
@@ -134,6 +134,18 @@ typedef struct _stBTRCorePairedDevicesCount
     int numberOfDevices;
     stBTRCoreKnownDevice devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCorePairedDevicesCount;
+
+typedef struct _stBTRCoreSupportedService
+{
+    unsigned int uuid_value;
+    BD_NAME profile_name;
+} stBTRCoreSupportedService;
+
+typedef struct _stBTRCoreSupportedServiceList
+{
+    int numberOfService;
+    stBTRCoreSupportedService profile[BTRCORE_MAX_DEVICE_PROFILE];
+} stBTRCoreSupportedServiceList;
 
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevicesCount astBTRCoreScannedDevicesCount);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCB* apstDevStateCbInfo);
@@ -275,8 +287,11 @@ enBTRCoreRet BTRCore_UnPairDevice (tBTRCoreHandle hBTRCore, const char* pAdapter
 /*BTRCore_ListKnownDevices*/
 enBTRCoreRet BTRCore_ListKnownDevices(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter); /*- list previously Paired Devices*/
 
-/*BTRCore_FindService - confirm if a given service exists on a device*/
-enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
+/* BTRCore_GetSupportedServices - confirm if a given service exists on a device*/
+enBTRCoreRet BTRCore_GetSupportedServices (tBTRCoreHandle hBTRCore, tBTRCoreDevHandle handle, stBTRCoreSupportedServiceList *pProfileList);
+
+/*BTRCore_FindServiceByIndex - confirm if a given service exists on a device*/
+enBTRCoreRet BTRCore_FindServiceByIndex (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
 
 /* Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB);

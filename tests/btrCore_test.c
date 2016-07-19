@@ -330,7 +330,7 @@ main (
             lstBTRCoreAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(lhBTRCore, &lstBTRCoreAdapter);
             devnum = getChoice();
-            if (BTRCore_FindService(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
+            if (BTRCore_FindServiceByIndex(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
                 if (bfound) {
                     printf("Service UUID BTRCore_A2SNK is found\n");
                 }
@@ -339,7 +339,7 @@ main (
                 }
             }
             else {
-                printf("Error on BTRCore_FindService\n");
+                printf("Error on BTRCore_FindServiceByIndex\n");
             }
             break;
         case 18:
@@ -356,7 +356,7 @@ main (
                    myService[i] = '\0';
                 }
             bfound=0;//assume not found
-            if (BTRCore_FindService(lhBTRCore, devnum, myService,NULL,&bfound) == enBTRCoreSuccess) {
+            if (BTRCore_FindServiceByIndex(lhBTRCore, devnum, myService,NULL,&bfound) == enBTRCoreSuccess) {
                 if (bfound) {
                     printf("Service UUID %s is found\n",myService);
                 }
@@ -365,7 +365,7 @@ main (
                 }
             }
             else {
-                printf("Error on BTRCore_FindService\n");
+                printf("Error on BTRCore_FindServiceByIndex\n");
             }
             break;
         case 19:
@@ -388,7 +388,7 @@ main (
             so this usage  can provide that capability.
             In most cases, simply knowing if the service exists may suffice, in which case you can use
             the simplified option where the data pointer is NULL, and no data is copied*/
-            if (BTRCore_FindService(lhBTRCore, devnum,myService,myData,&bfound)  == enBTRCoreSuccess) {
+            if (BTRCore_FindServiceByIndex(lhBTRCore, devnum,myService,myData,&bfound)  == enBTRCoreSuccess) {
                 if (bfound) {
                     printf("Service UUID %s is found\n",myService);
                     printf("Data is:\n %s \n",myData);
@@ -398,7 +398,7 @@ main (
                 }
             }
             else {
-                printf("Error on BTRCore_FindService\n");
+                printf("Error on BTRCore_FindServiceByIndex\n");
             }
             break;
          case 20:

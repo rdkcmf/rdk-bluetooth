@@ -6,7 +6,9 @@
 #ifndef __BTR_CORE_DBUS_BT_H__
 #define __BTR_CORE_DBUS_BT_H__
 
-#define BT_MAX_STR_LEN  256
+#define BT_MAX_STR_LEN          256
+#define BT_MAX_NUM_DEVICE        32
+#define BT_MAX_DEVICE_PROFILE    32
 
 /* Enum Types */
 typedef enum _enBTDeviceType {
@@ -69,6 +71,24 @@ typedef struct _stBTDeviceInfo {
     // TODO: Array of objects Nodes;
 } stBTDeviceInfo;
 
+typedef struct _stBTPairedDeviceInfo {
+    unsigned short numberOfDevices;
+    char devicePath[BT_MAX_NUM_DEVICE][BT_MAX_STR_LEN];
+    stBTDeviceInfo deviceInfo[BT_MAX_NUM_DEVICE];
+} stBTPairedDeviceInfo;
+
+typedef struct _stBTDeviceSupportedService
+{
+    unsigned int uuid_value;
+    char profile_name[BT_MAX_STR_LEN];
+} stBTDeviceSupportedService;
+
+typedef struct _stBTDeviceSupportedServiceList
+{
+    int numberOfService;
+    stBTDeviceSupportedService profile[BT_MAX_DEVICE_PROFILE];
+} stBTDeviceSupportedServiceList;
+
 
 /* Callbacks Types */
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
@@ -88,7 +108,9 @@ int   BtrCore_BTSetAdapterProp (void* apBtConn, const char* apBtAdapter, enBTAda
 int   BtrCore_BTStartDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTStopDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTGetPairedDevices (void* apBtConn, const char* apBtAdapter, unsigned int* apui32PairedDevCnt, char** apcArrPairedDevPath);
-int   BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, const char* apcSearchString, char* apcDataString);
+int   BtrCore_BTGetPairedDeviceInfo (void* apBtConn, const char* apBtAdapter, stBTPairedDeviceInfo *pPairedDeviceInfo);
+int   BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, stBTDeviceSupportedServiceList *pProfileList);
+int   BtrCore_BTFindServiceSupported(void* apBtConn, const char* apcDevPath, const char* apcSearchString, char* apcDataString);
 int   BtrCore_BTPerformDeviceOp (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char* apcDevPath, enBTDeviceOp aenBTDevOp);
 int   BtrCore_BTConnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType enBTDevType);
 int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType enBTDevType);
