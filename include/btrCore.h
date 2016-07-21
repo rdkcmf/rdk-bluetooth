@@ -299,4 +299,13 @@ enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCor
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
 enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afptrBTRCoreStatusCB);
 
+//Register Agent to accept connection requests
+enBTRCoreRet BTRCore_RegisterAgent(tBTRCoreHandle hBTRCore, int iBTRCapMode);
+
+//unregister agent to support pairing initiated from settop
+enBTRCoreRet BTRCore_UnregisterAgent(tBTRCoreHandle hBTRCore);
+
+/*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
+enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCallback(tBTRCoreHandle hBTRCore, void * cb);
+
 #endif // __BTR_CORE_H__

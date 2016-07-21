@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <signal.h>
 
 /* External Library Headers */
 #include <dbus/dbus.h>
@@ -28,6 +29,7 @@ static char* btrCore_BTGetDefaultAdapterPath (void);
 static int btrCore_BTReleaseDefaultAdapterPath (void);
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
 static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
+static int btrCore_BTParsePropertyChange (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
 static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage* apDBusMsg);
 static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage* apDBusMsg);
 static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDBusMsg);
@@ -35,6 +37,11 @@ static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDB
 
 
 /* Static Global Variables Defs */
+static char *passkey = NULL;
+static int do_reject = 0;
+static volatile sig_atomic_t __io_canceled = 0;
+static volatile sig_atomic_t __io_terminated = 0;
+static char gpcDeviceCurrState[BT_MAX_STR_LEN];
 static DBusConnection*  gpDBusConn = NULL;
 static char* gpcBTAgentPath = NULL;
 static char* gpcBTDAdapterPath = NULL;
@@ -120,6 +127,15 @@ btrCore_BTDBusAgentFilter_cb (
         printf("Device Connected - AudioSink!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStConnected, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","PropertyChanged")) {
+        printf("Device PropertyChanged!\n");
+         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBUserData)) {
             }
         }
     }
@@ -295,6 +311,274 @@ btrCore_BTReleaseDefaultAdapterPath (
     return 0;
 }
 
+static int BTunregister_agent(DBusConnection *Dbusconn, const char *adapter_path, const char *agent_path)
+{
+	DBusMessage *apDBusMsg, *reply;
+	DBusError err;
+	apDBusMsg = dbus_message_new_method_call("org.bluez", adapter_path, "org.bluez.Adapter", "UnregisterAgent");
+	if (!apDBusMsg)
+          {
+		fprintf(stderr, "Can't allocate new method call\n");
+		return -1;
+	}
+
+	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &agent_path, DBUS_TYPE_INVALID);
+
+	dbus_error_init(&err);
+
+	reply = dbus_connection_send_with_reply_and_block(Dbusconn, apDBusMsg, -1, &err);
+
+	dbus_message_unref(apDBusMsg);
+
+	if (!reply) 
+              {
+		fprintf(stderr, "Can't unregister agent\n");
+		if (dbus_error_is_set(&err)) 
+                   {
+			fprintf(stderr, "%s\n", err.message);
+			dbus_error_free(&err);
+		}
+		return -1;//this was an error case
+	}
+	dbus_message_unref(reply);
+
+
+	dbus_connection_flush(Dbusconn);
+
+	dbus_connection_unregister_object_path(Dbusconn, agent_path);
+	return 0;
+}
+
+static DBusHandlerResult BTrequest_pincode_message(DBusConnection *Dbusconn,  DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+	const char *path;
+	if (!passkey)
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	if (!dbus_message_get_args(msg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) 
+           {
+		fprintf(stderr, "Invalid arguments for RequestPinCode method");
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+	if (do_reject) {
+		reply = dbus_message_new_error(msg,
+					"org.bluez.Error.Rejected", "");
+		goto sendmsg;
+	}
+	reply = dbus_message_new_method_return(msg);
+	if (!reply) {
+		fprintf(stderr, "Can't create reply message\n");
+		return DBUS_HANDLER_RESULT_NEED_MEMORY;
+	}
+	printf("Pincode request for device %s\n", path);
+	dbus_message_append_args(reply, DBUS_TYPE_STRING, &passkey,DBUS_TYPE_INVALID);
+sendmsg:
+	dbus_connection_send(Dbusconn, reply, NULL);
+	dbus_connection_flush(Dbusconn);
+
+	dbus_message_unref(reply);
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static DBusHandlerResult BTrequest_passkey_message(DBusConnection *conn,DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+	const char *path;
+	unsigned int int_passkey;
+	if (!passkey)
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	if (!dbus_message_get_args(msg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) 
+        {
+		fprintf(stderr, "Invalid arguments for RequestPasskey method");
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+	
+        
+	reply = dbus_message_new_method_return(msg);
+	if (!reply) {
+		fprintf(stderr, "Can't create reply message\n");
+		return DBUS_HANDLER_RESULT_NEED_MEMORY;
+	}
+	printf("Passkey request for device %s\n", path);
+	int_passkey = strtoul(passkey, NULL, 10);
+	dbus_message_append_args(reply, DBUS_TYPE_UINT32, &int_passkey,
+					DBUS_TYPE_INVALID);
+	dbus_connection_send(conn, reply, NULL);
+	dbus_connection_flush(conn);
+	dbus_message_unref(reply);
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static DBusHandlerResult BTcancel_message(DBusConnection *Dbusconn, DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_INVALID))
+          {
+		fprintf(stderr, "Invalid arguments for passkey confirmation method");
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+	printf("Request canceled\n");
+	reply = dbus_message_new_method_return(msg);
+
+	if (!reply) 
+          {
+		fprintf(stderr, "Can't create reply message\n");
+		return DBUS_HANDLER_RESULT_NEED_MEMORY;
+	}
+
+	dbus_connection_send(Dbusconn, reply, NULL);
+	dbus_connection_flush(Dbusconn);
+
+	dbus_message_unref(reply);
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static DBusHandlerResult BTrelease_message(DBusConnection *Dbusconn, DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_INVALID))
+         {
+		fprintf(stderr, "Invalid arguments for Release method");
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+
+	if (!__io_canceled)
+		fprintf(stderr, "Agent has been released\n");
+	__io_terminated = 1;
+
+	reply = dbus_message_new_method_return(msg);
+
+	if (!reply) 
+         {
+		fprintf(stderr, "Unable to create reply message\n");
+		return DBUS_HANDLER_RESULT_NEED_MEMORY;
+	}
+	dbus_connection_send(Dbusconn, reply, NULL);
+	dbus_connection_flush(Dbusconn);
+
+	dbus_message_unref(reply);
+       //return the result
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static DBusHandlerResult BTauthorize_message(DBusConnection *Dbusconn, DBusMessage *msg, void *data)
+{
+	DBusMessage *reply;
+	const char *path, *uuid;
+        const char *dev_name;//pass the dev name to the callback for app to use
+        int yesNo;
+	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) 
+            {
+		fprintf(stderr, "Invalid arguments for Authorize method");
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	}
+
+      if (p_ConnAuth_callback)
+          {
+             printf("calling ConnAuth cb with %s...\n",path);
+             dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
+
+             if (dev_name !=NULL)
+              {
+               yesNo = p_ConnAuth_callback(dev_name);
+              }
+             else
+             {
+             //couldnt get the name, provide the bt address instead
+             yesNo = p_ConnAuth_callback(path);
+            }
+             if (yesNo == 0)
+                 {
+                   //printf("sorry dude, you cant connect....\n");
+                     reply = dbus_message_new_error(msg,"org.bluez.Error.Rejected", "");
+                     goto send;
+                }
+          }
+
+	reply = dbus_message_new_method_return(msg);
+	if (!reply) {
+		fprintf(stderr, "Can't create reply message\n");
+		return DBUS_HANDLER_RESULT_NEED_MEMORY;
+	}
+	printf("Authorizing request for %s\n", path);
+send:
+	dbus_connection_send(Dbusconn, reply, NULL);
+	dbus_connection_flush(Dbusconn);
+	dbus_message_unref(reply);
+	return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+static DBusHandlerResult BTagent_message(DBusConnection *Dbusconn, DBusMessage *Dbusmsg, void *data)
+{
+
+    if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent", "Release"))
+                return BTrelease_message(Dbusconn, Dbusmsg, data);
+
+	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent",	"RequestPinCode"))
+		return BTrequest_pincode_message(Dbusconn, Dbusmsg, data);
+
+	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent",	"RequestPasskey"))
+		return BTrequest_passkey_message(Dbusconn, Dbusmsg, data);
+
+	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent", "Cancel"))
+		return BTcancel_message(Dbusconn, Dbusmsg, data);
+
+
+	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent", "Authorize"))
+		return BTauthorize_message(Dbusconn, Dbusmsg, data);
+	
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+static const DBusObjectPathVTable agent_table = {
+	.message_function = BTagent_message,
+};
+
+static int BTregister_agent(DBusConnection *Dbusconn, const char *adapter_path, const char *agent_path, const char *capabilities)
+{
+	DBusMessage *apDBusMsg, *reply;
+
+        //myerr can provide information about DBUS failures
+	DBusError myerr;
+
+	if (!dbus_connection_register_object_path(Dbusconn, agent_path,	&agent_table, NULL)) 
+        {
+		fprintf(stderr, "Error registering object path for agent\n");
+		return -1;//an error occured
+	}
+	apDBusMsg = dbus_message_new_method_call("org.bluez", adapter_path,"org.bluez.Adapter", "RegisterAgent");
+	
+
+       if (apDBusMsg)
+             {
+		fprintf(stderr, "Error allocating new method call\n");
+		return -1;
+  	   }
+
+	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &agent_path,	DBUS_TYPE_STRING, &capabilities,DBUS_TYPE_INVALID);
+
+	dbus_error_init(&myerr);
+
+	reply = dbus_connection_send_with_reply_and_block(Dbusconn, apDBusMsg, -1, &myerr);
+
+	dbus_message_unref(apDBusMsg);
+	if (!reply)
+                {
+		fprintf(stderr, "Unable to register agent\n");
+		if (dbus_error_is_set(&myerr)) 
+                    {
+			fprintf(stderr, "%s\n", myerr.message);
+			dbus_error_free(&myerr);
+		   }
+		return -1;//an error occurred
+	}
+	dbus_message_unref(reply);
+
+	dbus_connection_flush(Dbusconn);
+
+	return 0;
+}
 
 static DBusMessage*
 btrCore_BTSendMethodCall (
@@ -508,6 +792,47 @@ btrCore_BTParseDevice (
     return 0;
 }
 
+static int
+btrCore_BTParsePropertyChange (
+    DBusMessage*    apDBusMsg,
+    stBTDeviceInfo* apstBTDeviceInfo
+) {
+     DBusMessageIter arg_i, variant_i;
+    const char* value;
+    const char* bd_addr;
+    int dbus_type;
+
+    if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
+       printf("GetProperties reply has no arguments.");
+    }
+
+    if (!dbus_message_get_args( apDBusMsg, NULL,
+                                DBUS_TYPE_STRING, &bd_addr,
+                                DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
+        return -1;
+    }
+
+    printf(" Name: %s\n",bd_addr);//"State" then the variant is a string
+    if (strcmp(bd_addr,"State") == 0) {
+        dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+        //printf("type is %d\n",dbus_type);
+
+        if (dbus_type == DBUS_TYPE_STRING) {
+            dbus_message_iter_next(&arg_i);
+            dbus_message_iter_recurse(&arg_i, &variant_i);
+            dbus_message_iter_get_basic(&variant_i, &value);
+             // printf("    the new state is: %s\n",value);
+            strncpy(apstBTDeviceInfo->pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+            strncpy(apstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+          strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+
+        }
+    }
+
+    return 0;
+}
 
 static DBusMessage* 
 btrCore_BTMediaEndpointSelectConfiguration (
@@ -1091,6 +1416,44 @@ BtrCore_BTSetAdapterProp (
     dbus_message_unref(lpDBusReply);
 
     dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+int
+BTRCore_BTUnregisterAgent (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (BTunregister_agent(apBtConn, apBtAdapter, apBtAgentPath) < 0) {
+        fprintf(stderr, "agent unregistration ERROR occurred\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+
+int
+BTRCore_BTRegisterAgent (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath,
+    const char* capabilities
+) {
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (BTregister_agent(apBtConn, apBtAdapter, apBtAgentPath,capabilities) < 0) {
+        fprintf(stderr, "agent registration ERROR occurred\n");
+        return -1;
+    }
 
     return 0;
 }
@@ -1701,7 +2064,7 @@ BtrCore_BTRegisterMedia (
     //TODO: Check the Mediatype and then add the match
     dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
     dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
-
+    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
     lDBusOp = dbus_connection_register_object_path(gpDBusConn, apBtMediaType, &gDBusMediaEndpointVTable, NULL);
     if (!lDBusOp) {
         fprintf(stderr, "Can't Register Media Object\n");

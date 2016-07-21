@@ -51,6 +51,7 @@ static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, 
 static void btrCore_SetScannedDeviceInfo (stBTRCoreHdl* apsthBTRCore); 
 static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCore, const char* pAdapterPath);
 static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevHandle handle);
+static const char* btrCore_GetKnownDeviceName(stBTRCoreHdl* apsthBTRCore, tBTRCoreDevHandle   aBTRCoreDevHandle);
 static void btrCore_ShowSignalStrength (short strength);
 
 /* Callbacks */
@@ -247,6 +248,26 @@ btrCore_GetKnownDeviceAddress (
     return NULL;
 }
 
+static const char* btrCore_GetKnownDeviceName(
+   stBTRCoreHdl*       apsthBTRCore,
+   tBTRCoreDevHandle   aBTRCoreDevHandle
+  )
+{
+    int loop = 0;
+
+   if ((0 == aBTRCoreDevHandle) || (!apsthBTRCore))
+        return NULL;
+
+    if (apsthBTRCore->numOfPairedDevices) {
+        for (loop = 0; loop < apsthBTRCore->numOfPairedDevices; loop++) {
+            if (aBTRCoreDevHandle == apsthBTRCore->stKnownDevicesArr[loop].device_handle)
+             return apsthBTRCore->stKnownDevicesArr[loop].device_name;
+        }
+
+    }
+
+    return NULL;
+}
 
 static void 
 btrCore_ShowSignalStrength (
@@ -358,6 +379,11 @@ BTRCore_Init (
         return enBTRCoreInvalidArg;
     }
 
+   /*The p_ConnAuth_callback is initialized to NULL.  An app can register this callback to allow a user to accept or reject a
+      connection request from a remote device.  If the app does not register this callback, the behavior is similar to the
+      NoInputNoOuput setting, where connections are automatically accepted.
+    */
+    p_ConnAuth_callback = NULL;
 
     pstlhBTRCore = (stBTRCoreHdl*)malloc(sizeof(stBTRCoreHdl));
     if (!pstlhBTRCore) {
@@ -414,6 +440,9 @@ BTRCore_Init (
     }
 
     *phBTRCore  = (tBTRCoreHandle)pstlhBTRCore;
+
+   //Initialize array of known devices so we can use it for stuff
+    btrCore_PopulateListOfPairedDevices(*phBTRCore, pstlhBTRCore->curAdapterPath);
 
     return enBTRCoreSuccess;
 }
@@ -828,10 +857,70 @@ BTRCore_PairDeviceByIndex (
         return enBTRCorePairingFailed;
     }
 
+   //Update array of known devices now that we paired something
+    btrCore_PopulateListOfPairedDevices(hBTRCore, pstlhBTRCore->curAdapterPath);
+
     return enBTRCoreSuccess;
 }
 
+enBTRCoreRet
+BTRCore_RegisterAgent (
+    tBTRCoreHandle  hBTRCore,
+    int iBTRCapMode
+) {
+   // const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
+    char capabilities[32];
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    
+     if (iBTRCapMode == 1)
+      {
+        strcpy(capabilities,"DisplayYesNo");
+       }
+       else
+       {//default is no input no output
+         strcpy(capabilities,"NoInputNoOutput");
+       }
 
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+
+   // printf("Starting agent in mode %s\n",capabilities);
+    if (BTRCore_BTRegisterAgent(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities) < 0) {
+        BTRCore_LOG("agent registration ERROR occurred\n");
+        return enBTRCorePairingFailed;
+    }
+
+     return enBTRCoreSuccess;
+ }
+ 
+enBTRCoreRet
+BTRCore_UnregisterAgent (
+    tBTRCoreHandle  hBTRCore
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+
+    if ( BTRCore_BTUnregisterAgent(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath) < 0) {
+        BTRCore_LOG("agent unregistration  ERROR occurred\n");
+        return enBTRCorePairingFailed;//TODO add an enum error code for this situation
+    }
+
+    return enBTRCoreSuccess;
+}
+ 
 enBTRCoreRet
 BTRCore_FindDevice (
     tBTRCoreHandle  hBTRCore,
@@ -1077,6 +1166,25 @@ BTRCore_ReleaseDeviceDataPath (
     return enBTRCoreSuccess;
 }
 
+enBTRCoreRet
+BTRCore_RegisterConnectionAuthenticationCallback (
+    tBTRCoreHandle  hBTRCore,
+    void*           cb
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    (void)pstlhBTRCore;
+
+  p_ConnAuth_callback = cb;
+  return enBTRCoreSuccess;
+}
 
 enBTRCoreRet
 BTRCore_EnableAdapter (
@@ -1809,6 +1917,7 @@ BTRCore_ConnectDevice (
 
         if (pstlhBTRCore->numOfPairedDevices) {
             const char *pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, handle);
+            const char *pDeviceName =  btrCore_GetKnownDeviceName(pstlhBTRCore, handle);
             if (pDeviceAddress) {
                 // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
                 // before making the connect call
@@ -1828,7 +1937,7 @@ BTRCore_ConnectDevice (
                 }
                 if (0 == BtrCore_BTConnectDevice(pstlhBTRCore->connHandle, pDeviceAddress, lenBTDeviceType)) {
                     rc = enBTRCoreSuccess;
-                    printf("%s:%d - Connected to device Successfully. Lets start Play the audio\n", __FUNCTION__, __LINE__);
+                    printf("%s:%d - Connected to device %s Successfully. Lets start Play the audio\n", __FUNCTION__, __LINE__,pDeviceName);
                 }
                 else
                     printf("%s:%d - Connect to device failed\n", __FUNCTION__, __LINE__);
@@ -2077,6 +2186,12 @@ btrCore_BTDeviceStatusUpdate_cb (
         }
         break;
         case enBTDevStPropChanged: {
+         stBTRCoreHdl*       lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
+         if (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL) {
+             strcpy(lpstlhBTRCore->stDevStateCbInfo.cDevicePrevState,apstBTDeviceInfo->pcDevicePrevState );
+             strcpy(lpstlhBTRCore->stDevStateCbInfo.cDeviceCurrState,apstBTDeviceInfo->pcDeviceCurrState );
+             lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStateCbInfo);
+         }
         }
         break;
         case enBTDevStUnknown: {

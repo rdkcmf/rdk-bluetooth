@@ -66,6 +66,8 @@ typedef struct _stBTDeviceInfo {
     char            pcAddress[BT_MAX_STR_LEN];
     char            pcAlias[BT_MAX_STR_LEN];
     char            pcIcon[BT_MAX_STR_LEN];
+    char pcDevicePrevState[BT_MAX_STR_LEN];
+    char pcDeviceCurrState[BT_MAX_STR_LEN];
     // TODO: Array of strings UUIDs;
     // TODO: Array of objects Services;
     // TODO: Array of objects Nodes;
@@ -94,6 +96,9 @@ typedef struct _stBTDeviceSupportedServiceList
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps);
 typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps);
+
+//callback to process connection requests:
+int (*p_ConnAuth_callback) ();
 
 /* Interfaces */
 void* BtrCore_BTInitGetConnection (void);
@@ -125,5 +130,9 @@ int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapte
                                             fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia);
 int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia);
+
+
+int   BTRCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
+int   BTRCore_BTRegisterAgent (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char *capabilities);
 
 #endif // __BTR_CORE_DBUS_BT_H__
