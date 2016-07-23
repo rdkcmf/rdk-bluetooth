@@ -105,6 +105,8 @@ void* BtrCore_BTInitGetConnection (void);
 int   BtrCore_BTDeInitReleaseConnection (void* apBtConn);
 char* BtrCore_BTGetAgentPath (void* apBtConn);
 int   BtrCore_BTReleaseAgentPath (void* apBtConn);
+int   BTRCore_BTRegisterAgent (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char *capabilities);
+int   BTRCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, char** apcArrBtAdapterPath);
 char* BtrCore_BTGetAdapterPath (void* apBtConn, const char* apBtAdapter);
 int   BtrCore_BTReleaseAdapterPath (void* apBtConn, const char* apBtAdapter);
@@ -130,9 +132,5 @@ int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapte
                                             fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia);
 int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia);
-
-
-int   BTRCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
-int   BTRCore_BTRegisterAgent (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char *capabilities);
 
 #endif // __BTR_CORE_DBUS_BT_H__

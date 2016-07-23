@@ -20,7 +20,7 @@
 #define BD_NAME_LEN     248
 
 /* Static Function Prototypes */
-static int btrCore_BTHandleDusError(DBusError* aDBusErr, const char* aErrfunc, int aErrline);
+static int btrCore_BTHandleDusError (DBusError* aDBusErr, const char* aErrfunc, int aErrline);
 
 static DBusHandlerResult btrCore_BTDBusAgentFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 static DBusHandlerResult btrCore_BTMediaEndpointHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata); 
@@ -550,7 +550,7 @@ static int BTregister_agent(DBusConnection *Dbusconn, const char *adapter_path, 
 	apDBusMsg = dbus_message_new_method_call("org.bluez", adapter_path,"org.bluez.Adapter", "RegisterAgent");
 	
 
-       if (apDBusMsg)
+       if (!apDBusMsg)
              {
 		fprintf(stderr, "Error allocating new method call\n");
 		return -1;
@@ -658,6 +658,7 @@ btrCore_BTParseDevice (
                                 DBUS_TYPE_STRING, &pcBTDevAddr,
                                 DBUS_TYPE_INVALID)) {
         fprintf(stderr, "%s:%d:%s - dbus_message_get_args Failed\n", __FILE__, __LINE__, __FUNCTION__);
+        //return -1; Users of btrCore_BTParseDevice should not call it if the message contains no valid args
     }
 
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
@@ -866,7 +867,7 @@ btrCore_BTMediaEndpointSelectConfiguration (
 
 static DBusMessage*
 btrCore_BTMediaEndpointSetConfiguration (
-    DBusMessage *apDBusMsg
+    DBusMessage*    apDBusMsg
 ) {
     const char* lDevTransportPath = NULL;
     const char* lStoredDevTransportPath = NULL;
@@ -1064,6 +1065,45 @@ BtrCore_BTReleaseAgentPath (
     if (gpcBTAgentPath) {
         free(gpcBTAgentPath);
         gpcBTAgentPath = NULL;
+    }
+
+    return 0;
+}
+
+
+int
+BTRCore_BTRegisterAgent (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath,
+    const char* capabilities
+) {
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (BTregister_agent(apBtConn, apBtAdapter, apBtAgentPath, capabilities) < 0) {
+        fprintf(stderr, "agent registration ERROR occurred\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+
+int
+BTRCore_BTUnregisterAgent (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (BTunregister_agent(apBtConn, apBtAdapter, apBtAgentPath) < 0) {
+        fprintf(stderr, "agent unregistration ERROR occurred\n");
+        return -1;
     }
 
     return 0;
@@ -1420,44 +1460,6 @@ BtrCore_BTSetAdapterProp (
     return 0;
 }
 
-int
-BTRCore_BTUnregisterAgent (
-    void*       apBtConn,
-    const char* apBtAdapter,
-    const char* apBtAgentPath
-) {
-
-    if (!gpDBusConn || (gpDBusConn != apBtConn))
-        return -1;
-
-    if (BTunregister_agent(apBtConn, apBtAdapter, apBtAgentPath) < 0) {
-        fprintf(stderr, "agent unregistration ERROR occurred\n");
-        return -1;
-    }
-
-    return 0;
-}
-
-
-int
-BTRCore_BTRegisterAgent (
-    void*       apBtConn,
-    const char* apBtAdapter,
-    const char* apBtAgentPath,
-    const char* capabilities
-) {
-
-    if (!gpDBusConn || (gpDBusConn != apBtConn))
-        return -1;
-
-    if (BTregister_agent(apBtConn, apBtAdapter, apBtAgentPath,capabilities) < 0) {
-        fprintf(stderr, "agent registration ERROR occurred\n");
-        return -1;
-    }
-
-    return 0;
-}
-
 
 int
 BtrCore_BTStartDiscovery (
@@ -1531,8 +1533,12 @@ BtrCore_BTStopDiscovery (
 }
 
 
-int BtrCore_BTGetPairedDeviceInfo (void* apBtConn, const char* apBtAdapter, stBTPairedDeviceInfo *pPairedDeviceInfo)
-{
+int
+BtrCore_BTGetPairedDeviceInfo (
+    void*                   apBtConn,
+    const char*             apBtAdapter,
+    stBTPairedDeviceInfo*   pPairedDeviceInfo
+) {
     int         i = 0;
     int         num = 0;
     char**      paths = NULL;
@@ -1565,21 +1571,21 @@ int BtrCore_BTGetPairedDeviceInfo (void* apBtConn, const char* apBtAdapter, stBT
         reply = btrCore_BTSendMethodCall(pPairedDeviceInfo->devicePath[i], "org.bluez.Device", "GetProperties");
         if (reply != NULL) {
             memset (&apstBTDeviceInfo, 0, sizeof(apstBTDeviceInfo));
-            if (0 != btrCore_BTParseDevice(reply, &apstBTDeviceInfo))
-            {
+            if (0 != btrCore_BTParseDevice(reply, &apstBTDeviceInfo)) {
                 printf ("Parsing the device %s failed..\n", pPairedDeviceInfo->devicePath[i]);
                 dbus_message_unref(reply);
                 return -1;
             }
-            else
-            {
+            else {
                 memcpy (&pPairedDeviceInfo->deviceInfo[i], &apstBTDeviceInfo, sizeof(apstBTDeviceInfo));
             }
         }
         dbus_message_unref(reply);
     }
+
     return 0;
 }
+
 
 int
 BtrCore_BTGetPairedDevices (
@@ -1620,8 +1626,13 @@ BtrCore_BTGetPairedDevices (
     return rc;
 }
 
-int BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, stBTDeviceSupportedServiceList *pProfileList)
-{
+
+int
+BtrCore_BTDiscoverDeviceServices (
+    void*                           apBtConn,
+    const char*                     apcDevPath,
+    stBTDeviceSupportedServiceList* pProfileList
+) {
     DBusMessage *msg, *reply;
     DBusMessageIter arg_i, element_i;
     DBusMessageIter dict_i;
@@ -1713,12 +1724,10 @@ int BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, st
                 int index = 0;
                 ret += lengthOfProfile;
                 ptr = strchr(ret, '"');
-                if (ptr != NULL)
-                {
+                if (ptr != NULL) {
                     /* shorten the string */
                     index = ptr - ret;
-                    if (index < BT_MAX_STR_LEN)
-                    {
+                    if (index < BT_MAX_STR_LEN) {
                         strncpy (pProfileList->profile[count].profile_name, ret, index);
                         isProfileFound = 1;
                     }
@@ -1726,8 +1735,7 @@ int BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, st
             }
 
             /* increase the Profile/Service Count by 1 */
-            if ((isUUIDFound) && (isProfileFound))
-            {
+            if ((isUUIDFound) && (isProfileFound)) {
                 count++;
                 pProfileList->numberOfService = count;
             }
@@ -1743,6 +1751,7 @@ int BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, st
 
     return 0;
 }
+
 
 int 
 BtrCore_BTFindServiceSupported (
@@ -2187,6 +2196,7 @@ BtrCore_BTUnRegisterMedia (
 
 
     //TODO: Check the Mediatype and then remove the match
+    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
     dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
     dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
 
@@ -2339,7 +2349,6 @@ BtrCore_BTRegisterDevStatusUpdatecB (
 
     return 0;
 }
-
 
 
 int

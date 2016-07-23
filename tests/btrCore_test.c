@@ -568,8 +568,8 @@ main (
             lstBTRCoreAdapter.adapter_number = myadapter;
             BTRCore_ListKnownDevices(lhBTRCore, &lstBTRCoreAdapter);
             devnum = getChoice();
-            if (BTRCore_FindServiceByIndex(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {                
-              if (bfound) {
+            if (BTRCore_FindServiceByIndex(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
+                if (bfound) {
                     printf("Service UUID BTRCore_A2SNK is found\n");
                 }
                 else {
@@ -594,8 +594,8 @@ main (
                    myService[i] = '\0';
                 }
             bfound=0;//assume not found
-              if (BTRCore_FindServiceByIndex(lhBTRCore, devnum, myService,NULL,&bfound) == enBTRCoreSuccess) {
-                 if (bfound) {
+            if (BTRCore_FindServiceByIndex(lhBTRCore, devnum, myService,NULL,&bfound) == enBTRCoreSuccess) {
+                if (bfound) {
                     printf("Service UUID %s is found\n",myService);
                 }
                 else {
@@ -627,7 +627,7 @@ main (
             In most cases, simply knowing if the service exists may suffice, in which case you can use
             the simplified option where the data pointer is NULL, and no data is copied*/
             if (BTRCore_FindServiceByIndex(lhBTRCore, devnum,myService,myData,&bfound)  == enBTRCoreSuccess) {
-                 if (bfound) {
+                if (bfound) {
                     printf("Service UUID %s is found\n",myService);
                     printf("Data is:\n %s \n",myData);
                 }

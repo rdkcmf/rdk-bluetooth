@@ -109,7 +109,6 @@ BTRCore_AVMedia_Init (
                                                                          BTR_MEDIA_A2DP_SOURCE_ENDPOINT,
                                                                          &btrCore_AVMedia_TransportPath_cb);
 
-
     if (!lBtAVMediaRegisterRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
@@ -128,6 +127,10 @@ BTRCore_AVMedia_DeInit (
     if (apBtConn == NULL || apBtAdapter == NULL) {
         return enBTRCoreInvalidArg;
     }
+
+    lBtAVMediaRet = BtrCore_BTUnRegisterMedia(apBtConn,
+                                              apBtAdapter,
+                                              BTR_MEDIA_A2DP_SINK_ENDPOINT);
 
     lBtAVMediaRet = BtrCore_BTUnRegisterMedia(apBtConn,
                                               apBtAdapter,
