@@ -46,6 +46,7 @@ typedef struct _stBTRCoreHdl {
 
 static void btrCore_InitDataSt (stBTRCoreHdl* apsthBTRCore);
 static tBTRCoreDevHandle btrCore_GenerateUniqueHandle (const char* apcDeviceAddress);
+static enBTRCoreDeviceClass btrCore_MapClassIDtoDeviceType(unsigned int classID);
 static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
 static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevHandle handle);
 static void btrCore_SetScannedDeviceInfo (stBTRCoreHdl* apsthBTRCore); 
@@ -143,6 +144,96 @@ btrCore_GenerateUniqueHandle (
     return lBTRCoreDevHandle;
 }
 
+static enBTRCoreDeviceClass btrCore_MapClassIDtoDeviceType(unsigned int classID)
+{
+    enBTRCoreDeviceClass rc = enBTRCoreAV_Unknown;
+    if (classID & 0x400)
+    {
+        unsigned int lastByte = (classID & 0xFF);
+
+        if (lastByte == enBTRCoreAV_WearableHeadset)
+        {
+            printf ("Its a enBTRCoreAV_WearableHeadset \n");
+            rc = enBTRCoreAV_WearableHeadset;
+        }
+        else if (lastByte == enBTRCoreAV_Handsfree)
+        {
+            printf ("Its a enBTRCoreAV_Handsfree \n");
+            rc = enBTRCoreAV_Handsfree;
+        }
+        else if (lastByte == enBTRCoreAV_Reserved)
+        {
+            printf ("Its a enBTRCoreAV_Reserved \n");
+            rc = enBTRCoreAV_Reserved;
+        }
+        else if (lastByte == enBTRCoreAV_Microphone)
+        {
+            printf ("Its a enBTRCoreAV_Microphone \n");
+            rc = enBTRCoreAV_Microphone;
+        }
+        else if (lastByte == enBTRCoreAV_Loudspeaker)
+        {
+            printf ("Its a enBTRCoreAV_Loudspeaker \n");
+            rc = enBTRCoreAV_Loudspeaker;
+        }
+        else if (lastByte == enBTRCoreAV_Headphones)
+        {
+            printf ("Its a enBTRCoreAV_Headphones \n");
+            rc = enBTRCoreAV_Headphones;
+        }
+        else if (lastByte == enBTRCoreAV_PortableAudio)
+        {
+            printf ("Its a enBTRCoreAV_PortableAudio \n");
+            rc = enBTRCoreAV_PortableAudio;
+        }
+        else if (lastByte == enBTRCoreAV_CarAudio)
+        {
+            printf ("Its a enBTRCoreAV_CarAudio \n");
+            rc = enBTRCoreAV_CarAudio;
+        }
+        else if (lastByte == enBTRCoreAV_STB)
+        {
+            printf ("Its a enBTRCoreAV_STB \n");
+            rc = enBTRCoreAV_STB;
+        }
+        else if (lastByte == enBTRCoreAV_HIFIAudioDevice)
+        {
+            printf ("Its a enBTRCoreAV_HIFIAudioDevice \n");
+            rc = enBTRCoreAV_HIFIAudioDevice;
+        }
+        else if (lastByte == enBTRCoreAV_VCR)
+        {
+            printf ("Its a enBTRCoreAV_VCR \n");
+            rc = enBTRCoreAV_VCR;
+        }
+        else if (lastByte == enBTRCoreAV_VideoCamera)
+        {
+            printf ("Its a enBTRCoreAV_VideoCamera \n");
+            rc = enBTRCoreAV_VideoCamera;
+        }
+        else if (lastByte == enBTRCoreAV_Camcoder)
+        {
+            printf ("Its a enBTRCoreAV_Camcoder \n");
+            rc = enBTRCoreAV_Camcoder;
+        }
+        else if (lastByte == enBTRCoreAV_VideoMonitor)
+        {
+            printf ("Its a enBTRCoreAV_VideoMonitor \n");
+            rc = enBTRCoreAV_VideoMonitor;
+        }
+        else if (lastByte == enBTRCoreAV_TV)
+        {
+            printf ("Its a enBTRCoreAV_TV \n");
+            rc = enBTRCoreAV_TV;
+        }
+        else if (lastByte == enBTRCoreAV_VideoConference)
+        {
+            printf ("Its a enBTRCoreAV_VideoConference \n");
+            rc = enBTRCoreAV_TV;
+        }
+    }
+    return rc;
+}
 
 static void
 btrCore_ClearScannedDevicesList (
@@ -175,6 +266,7 @@ btrCore_SetScannedDeviceInfo (
             strcpy(apsthBTRCore->stScannedDevicesArr[i].device_name, apsthBTRCore->stFoundDevice.device_name);
             apsthBTRCore->stScannedDevicesArr[i].RSSI = apsthBTRCore->stFoundDevice.RSSI;
             apsthBTRCore->stScannedDevicesArr[i].vendor_id = apsthBTRCore->stFoundDevice.vendor_id;
+            apsthBTRCore->stScannedDevicesArr[i].device_type = apsthBTRCore->stFoundDevice.device_type;
             apsthBTRCore->stScannedDevicesArr[i].device_handle = btrCore_GenerateUniqueHandle(apsthBTRCore->stFoundDevice.device_address);
             apsthBTRCore->numOfScannedDevices++;
             break;
@@ -218,6 +310,7 @@ static enBTRCoreRet btrCore_PopulateListOfPairedDevices (stBTRCoreHdl* apsthBTRC
             strcpy(apsthBTRCore->stKnownDevicesArr[i].device_name,    pairedDeviceInfo.deviceInfo[i].pcName);
             strcpy(apsthBTRCore->stKnownDevicesArr[i].device_address, pairedDeviceInfo.deviceInfo[i].pcAddress);
             apsthBTRCore->stKnownDevicesArr[i].vendor_id      =    pairedDeviceInfo.deviceInfo[i].ui16Vendor;
+            apsthBTRCore->stKnownDevicesArr[i].device_type    =    btrCore_MapClassIDtoDeviceType(pairedDeviceInfo.deviceInfo[i].ui32Class);
             apsthBTRCore->stKnownDevicesArr[i].device_handle  =    btrCore_GenerateUniqueHandle(pairedDeviceInfo.deviceInfo[i].pcAddress);
         }
         return enBTRCoreSuccess;
@@ -2191,6 +2284,7 @@ btrCore_BTDeviceStatusUpdate_cb (
                     lpstlhBTRCore->stFoundDevice.found  = FALSE;
                     lpstlhBTRCore->stFoundDevice.RSSI   = apstBTDeviceInfo->i32RSSI;
                     lpstlhBTRCore->stFoundDevice.vendor_id = apstBTDeviceInfo->ui16Vendor;
+                    lpstlhBTRCore->stFoundDevice.device_type = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
                     strcpy(lpstlhBTRCore->stFoundDevice.device_name, apstBTDeviceInfo->pcName);
                     strcpy(lpstlhBTRCore->stFoundDevice.device_address, apstBTDeviceInfo->pcAddress);
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);

@@ -23,6 +23,26 @@ typedef enum _enBTRCoreDeviceType {
     enBTRCoreUnknown
 } enBTRCoreDeviceType;
 
+typedef enum _enBTRCoreDeviceClass {
+    enBTRCoreAV_WearableHeadset  = 0x04,
+    enBTRCoreAV_Handsfree        = 0x08,
+    enBTRCoreAV_Reserved         = 0x0C,
+    enBTRCoreAV_Microphone       = 0x10,
+    enBTRCoreAV_Loudspeaker      = 0x14,
+    enBTRCoreAV_Headphones       = 0x18,
+    enBTRCoreAV_PortableAudio    = 0x1C,
+    enBTRCoreAV_CarAudio         = 0x20,
+    enBTRCoreAV_STB              = 0x24,
+    enBTRCoreAV_HIFIAudioDevice  = 0x28,
+    enBTRCoreAV_VCR              = 0x2C,
+    enBTRCoreAV_VideoCamera      = 0x30,
+    enBTRCoreAV_Camcoder         = 0x34,
+    enBTRCoreAV_VideoMonitor     = 0x38,
+    enBTRCoreAV_TV               = 0x3C,
+    enBTRCoreAV_VideoConference   = 0x40,
+    enBTRCoreAV_Unknown          = 0x00,
+} enBTRCoreDeviceClass;
+
 /*platform specific data lengths */
 typedef unsigned char   U8;
 typedef unsigned short  U16;
@@ -108,8 +128,9 @@ typedef struct _stBTRCoreStartDiscovery {
 
 typedef struct _stBTRCoreScannedDevices {
    tBTRCoreDevHandle device_handle;
-   BD_NAME device_address;
    BD_NAME device_name;
+   BD_NAME device_address;
+   enBTRCoreDeviceType device_type;
    int RSSI;
    unsigned int vendor_id;
    BOOLEAN found;
@@ -119,6 +140,7 @@ typedef struct _stBTRCoreKnownDevice {
    tBTRCoreDevHandle device_handle;
    BD_NAME device_name;
    BD_NAME device_address;
+   enBTRCoreDeviceType device_type;
    BD_NAME bd_path;
    unsigned int vendor_id;
    int RSSI;
