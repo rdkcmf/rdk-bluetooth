@@ -19,9 +19,7 @@ typedef enum _BOOLEAN {
 
 typedef void* tBTRCoreHandle;
 
-
 typedef unsigned long long int tBTRCoreDevId;
-typedef unsigned long long int tBTRCoreDevHandle;
 
 
 typedef enum _enBTRCoreRet {
@@ -31,6 +29,7 @@ typedef enum _enBTRCoreRet {
     enBTRCoreInvalidAdapter, 
     enBTRCorePairingFailed,
     enBTRCoreDiscoveryFailure, 
+    enBTRCoreDeviceNotFound, 
     enBTRCoreInvalidArg, 
     enBTRCoreSuccess
 } enBTRCoreRet;

@@ -131,15 +131,6 @@ btrCore_BTDBusAgentFilter_cb (
         }
     }
 
-    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","PropertyChanged")) {
-        printf("Device PropertyChanged!\n");
-         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
-        if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBUserData)) {
-            }
-        }
-    }
-
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","Disconnected")) {
         printf("Device Disconnected - AudioSink!\n");
         if (gfpcBDevStatusUpdate) {
@@ -152,6 +143,31 @@ btrCore_BTDBusAgentFilter_cb (
         printf("Device PropertyChanged!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","Connected")) {
+        printf("Device Connected - AudioSource!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStConnected, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","Disconnected")) {
+        printf("Device Disconnected - AudioSource!\n");
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStDisconnected, NULL, NULL)) {
+            }
+        }
+    }
+
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","PropertyChanged")) {
+        printf("Device PropertyChanged!\n");
+         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
+        if (gfpcBDevStatusUpdate) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBUserData)) {
             }
         }
     }
@@ -311,43 +327,6 @@ btrCore_BTReleaseDefaultAdapterPath (
     return 0;
 }
 
-static int BTunregister_agent(DBusConnection *Dbusconn, const char *adapter_path, const char *agent_path)
-{
-	DBusMessage *apDBusMsg, *reply;
-	DBusError err;
-	apDBusMsg = dbus_message_new_method_call("org.bluez", adapter_path, "org.bluez.Adapter", "UnregisterAgent");
-	if (!apDBusMsg)
-          {
-		fprintf(stderr, "Can't allocate new method call\n");
-		return -1;
-	}
-
-	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &agent_path, DBUS_TYPE_INVALID);
-
-	dbus_error_init(&err);
-
-	reply = dbus_connection_send_with_reply_and_block(Dbusconn, apDBusMsg, -1, &err);
-
-	dbus_message_unref(apDBusMsg);
-
-	if (!reply) 
-              {
-		fprintf(stderr, "Can't unregister agent\n");
-		if (dbus_error_is_set(&err)) 
-                   {
-			fprintf(stderr, "%s\n", err.message);
-			dbus_error_free(&err);
-		}
-		return -1;//this was an error case
-	}
-	dbus_message_unref(reply);
-
-
-	dbus_connection_flush(Dbusconn);
-
-	dbus_connection_unregister_object_path(Dbusconn, agent_path);
-	return 0;
-}
 
 static DBusHandlerResult BTrequest_pincode_message(DBusConnection *Dbusconn,  DBusMessage *msg, void *data)
 {
@@ -535,50 +514,6 @@ static const DBusObjectPathVTable agent_table = {
 	.message_function = BTagent_message,
 };
 
-static int BTregister_agent(DBusConnection *Dbusconn, const char *adapter_path, const char *agent_path, const char *capabilities)
-{
-	DBusMessage *apDBusMsg, *reply;
-
-        //myerr can provide information about DBUS failures
-	DBusError myerr;
-
-	if (!dbus_connection_register_object_path(Dbusconn, agent_path,	&agent_table, NULL)) 
-        {
-		fprintf(stderr, "Error registering object path for agent\n");
-		return -1;//an error occured
-	}
-	apDBusMsg = dbus_message_new_method_call("org.bluez", adapter_path,"org.bluez.Adapter", "RegisterAgent");
-	
-
-       if (!apDBusMsg)
-             {
-		fprintf(stderr, "Error allocating new method call\n");
-		return -1;
-  	   }
-
-	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &agent_path,	DBUS_TYPE_STRING, &capabilities,DBUS_TYPE_INVALID);
-
-	dbus_error_init(&myerr);
-
-	reply = dbus_connection_send_with_reply_and_block(Dbusconn, apDBusMsg, -1, &myerr);
-
-	dbus_message_unref(apDBusMsg);
-	if (!reply)
-                {
-		fprintf(stderr, "Unable to register agent\n");
-		if (dbus_error_is_set(&myerr)) 
-                    {
-			fprintf(stderr, "%s\n", myerr.message);
-			dbus_error_free(&myerr);
-		   }
-		return -1;//an error occurred
-	}
-	dbus_message_unref(reply);
-
-	dbus_connection_flush(Dbusconn);
-
-	return 0;
-}
 
 static DBusMessage*
 btrCore_BTSendMethodCall (
@@ -1072,7 +1007,7 @@ BtrCore_BTReleaseAgentPath (
 
 
 int
-BTRCore_BTRegisterAgent (
+BtrCore_BTRegisterAgent (
     void*       apBtConn,
     const char* apBtAdapter,
     const char* apBtAgentPath,
@@ -1082,29 +1017,85 @@ BTRCore_BTRegisterAgent (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if (BTregister_agent(apBtConn, apBtAdapter, apBtAgentPath, capabilities) < 0) {
-        fprintf(stderr, "agent registration ERROR occurred\n");
-        return -1;
+    DBusMessage *apDBusMsg, *reply;
+	DBusError myerr;
+
+	if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &agent_table, NULL))  {
+		fprintf(stderr, "Error registering object path for agent\n");
+		return -1;//an error occured
+	}
+
+	apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter,"org.bluez.Adapter", "RegisterAgent");
+    if (!apDBusMsg) {
+		fprintf(stderr, "Error allocating new method call\n");
+		return -1;
     }
+
+	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,	DBUS_TYPE_STRING, &capabilities,DBUS_TYPE_INVALID);
+
+	dbus_error_init(&myerr);
+
+	reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &myerr);
+
+	dbus_message_unref(apDBusMsg);
+	if (!reply) {
+		fprintf(stderr, "Unable to register agent\n");
+		if (dbus_error_is_set(&myerr)) {
+			fprintf(stderr, "%s\n", myerr.message);
+			dbus_error_free(&myerr);
+        }
+		return -1;//an error occurred
+	}
+
+	dbus_message_unref(reply);
+
+	dbus_connection_flush(gpDBusConn);
 
     return 0;
 }
 
 
 int
-BTRCore_BTUnregisterAgent (
+BtrCore_BTUnregisterAgent (
     void*       apBtConn,
     const char* apBtAdapter,
     const char* apBtAgentPath
 ) {
-
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if (BTunregister_agent(apBtConn, apBtAdapter, apBtAgentPath) < 0) {
-        fprintf(stderr, "agent unregistration ERROR occurred\n");
+	DBusMessage *apDBusMsg, *reply;
+	DBusError err;
+	apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter, "org.bluez.Adapter", "UnregisterAgent");
+	if (!apDBusMsg) {
+        fprintf(stderr, "Can't allocate new method call\n");
         return -1;
     }
+
+	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
+
+	dbus_error_init(&err);
+
+	reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
+
+	dbus_message_unref(apDBusMsg);
+
+	if (!reply) {
+		fprintf(stderr, "Can't unregister agent\n");
+		if (dbus_error_is_set(&err))  {
+			fprintf(stderr, "%s\n", err.message);
+			dbus_error_free(&err);
+		}
+
+		return -1;//this was an error case
+	}
+
+	dbus_message_unref(reply);
+
+	dbus_connection_flush(gpDBusConn);
+
+	dbus_connection_unregister_object_path(gpDBusConn, apBtAgentPath);
+
 
     return 0;
 }
