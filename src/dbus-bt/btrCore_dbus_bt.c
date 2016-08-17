@@ -24,9 +24,15 @@ static int btrCore_BTHandleDusError (DBusError* aDBusErr, const char* aErrfunc, 
 
 static DBusHandlerResult btrCore_BTDBusAgentFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 static DBusHandlerResult btrCore_BTMediaEndpointHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata); 
+static DBusHandlerResult btrCore_BTAgentMessageHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 
 static char* btrCore_BTGetDefaultAdapterPath (void);
 static int btrCore_BTReleaseDefaultAdapterPath (void);
+static DBusHandlerResult btrCore_BTAgentRequestPincode (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTAgentRequestPasskey (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTAgentRelease (DBusConnection* apDBusConn, DBusMessage*    apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTAgentAuthorize (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
 static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
 static int btrCore_BTParsePropertyChange (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
@@ -48,8 +54,13 @@ static char* gpcBTDAdapterPath = NULL;
 static char* gpcBTAdapterPath = NULL;
 static char* gpcDevTransportPath = NULL;
 static void* gpcBUserData = NULL;
+
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
+};
+
+static const DBusObjectPathVTable agent_table = {
+	.message_function = btrCore_BTAgentMessageHandler_cb,
 };
 
 
@@ -264,6 +275,31 @@ btrCore_BTMediaEndpointHandler_cb (
 }
 
 
+static DBusHandlerResult
+btrCore_BTAgentMessageHandler_cb (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
+    if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Release"))
+        return btrCore_BTAgentRelease (apDBusConn, apDBusMsg, userdata);
+
+	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent",	"RequestPinCode"))
+		return btrCore_BTAgentRequestPincode(apDBusConn, apDBusMsg, userdata);
+
+	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent",	"RequestPasskey"))
+		return btrCore_BTAgentRequestPasskey(apDBusConn, apDBusMsg, userdata);
+
+	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Cancel"))
+		return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, userdata);
+
+	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Authorize"))
+		return btrCore_BTAgentAuthorize(apDBusConn, apDBusMsg, userdata);
+
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+
 static char*
 btrCore_BTGetDefaultAdapterPath (
     void
@@ -328,76 +364,96 @@ btrCore_BTReleaseDefaultAdapterPath (
 }
 
 
-static DBusHandlerResult BTrequest_pincode_message(DBusConnection *Dbusconn,  DBusMessage *msg, void *data)
-{
-	DBusMessage *reply;
-	const char *path;
+static DBusHandlerResult
+btrCore_BTAgentRequestPincode (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
+	DBusMessage*    reply;
+	const char*     path;
+
 	if (!passkey)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	if (!dbus_message_get_args(msg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) 
-           {
+
+	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) {
 		fprintf(stderr, "Invalid arguments for RequestPinCode method");
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 	}
+
 	if (do_reject) {
-		reply = dbus_message_new_error(msg,
-					"org.bluez.Error.Rejected", "");
+		reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
 		goto sendmsg;
 	}
-	reply = dbus_message_new_method_return(msg);
+
+	reply = dbus_message_new_method_return(apDBusMsg);
 	if (!reply) {
 		fprintf(stderr, "Can't create reply message\n");
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
+
 	printf("Pincode request for device %s\n", path);
 	dbus_message_append_args(reply, DBUS_TYPE_STRING, &passkey,DBUS_TYPE_INVALID);
+
 sendmsg:
-	dbus_connection_send(Dbusconn, reply, NULL);
-	dbus_connection_flush(Dbusconn);
+	dbus_connection_send(apDBusConn, reply, NULL);
+	dbus_connection_flush(apDBusConn);
 
 	dbus_message_unref(reply);
+
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult BTrequest_passkey_message(DBusConnection *conn,DBusMessage *msg, void *data)
-{
-	DBusMessage *reply;
-	const char *path;
-	unsigned int int_passkey;
+
+static DBusHandlerResult
+btrCore_BTAgentRequestPasskey (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
+	DBusMessage*    reply;
+	const char*     path;
+	unsigned int    int_passkey;
+
 	if (!passkey)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	if (!dbus_message_get_args(msg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) 
-        {
+
+	if (!dbus_message_get_args(apDBusMsg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID))  {
 		fprintf(stderr, "Invalid arguments for RequestPasskey method");
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 	}
-	
         
-	reply = dbus_message_new_method_return(msg);
+	reply = dbus_message_new_method_return(apDBusMsg);
 	if (!reply) {
 		fprintf(stderr, "Can't create reply message\n");
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
+
 	printf("Passkey request for device %s\n", path);
 	int_passkey = strtoul(passkey, NULL, 10);
-	dbus_message_append_args(reply, DBUS_TYPE_UINT32, &int_passkey,
-					DBUS_TYPE_INVALID);
-	dbus_connection_send(conn, reply, NULL);
-	dbus_connection_flush(conn);
+	dbus_message_append_args(reply, DBUS_TYPE_UINT32, &int_passkey, DBUS_TYPE_INVALID);
+
+	dbus_connection_send(apDBusConn, reply, NULL);
+	dbus_connection_flush(apDBusConn);
 	dbus_message_unref(reply);
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult BTcancel_message(DBusConnection *Dbusconn, DBusMessage *msg, void *data)
-{
+
+static DBusHandlerResult
+btrCore_BTAgentCancelMessage (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
 	DBusMessage *reply;
-	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_INVALID))
+	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID))
           {
 		fprintf(stderr, "Invalid arguments for passkey confirmation method");
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 	}
 	printf("Request canceled\n");
-	reply = dbus_message_new_method_return(msg);
+	reply = dbus_message_new_method_return(apDBusMsg);
 
 	if (!reply) 
           {
@@ -405,18 +461,23 @@ static DBusHandlerResult BTcancel_message(DBusConnection *Dbusconn, DBusMessage 
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
 
-	dbus_connection_send(Dbusconn, reply, NULL);
-	dbus_connection_flush(Dbusconn);
+	dbus_connection_send(apDBusConn, reply, NULL);
+	dbus_connection_flush(apDBusConn);
 
 	dbus_message_unref(reply);
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult BTrelease_message(DBusConnection *Dbusconn, DBusMessage *msg, void *data)
-{
+
+static DBusHandlerResult
+btrCore_BTAgentRelease (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
 	DBusMessage *reply;
 
-	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_INVALID))
+	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID))
          {
 		fprintf(stderr, "Invalid arguments for Release method");
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -426,28 +487,33 @@ static DBusHandlerResult BTrelease_message(DBusConnection *Dbusconn, DBusMessage
 		fprintf(stderr, "Agent has been released\n");
 	__io_terminated = 1;
 
-	reply = dbus_message_new_method_return(msg);
+	reply = dbus_message_new_method_return(apDBusMsg);
 
 	if (!reply) 
          {
 		fprintf(stderr, "Unable to create reply message\n");
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
-	dbus_connection_send(Dbusconn, reply, NULL);
-	dbus_connection_flush(Dbusconn);
+	dbus_connection_send(apDBusConn, reply, NULL);
+	dbus_connection_flush(apDBusConn);
 
 	dbus_message_unref(reply);
        //return the result
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
-static DBusHandlerResult BTauthorize_message(DBusConnection *Dbusconn, DBusMessage *msg, void *data)
-{
+
+static DBusHandlerResult
+btrCore_BTAgentAuthorize (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           userdata
+) {
 	DBusMessage *reply;
 	const char *path, *uuid;
         const char *dev_name;//pass the dev name to the callback for app to use
         int yesNo;
-	if (!dbus_message_get_args(msg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) 
+	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) 
             {
 		fprintf(stderr, "Invalid arguments for Authorize method");
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -470,49 +536,23 @@ static DBusHandlerResult BTauthorize_message(DBusConnection *Dbusconn, DBusMessa
              if (yesNo == 0)
                  {
                    //printf("sorry dude, you cant connect....\n");
-                     reply = dbus_message_new_error(msg,"org.bluez.Error.Rejected", "");
+                     reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
                      goto send;
                 }
           }
 
-	reply = dbus_message_new_method_return(msg);
+	reply = dbus_message_new_method_return(apDBusMsg);
 	if (!reply) {
 		fprintf(stderr, "Can't create reply message\n");
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
 	printf("Authorizing request for %s\n", path);
 send:
-	dbus_connection_send(Dbusconn, reply, NULL);
-	dbus_connection_flush(Dbusconn);
+	dbus_connection_send(apDBusConn, reply, NULL);
+	dbus_connection_flush(apDBusConn);
 	dbus_message_unref(reply);
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
-
-static DBusHandlerResult BTagent_message(DBusConnection *Dbusconn, DBusMessage *Dbusmsg, void *data)
-{
-
-    if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent", "Release"))
-                return BTrelease_message(Dbusconn, Dbusmsg, data);
-
-	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent",	"RequestPinCode"))
-		return BTrequest_pincode_message(Dbusconn, Dbusmsg, data);
-
-	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent",	"RequestPasskey"))
-		return BTrequest_passkey_message(Dbusconn, Dbusmsg, data);
-
-	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent", "Cancel"))
-		return BTcancel_message(Dbusconn, Dbusmsg, data);
-
-
-	if (dbus_message_is_method_call(Dbusmsg, "org.bluez.Agent", "Authorize"))
-		return BTauthorize_message(Dbusconn, Dbusmsg, data);
-	
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-}
-
-static const DBusObjectPathVTable agent_table = {
-	.message_function = BTagent_message,
-};
 
 
 static DBusMessage*

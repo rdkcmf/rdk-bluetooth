@@ -144,90 +144,75 @@ btrCore_GenerateUniqueDeviceID (
     return lBTRCoreDevId;
 }
 
-static enBTRCoreDeviceClass btrCore_MapClassIDtoDeviceType(unsigned int classID)
-{
+static enBTRCoreDeviceClass
+btrCore_MapClassIDtoDeviceType (
+    unsigned int classID
+) {
     enBTRCoreDeviceClass rc = enBTRCoreAV_Unknown;
-    if (classID & 0x400)
-    {
+    if (classID & 0x400) {
         unsigned int lastByte = (classID & 0xFF);
 
-        if (lastByte == enBTRCoreAV_WearableHeadset)
-        {
+        if (lastByte == enBTRCoreAV_WearableHeadset) {
             printf ("Its a enBTRCoreAV_WearableHeadset \n");
             rc = enBTRCoreAV_WearableHeadset;
         }
-        else if (lastByte == enBTRCoreAV_Handsfree)
-        {
+        else if (lastByte == enBTRCoreAV_Handsfree) {
             printf ("Its a enBTRCoreAV_Handsfree \n");
             rc = enBTRCoreAV_Handsfree;
         }
-        else if (lastByte == enBTRCoreAV_Reserved)
-        {
+        else if (lastByte == enBTRCoreAV_Reserved) {
             printf ("Its a enBTRCoreAV_Reserved \n");
             rc = enBTRCoreAV_Reserved;
         }
-        else if (lastByte == enBTRCoreAV_Microphone)
-        {
+        else if (lastByte == enBTRCoreAV_Microphone) {
             printf ("Its a enBTRCoreAV_Microphone \n");
             rc = enBTRCoreAV_Microphone;
         }
-        else if (lastByte == enBTRCoreAV_Loudspeaker)
-        {
+        else if (lastByte == enBTRCoreAV_Loudspeaker) {
             printf ("Its a enBTRCoreAV_Loudspeaker \n");
             rc = enBTRCoreAV_Loudspeaker;
         }
-        else if (lastByte == enBTRCoreAV_Headphones)
-        {
+        else if (lastByte == enBTRCoreAV_Headphones) {
             printf ("Its a enBTRCoreAV_Headphones \n");
             rc = enBTRCoreAV_Headphones;
         }
-        else if (lastByte == enBTRCoreAV_PortableAudio)
-        {
+        else if (lastByte == enBTRCoreAV_PortableAudio) {
             printf ("Its a enBTRCoreAV_PortableAudio \n");
             rc = enBTRCoreAV_PortableAudio;
         }
-        else if (lastByte == enBTRCoreAV_CarAudio)
-        {
+        else if (lastByte == enBTRCoreAV_CarAudio) {
             printf ("Its a enBTRCoreAV_CarAudio \n");
             rc = enBTRCoreAV_CarAudio;
         }
-        else if (lastByte == enBTRCoreAV_STB)
-        {
+        else if (lastByte == enBTRCoreAV_STB) {
             printf ("Its a enBTRCoreAV_STB \n");
             rc = enBTRCoreAV_STB;
         }
-        else if (lastByte == enBTRCoreAV_HIFIAudioDevice)
-        {
+        else if (lastByte == enBTRCoreAV_HIFIAudioDevice) {
             printf ("Its a enBTRCoreAV_HIFIAudioDevice \n");
             rc = enBTRCoreAV_HIFIAudioDevice;
         }
-        else if (lastByte == enBTRCoreAV_VCR)
-        {
+        else if (lastByte == enBTRCoreAV_VCR) {
             printf ("Its a enBTRCoreAV_VCR \n");
             rc = enBTRCoreAV_VCR;
         }
-        else if (lastByte == enBTRCoreAV_VideoCamera)
-        {
+        else if (lastByte == enBTRCoreAV_VideoCamera) {
             printf ("Its a enBTRCoreAV_VideoCamera \n");
             rc = enBTRCoreAV_VideoCamera;
         }
-        else if (lastByte == enBTRCoreAV_Camcoder)
-        {
+        else if (lastByte == enBTRCoreAV_Camcoder) {
             printf ("Its a enBTRCoreAV_Camcoder \n");
             rc = enBTRCoreAV_Camcoder;
         }
-        else if (lastByte == enBTRCoreAV_VideoMonitor)
-        {
+        else if (lastByte == enBTRCoreAV_VideoMonitor) {
             printf ("Its a enBTRCoreAV_VideoMonitor \n");
             rc = enBTRCoreAV_VideoMonitor;
         }
-        else if (lastByte == enBTRCoreAV_TV)
-        {
+        else if (lastByte == enBTRCoreAV_TV) {
             printf ("Its a enBTRCoreAV_TV \n");
             rc = enBTRCoreAV_TV;
         }
-        else if (lastByte == enBTRCoreAV_VideoConference)
-        {
+        else if (lastByte == enBTRCoreAV_VideoConference) {
             printf ("Its a enBTRCoreAV_VideoConference \n");
             rc = enBTRCoreAV_TV;
         }
@@ -1321,7 +1306,7 @@ BTRCore_PairDevice (
         pDeviceAddress = btrCore_GetScannedDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
     }
 
-    if (!pDeviceAddress) {
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
         fprintf(stderr, "%s:%d:%s - Failed to find device in Scanned devices list\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreDeviceNotFound;
     }
@@ -1385,7 +1370,7 @@ BTRCore_UnPairDevice (
         pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
     }
 
-    if (!pDeviceAddress) {
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
         fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreDeviceNotFound;
     }
@@ -1617,7 +1602,7 @@ BTRCore_ConnectDevice (
     }
 
 
-    if (!pDeviceAddress) {
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
         fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreDeviceNotFound;
     }
@@ -1698,7 +1683,7 @@ BTRCore_DisconnectDevice (
     }
 
 
-    if (!pDeviceAddress) {
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
         fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreDeviceNotFound;
     }
@@ -1785,7 +1770,7 @@ BTRCore_AcquireDeviceDataPath (
         pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
     }
 
-    if (!pDeviceAddress) {
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
         fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreDeviceNotFound;
     }
@@ -1860,7 +1845,7 @@ BTRCore_ReleaseDeviceDataPath (
         pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
     }
 
-    if (!pDeviceAddress) {
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
         fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreDeviceNotFound;
     }
