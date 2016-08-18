@@ -151,7 +151,7 @@ typedef struct _stBTRCoreSupportedServiceList
     stBTRCoreSupportedService profile[BTRCORE_MAX_DEVICE_PROFILE];
 } stBTRCoreSupportedServiceList;
 
-typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevicesCount astBTRCoreScannedDevicesCount);
+typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevices astBTRCoreScannedDevice);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCB* apstDevStateCbInfo);
 
 

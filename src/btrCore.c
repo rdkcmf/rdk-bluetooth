@@ -267,7 +267,7 @@ btrCore_SetScannedDeviceInfo (
             apsthBTRCore->stScannedDevicesArr[i].RSSI = apsthBTRCore->stFoundDevice.RSSI;
             apsthBTRCore->stScannedDevicesArr[i].vendor_id = apsthBTRCore->stFoundDevice.vendor_id;
             apsthBTRCore->stScannedDevicesArr[i].device_type = apsthBTRCore->stFoundDevice.device_type;
-            apsthBTRCore->stScannedDevicesArr[i].deviceId = btrCore_GenerateUniqueDeviceID(apsthBTRCore->stFoundDevice.device_address);
+            apsthBTRCore->stScannedDevicesArr[i].deviceId = apsthBTRCore->stFoundDevice.deviceId;
             apsthBTRCore->numOfScannedDevices++;
             break;
         }
@@ -2015,9 +2015,16 @@ btrCore_BTDeviceStatusUpdate_cb (
                     lpstlhBTRCore->stFoundDevice.RSSI   = apstBTDeviceInfo->i32RSSI;
                     lpstlhBTRCore->stFoundDevice.vendor_id = apstBTDeviceInfo->ui16Vendor;
                     lpstlhBTRCore->stFoundDevice.device_type = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+                    lpstlhBTRCore->stFoundDevice.deviceId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
                     strcpy(lpstlhBTRCore->stFoundDevice.device_name, apstBTDeviceInfo->pcName);
                     strcpy(lpstlhBTRCore->stFoundDevice.device_address, apstBTDeviceInfo->pcAddress);
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
+                    if (lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB)
+                    {
+                        stBTRCoreScannedDevices stFoundDevice;
+                        memcpy (&stFoundDevice, &lpstlhBTRCore->stFoundDevice, sizeof(stFoundDevice));
+                        lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB(stFoundDevice);
+                    }
                 }
             }
         }
