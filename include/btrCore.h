@@ -78,11 +78,16 @@ typedef struct _stBTRCoreFilterMode {
    UUID     uuid;
 } stBTRCoreFilterMode;
 
-typedef struct _stBTRCoreDevStateCB {
+typedef struct _stBTRCoreDevStateCBInfo {
    char cDeviceType[BTRCORE_STRINGS_MAX_LEN];
    char cDevicePrevState[BTRCORE_STRINGS_MAX_LEN];
    char cDeviceCurrState[BTRCORE_STRINGS_MAX_LEN];
-} stBTRCoreDevStateCB;
+} stBTRCoreDevStateCBInfo;
+
+typedef struct _stBTRCoreConnAuthCBInfo {
+    int test;
+    char cConnAuthDeviceName[BTRCORE_STRINGS_MAX_LEN];
+} stBTRCoreConnAuthCBInfo;
 
 /*BT Adapter*/
 typedef struct _stBTRCoreAdapter {
@@ -127,32 +132,29 @@ typedef struct _stBTRCoreKnownDevice {
    BOOLEAN device_connected;
 } stBTRCoreKnownDevice;
 
-typedef struct _stBTRCoreScannedDevicesCount
-{
+typedef struct _stBTRCoreScannedDevicesCount {
     int numberOfDevices;
     stBTRCoreScannedDevices devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCoreScannedDevicesCount;
 
-typedef struct _stBTRCorePairedDevicesCount
-{
+typedef struct _stBTRCorePairedDevicesCount {
     int numberOfDevices;
     stBTRCoreKnownDevice devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCorePairedDevicesCount;
 
-typedef struct _stBTRCoreSupportedService
-{
+typedef struct _stBTRCoreSupportedService {
     unsigned int uuid_value;
     BD_NAME profile_name;
 } stBTRCoreSupportedService;
 
-typedef struct _stBTRCoreSupportedServiceList
-{
+typedef struct _stBTRCoreSupportedServiceList {
     int numberOfService;
     stBTRCoreSupportedService profile[BTRCORE_MAX_DEVICE_PROFILE];
 } stBTRCoreSupportedServiceList;
 
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevices astBTRCoreScannedDevice);
-typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCB* apstDevStateCbInfo);
+typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCBInfo* apstDevStateCbInfo, void* apvUserData);
+typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnAuthCBInfo* apstConnAuthCbInfo);
 
 
 /*
@@ -268,12 +270,12 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* Callback to notify the application every time when a new device is found and added to discovery list */
-enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB);
+enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB, void* apUserData);
 
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
-enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afptrBTRCoreStatusCB);
+enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afptrBTRCoreStatusCB, void* apUserData);
 
 /*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
-enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCallback (tBTRCoreHandle hBTRCore, void * cb);
+enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnAuthCb afptrBTRCoreConnAuthCB, void* apUserData);
 
 #endif // __BTR_CORE_H__

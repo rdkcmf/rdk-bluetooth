@@ -9,11 +9,13 @@
 #include <pthread.h>
 #include <sys/stat.h> //for mkfifo
 #include <fcntl.h> //for open
+
+/* Interface lib Headers */
 #include "btrCore.h"            //basic RDK BT functions
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
 
 //test func
-void test_func(stBTRCoreAdapter* apstBTRCoreAdapter);
+void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 
 //for BT audio input testing
@@ -37,18 +39,18 @@ static int connectedDeviceIndex=0;
 #define NO_ADAPTER 1234
 
 
-static void GetTransport(void)
-{
+static void 
+GetTransport (
+    void
+) {
+    if (lidataReadMTU == 0) { //if we never did this before
+        lstBTRCoreAdapter.adapter_number = myadapter;
 
-      if (lidataReadMTU == 0)//if we never did this before
-       {
-           lstBTRCoreAdapter.adapter_number = myadapter;
-
-            BTRCore_AcquireDeviceDataPath(lhBTRCore, connectedDeviceIndex , enBTRCoreSpeakers, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
-            printf("Device Data Path = %d \n", liDataPath);
-            printf("Device Data Read MTU = %d \n", lidataReadMTU);
-            printf("Device Data Write MTU= %d \n", lidataWriteMTU);
-      }
+        BTRCore_AcquireDeviceDataPath(lhBTRCore, connectedDeviceIndex , enBTRCoreMobileAudioIn, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
+        printf("Device Data Path = %d \n", liDataPath);
+        printf("Device Data Read MTU = %d \n", lidataReadMTU);
+        printf("Device Data Write MTU= %d \n", lidataWriteMTU);
+    }
 }
 
 void *
@@ -243,10 +245,11 @@ getEncodedSBCFile (
 }
 
 
-static void sendSBCFileOverBT (
-    char* fileLocation,
-    int fd,
-    int mtuSize
+static void 
+sendSBCFileOverBT (
+    char*   fileLocation,
+    int     fd,
+    int     mtuSize
 ) {
     FILE* sbcFilePtr = fopen(fileLocation, "rb");
     int    bytesLeft = 0;
@@ -295,41 +298,44 @@ static void sendSBCFileOverBT (
     fclose(sbcFilePtr);
 }
 
+
 int
 cb_connection_authentication (
-     char *path
+    stBTRCoreConnAuthCBInfo* apstConnAuthCbInfo
 ) {
+#if 0
     printf("\n\nConnection attempt by: %s\n",path);
+#endif
     printf("Choose 32 to accept the connection or 33 to deny the connection\n\n");
     do {
-     usleep(20000);
-     } while (acceptConnection == 0);
+        usleep(20000);
+    } while (acceptConnection == 0);
 
-    printf("you picked %d\n",acceptConnection);
-    if (acceptConnection == 1)
-     {
-       printf("connection accepted\n");
-       acceptConnection = 0;//reset variabhle for the next connection
-       return 1;
-     }
-     else
-     {
-      printf("connection denied\n");
-      acceptConnection = 0;//reset variabhle for the next connection
-      return 0;
-     }
+    printf("you picked %d\n", acceptConnection);
+    if (acceptConnection == 1) {
+        printf("connection accepted\n");
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 1;
+    }
+    else {
+        printf("connection denied\n");
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 0;
+    }
 }
+
 
 void
 cb_unsolicited_bluetooth_status (
-    stBTRCoreDevStateCB* p_StatusCB
+    stBTRCoreDevStateCBInfo* p_StatusCB,
+    void*                    apvUserData
 ) {
+    printf("device status change: %s\n",p_StatusCB->cDeviceType);
     printf("app level cb device status change: new state is %s\n",p_StatusCB->cDeviceCurrState);
-   if ( (strcmp(p_StatusCB->cDevicePrevState,"connected") == 0) && (strcmp(p_StatusCB->cDeviceCurrState,"playing") == 0))
-   {
-     printf("transition to playing, get the transport info...\n");
-     GetTransport();
-   }
+    if ((strcmp(p_StatusCB->cDevicePrevState,"connected") == 0) && (strcmp(p_StatusCB->cDeviceCurrState,"playing") == 0)) {
+        printf("transition to playing, get the transport info...\n");
+        GetTransport();
+    }
 
     return;
 }
@@ -416,7 +422,7 @@ main (
     }
 
     //register callback for unsolicted events, such as powering off a bluetooth device
-    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status);
+    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, NULL);
 
     //display a menu of choices
     printMenu();
@@ -703,11 +709,15 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ReleaseDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers);
+
+                liDataPath      = 0;
+                lidataReadMTU   = 0;
+                lidataWriteMTU  = 0;
             }
             break;
         case 23:
             printf("Enter Encoded SBC file location to send to BT Headset/Speakers...\n");
-            sbcEncodedFileName = getEncodedSBCFile ();
+            sbcEncodedFileName = getEncodedSBCFile();
             if (sbcEncodedFileName) {
                 printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, liDataPath);
                 sendSBCFileOverBT(sbcEncodedFileName, liDataPath, lidataWriteMTU);
@@ -745,14 +755,14 @@ main (
              break;
         case 34:
              printf("register authentication CB\n");
-             BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication);
+             BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
             break;
          case 35:
              printf("uninstall agent - DisplayYesNo\n");
              BTRCore_UnregisterAgent(lhBTRCore);
              break;
         case 88:
-            test_func(&lstBTRCoreAdapter);
+            test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 99: 
             printf("Quitting program!\n");

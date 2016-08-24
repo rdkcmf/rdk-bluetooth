@@ -96,6 +96,7 @@ typedef struct _stBTDeviceSupportedServiceList
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps);
 typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps);
+typedef int (*fPtr_BtrCore_BTConnAuth_cB)(const char* apBtDeviceName, void* apUserData);
 
 //callback to process connection requests:
 int (*p_ConnAuth_callback) ();
@@ -128,9 +129,10 @@ int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, i
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
 int   BtrCore_BTSendReceiveMessages (void* apBtConn);
 int   BtrCore_BTRegisterDevStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTDevStatusUpdate_cB afpcBDevStatusUpdate, void* apUserData);
+int   BtrCore_BTRegisterConnAuthcB (void* apBtConn, fPtr_BtrCore_BTConnAuth_cB afpcBConnAuth, void* apUserData);
 int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
-                                            fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia);
+                                            fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia, void* apUserData);
 int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
-                                                fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia);
+                                                fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
 
 #endif // __BTR_CORE_DBUS_BT_H__

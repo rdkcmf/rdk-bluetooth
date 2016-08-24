@@ -32,11 +32,15 @@ typedef struct _stBTRCoreHdl {
 
     stBTRCoreScannedDevices     stFoundDevice;
 
-    stBTRCoreDevStateCB         stDevStateCbInfo;
+    stBTRCoreDevStateCBInfo     stDevStateCbInfo;
 
+    stBTRCoreConnAuthCBInfo     stConnAuthCbInfo;
 
     BTRCore_DeviceDiscoveryCb   fptrBTRCoreDeviceDiscoveryCB;
     BTRCore_StatusCb            fptrBTRCoreStatusCB;
+    BTRCore_ConnAuthCb          fptrBTRCoreConnAuthCB; 
+
+    void*                       pvCBUserData;
 
     GThread*                    dispatchThread;
     GMutex                      dispatchMutex;
@@ -57,6 +61,7 @@ static void btrCore_ShowSignalStrength (short strength);
 
 /* Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
+static int btrCore_BTDeviceAuthetication_cb(const char* apBtDeviceName, void* apUserData);
 
 
 static void
@@ -100,17 +105,21 @@ btrCore_InitDataSt (
     }
 
     /* Callback Info */
-    memset(apsthBTRCore->stDevStateCbInfo.cDeviceType, '\0', sizeof(apsthBTRCore->stDevStateCbInfo.cDeviceType));
-    memset(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, '\0', sizeof(apsthBTRCore->stDevStateCbInfo.cDevicePrevState));
-    memset(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState, '\0', sizeof(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState));
+    memset(apsthBTRCore->stDevStateCbInfo.cDeviceType,      '\0', BTRCORE_STRINGS_MAX_LEN);
+    memset(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, '\0', BTRCORE_STRINGS_MAX_LEN);
+    memset(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState, '\0', BTRCORE_STRINGS_MAX_LEN);
 
     strncpy(apsthBTRCore->stDevStateCbInfo.cDeviceType, "Bluez", BTRCORE_STRINGS_MAX_LEN - 1);
     strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
     strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
 
+    memset(apsthBTRCore->stConnAuthCbInfo.cConnAuthDeviceName, '\0', BTRCORE_STRINGS_MAX_LEN);
+
     apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB = NULL;
     apsthBTRCore->fptrBTRCoreStatusCB = NULL;
+    apsthBTRCore->fptrBTRCoreConnAuthCB = NULL;
 
+    apsthBTRCore->pvCBUserData = NULL;
     /* Always safer to initialze Global variables, init if any left or added */
 }
 
@@ -437,7 +446,7 @@ test_func (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->fptrBTRCoreStatusCB != NULL) {
-        pstlhBTRCore->fptrBTRCoreStatusCB(&pstlhBTRCore->stDevStateCbInfo);
+        pstlhBTRCore->fptrBTRCoreStatusCB(&pstlhBTRCore->stDevStateCbInfo, NULL);
     }
     else {
         printf("no callback installed\n");
@@ -463,11 +472,6 @@ BTRCore_Init (
         return enBTRCoreInvalidArg;
     }
 
-   /*The p_ConnAuth_callback is initialized to NULL.  An app can register this callback to allow a user to accept or reject a
-      connection request from a remote device.  If the app does not register this callback, the behavior is similar to the
-      NoInputNoOuput setting, where connections are automatically accepted.
-    */
-    p_ConnAuth_callback = NULL;
 
     pstlhBTRCore = (stBTRCoreHdl*)malloc(sizeof(stBTRCoreHdl));
     if (!pstlhBTRCore) {
@@ -520,6 +524,11 @@ BTRCore_Init (
 
     if(BtrCore_BTRegisterDevStatusUpdatecB(pstlhBTRCore->connHandle, &btrCore_BTDeviceStatusUpdate_cb, pstlhBTRCore)) {
         fprintf(stderr, "%s:%d:%s - Failed to Register Device Status CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
+    }
+
+    if(BtrCore_BTRegisterConnAuthcB(pstlhBTRCore->connHandle, &btrCore_BTDeviceAuthetication_cb, pstlhBTRCore)) {
+        fprintf(stderr, "%s:%d:%s - Failed to Register Connection Authentication CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
@@ -1884,7 +1893,8 @@ BTRCore_ReleaseDeviceDataPath (
 enBTRCoreRet
 BTRCore_RegisterDiscoveryCallback (
     tBTRCoreHandle              hBTRCore, 
-    BTRCore_DeviceDiscoveryCb   afptrBTRCoreDeviceDiscoveryCB
+    BTRCore_DeviceDiscoveryCb   afptrBTRCoreDeviceDiscoveryCB,
+    void*                       apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -1910,7 +1920,8 @@ BTRCore_RegisterDiscoveryCallback (
 enBTRCoreRet
 BTRCore_RegisterStatusCallback (
     tBTRCoreHandle     hBTRCore,
-    BTRCore_StatusCb   afptrBTRCoreStatusCB
+    BTRCore_StatusCb   afptrBTRCoreStatusCB,
+    void*              apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -1923,6 +1934,7 @@ BTRCore_RegisterStatusCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreStatusCB) {
         pstlhBTRCore->fptrBTRCoreStatusCB = afptrBTRCoreStatusCB;
+        pstlhBTRCore->pvCBUserData = apUserData; 
         printf("%s:%d - BT Status Callback Registered Successfully\n", __FUNCTION__, __LINE__);
     }
     else {
@@ -1935,8 +1947,9 @@ BTRCore_RegisterStatusCallback (
 
 enBTRCoreRet
 BTRCore_RegisterConnectionAuthenticationCallback (
-    tBTRCoreHandle  hBTRCore,
-    void*           cb
+    tBTRCoreHandle      hBTRCore,
+    BTRCore_ConnAuthCb  afptrBTRCoreConnAuthCB,
+    void*               apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -1949,8 +1962,15 @@ BTRCore_RegisterConnectionAuthenticationCallback (
 
     (void)pstlhBTRCore;
 
-  p_ConnAuth_callback = cb;
-  return enBTRCoreSuccess;
+    if (!pstlhBTRCore->fptrBTRCoreConnAuthCB) {
+        pstlhBTRCore->fptrBTRCoreConnAuthCB = afptrBTRCoreConnAuthCB;
+        printf("%s:%d - BT Conn Auth Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+    }
+    else {
+        printf("%s:%d - BT Conn Auth Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+    }
+
+    return enBTRCoreSuccess;
 }
 
 
@@ -2039,12 +2059,12 @@ btrCore_BTDeviceStatusUpdate_cb (
         }
         break;
         case enBTDevStPropChanged: {
-         stBTRCoreHdl*       lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
-         if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL)) {
-             strcpy(lpstlhBTRCore->stDevStateCbInfo.cDevicePrevState,apstBTDeviceInfo->pcDevicePrevState );
-             strcpy(lpstlhBTRCore->stDevStateCbInfo.cDeviceCurrState,apstBTDeviceInfo->pcDeviceCurrState );
-             lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStateCbInfo);
-         }
+            stBTRCoreHdl*       lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
+            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL)) {
+                strcpy(lpstlhBTRCore->stDevStateCbInfo.cDevicePrevState,apstBTDeviceInfo->pcDevicePrevState);
+                strcpy(lpstlhBTRCore->stDevStateCbInfo.cDeviceCurrState,apstBTDeviceInfo->pcDeviceCurrState);
+                lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStateCbInfo, lpstlhBTRCore->pvCBUserData);
+            }
         }
         break;
         case enBTDevStUnknown: {
@@ -2058,4 +2078,22 @@ btrCore_BTDeviceStatusUpdate_cb (
     return 0;
 }
 
+
+static int
+btrCore_BTDeviceAuthetication_cb (
+    const char*     apBtDeviceName,
+    void*           apUserData
+) {
+    int i32DevAuthRet = 0;
+    stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
+
+    if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnAuthCB)) {
+        if (apBtDeviceName) {
+            strncpy(lpstlhBTRCore->stConnAuthCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
+            i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnAuthCbInfo);
+        }
+    }
+
+    return i32DevAuthRet;
+} 
 /* End of File */

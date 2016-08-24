@@ -53,7 +53,8 @@ static char* gpcBTAgentPath = NULL;
 static char* gpcBTDAdapterPath = NULL;
 static char* gpcBTAdapterPath = NULL;
 static char* gpcDevTransportPath = NULL;
-static void* gpcBUserData = NULL;
+static void* gpcBDevStatusUserData = NULL;
+static void* gpcBConnAuthUserData = NULL;
 
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
@@ -68,6 +69,7 @@ static const DBusObjectPathVTable agent_table = {
 static fPtr_BtrCore_BTDevStatusUpdate_cB gfpcBDevStatusUpdate = NULL;
 static fPtr_BtrCore_BTNegotiateMedia_cB gfpcBNegotiateMedia = NULL;
 static fPtr_BtrCore_BTTransportPathMedia_cB gfpcBTransportPathMedia = NULL;
+static fPtr_BtrCore_BTConnAuth_cB gfpcBConnectionAuthentication = NULL;
 
 
 /* Static Function Defs */
@@ -113,7 +115,7 @@ btrCore_BTDBusAgentFilter_cb (
 
         i32OpRet = btrCore_BTParseDevice(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate && !i32OpRet) {
-            if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStFound, &lstBTDeviceInfo, gpcBUserData)) {
+            if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStFound, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
     }
@@ -178,7 +180,7 @@ btrCore_BTDBusAgentFilter_cb (
         printf("Device PropertyChanged!\n");
          btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBUserData)) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
     }
@@ -519,34 +521,33 @@ btrCore_BTAgentAuthorize (
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 	}
 
-      if (p_ConnAuth_callback)
-          {
-             printf("calling ConnAuth cb with %s...\n",path);
-             dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
+    if (gfpcBConnectionAuthentication) {
+        printf("calling ConnAuth cb with %s...\n",path);
+        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
 
-             if (dev_name !=NULL)
-              {
-               yesNo = p_ConnAuth_callback(dev_name);
-              }
-             else
-             {
-             //couldnt get the name, provide the bt address instead
-             yesNo = p_ConnAuth_callback(path);
-            }
-             if (yesNo == 0)
-                 {
-                   //printf("sorry dude, you cant connect....\n");
-                     reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
-                     goto send;
-                }
-          }
+        if (dev_name != NULL) {
+            yesNo = gfpcBConnectionAuthentication(dev_name, gpcBConnAuthUserData);
+        }
+        else {
+            //couldnt get the name, provide the bt address instead
+            yesNo = gfpcBConnectionAuthentication(path, gpcBConnAuthUserData);
+        }
+
+        if (yesNo == 0) {
+            //printf("sorry dude, you cant connect....\n");
+            reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+            goto send;
+        }
+    }
 
 	reply = dbus_message_new_method_return(apDBusMsg);
 	if (!reply) {
 		fprintf(stderr, "Can't create reply message\n");
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
+
 	printf("Authorizing request for %s\n", path);
+
 send:
 	dbus_connection_send(apDBusConn, reply, NULL);
 	dbus_connection_flush(apDBusConn);
@@ -978,10 +979,12 @@ BtrCore_BTInitGetConnection (
 
     dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL);
 
-    gpcBUserData            = NULL;
-    gfpcBDevStatusUpdate    = NULL;
-    gfpcBNegotiateMedia     = NULL;
-    gfpcBTransportPathMedia = NULL;
+    gpcBConnAuthUserData            = NULL;
+    gpcBDevStatusUserData           = NULL;
+    gfpcBDevStatusUpdate            = NULL;
+    gfpcBNegotiateMedia             = NULL;
+    gfpcBTransportPathMedia         = NULL;
+    gfpcBConnectionAuthentication   = NULL;
 
     return (void*)gpDBusConn;
 }
@@ -994,10 +997,12 @@ BtrCore_BTDeInitReleaseConnection (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    gfpcBTransportPathMedia = NULL;
-    gfpcBNegotiateMedia     = NULL;
-    gfpcBDevStatusUpdate    = NULL;
-    gpcBUserData            = NULL;
+    gfpcBConnectionAuthentication   = NULL;
+    gfpcBTransportPathMedia         = NULL;
+    gfpcBNegotiateMedia             = NULL;
+    gfpcBDevStatusUpdate            = NULL;
+    gpcBDevStatusUserData           = NULL;
+    gpcBConnAuthUserData            = NULL;
 
     dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL);
 
@@ -2365,9 +2370,9 @@ BtrCore_BTSendReceiveMessages (
 
 int
 BtrCore_BTRegisterDevStatusUpdatecB (
-    void*       apBtConn,
-    fPtr_BtrCore_BTDevStatusUpdate_cB afpcBDevStatusUpdate,
-    void*       apUserData
+    void*                               apBtConn,
+    fPtr_BtrCore_BTDevStatusUpdate_cB   afpcBDevStatusUpdate,
+    void*                               apUserData
 ) {
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -2375,8 +2380,27 @@ BtrCore_BTRegisterDevStatusUpdatecB (
     if (!afpcBDevStatusUpdate)
         return -1;
 
-    gfpcBDevStatusUpdate = afpcBDevStatusUpdate;
-    gpcBUserData = apUserData;
+    gfpcBDevStatusUpdate    = afpcBDevStatusUpdate;
+    gpcBDevStatusUserData   = apUserData;
+
+    return 0;
+}
+
+
+int
+BtrCore_BTRegisterConnAuthcB (
+    void*                       apBtConn,
+    fPtr_BtrCore_BTConnAuth_cB  afpcBConnAuth,
+    void*                       apUserData
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!afpcBConnAuth)
+        return -1;
+
+    gfpcBConnectionAuthentication = afpcBConnAuth;
+    gpcBConnAuthUserData = apUserData;
 
     return 0;
 }
@@ -2384,10 +2408,11 @@ BtrCore_BTRegisterDevStatusUpdatecB (
 
 int
 BtrCore_BTRegisterNegotiateMediacB (
-    void*       apBtConn, 
-    const char* apBtAdapter, 
-    char*       apBtMediaType,
-    fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia
+    void*                               apBtConn, 
+    const char*                         apBtAdapter, 
+    char*                               apBtMediaType,
+    fPtr_BtrCore_BTNegotiateMedia_cB    afpcBNegotiateMedia,
+    void*                               apUserData
 ) {
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -2403,10 +2428,11 @@ BtrCore_BTRegisterNegotiateMediacB (
 
 int
 BtrCore_BTRegisterTransportPathMediacB (
-    void*       apBtConn,
-    const char* apBtAdapter,
-    char*       apBtMediaType,
-    fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia
+    void*                                   apBtConn,
+    const char*                             apBtAdapter,
+    char*                                   apBtMediaType,
+    fPtr_BtrCore_BTTransportPathMedia_cB    afpcBTransportPathMedia,
+    void*                                   apUserData
 ) {
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
