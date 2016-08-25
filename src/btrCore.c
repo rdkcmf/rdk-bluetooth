@@ -12,7 +12,7 @@
 
 #include "btrCore.h"
 #include "btrCore_avMedia.h"
-#include "btrCore_dbus_bt.h"
+#include "btrCore_bt_ifce.h"
 
 
 typedef struct _stBTRCoreHdl {

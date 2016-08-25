@@ -15,7 +15,7 @@
 
 /* Local Headers */
 #include "btrCore_avMedia.h"
-#include "btrCore_dbus_bt.h"
+#include "btrCore_bt_ifce.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

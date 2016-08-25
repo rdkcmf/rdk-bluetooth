@@ -15,7 +15,7 @@
 #include <dbus/dbus.h>
 
 /* Local Headers */
-#include "btrCore_dbus_bt.h"
+#include "btrCore_bt_ifce.h"
 
 #define BD_NAME_LEN     248
 
