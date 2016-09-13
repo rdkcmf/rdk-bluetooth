@@ -64,6 +64,7 @@ static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDe
 static int btrCore_BTDeviceAuthetication_cb(const char* apBtDeviceName, void* apUserData);
 
 
+/* Static Function Definition */
 static void
 btrCore_InitDataSt (
     stBTRCoreHdl*   apsthBTRCore
@@ -623,7 +624,7 @@ BTRCore_RegisterAgent (
     int 			iBTRCapMode
 ) {
    // const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
-    char capabilities[32];
+    char capabilities[32] = {'\0'};
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {

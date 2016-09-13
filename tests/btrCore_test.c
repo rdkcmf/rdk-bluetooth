@@ -741,7 +741,7 @@ main (
              printf("install agent - NoInputNoOutput\n");
              BTRCore_RegisterAgent(lhBTRCore, 0);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
              break;
-          case 31:
+       case 31:
              printf("install agent - DisplayYesNo\n");
              BTRCore_RegisterAgent(lhBTRCore, 1);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
              break;

@@ -120,19 +120,19 @@ int   BtrCore_BTGetPairedDeviceInfo (void* apBtConn, const char* apBtAdapter, st
 int   BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, stBTDeviceSupportedServiceList *pProfileList);
 int   BtrCore_BTFindServiceSupported(void* apBtConn, const char* apcDevPath, const char* apcSearchString, char* apcDataString);
 int   BtrCore_BTPerformDeviceOp (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char* apcDevPath, enBTDeviceOp aenBTDevOp);
-int   BtrCore_BTConnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType enBTDevType);
-int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType enBTDevType);
-int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
+int   BtrCore_BTConnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType);
+int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType);
+int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType,
                                 void* apBtUUID, void* apBtMediaCodec, void* apBtMediaCapabilities, int apBtMediaCapabilitiesSize);
-int   BtrCore_BTUnRegisterMedia (void* apBtConn, const char* apBtAdapter, char* apBtMediaType);
+int   BtrCore_BTUnRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType);
 int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, int* dataPathFd, int* dataReadMTU, int* dataWriteMTU);
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
 int   BtrCore_BTSendReceiveMessages (void* apBtConn);
 int   BtrCore_BTRegisterDevStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTDevStatusUpdate_cB afpcBDevStatusUpdate, void* apUserData);
 int   BtrCore_BTRegisterConnAuthcB (void* apBtConn, fPtr_BtrCore_BTConnAuth_cB afpcBConnAuth, void* apUserData);
-int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
+int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapter,
                                             fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia, void* apUserData);
-int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter, char* apBtMediaType,
+int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
 
 #endif // __BTR_CORE_DBUS_BT_H__

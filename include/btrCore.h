@@ -39,7 +39,7 @@ typedef enum _enBTRCoreDeviceClass {
     enBTRCoreAV_Camcoder         = 0x34,
     enBTRCoreAV_VideoMonitor     = 0x38,
     enBTRCoreAV_TV               = 0x3C,
-    enBTRCoreAV_VideoConference   = 0x40,
+    enBTRCoreAV_VideoConference  = 0x40,
     enBTRCoreAV_Unknown          = 0x00,
 } enBTRCoreDeviceClass;
 

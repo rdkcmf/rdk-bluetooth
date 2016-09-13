@@ -17,7 +17,10 @@
 /* Local Headers */
 #include "btrCore_bt_ifce.h"
 
-#define BD_NAME_LEN     248
+#define BD_NAME_LEN                     248
+
+#define BT_MEDIA_A2DP_SINK_ENDPOINT     "/MediaEndpoint/A2DPSink"
+#define BT_MEDIA_A2DP_SOURCE_ENDPOINT   "/MediaEndpoint/A2DPSource"
 
 /* Static Function Prototypes */
 static int btrCore_BTHandleDusError (DBusError* aDBusErr, const char* aErrfunc, int aErrline);
@@ -45,8 +48,6 @@ static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDB
 /* Static Global Variables Defs */
 static char *passkey = NULL;
 static int do_reject = 0;
-static volatile sig_atomic_t __io_canceled = 0;
-static volatile sig_atomic_t __io_terminated = 0;
 static char gpcDeviceCurrState[BT_MAX_STR_LEN];
 static DBusConnection*  gpDBusConn = NULL;
 static char* gpcBTAgentPath = NULL;
@@ -60,7 +61,7 @@ static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
 };
 
-static const DBusObjectPathVTable agent_table = {
+static const DBusObjectPathVTable gDBusAgentVTable = {
 	.message_function = btrCore_BTAgentMessageHandler_cb,
 };
 
@@ -485,10 +486,6 @@ btrCore_BTAgentRelease (
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 	}
 
-	if (!__io_canceled)
-		fprintf(stderr, "Agent has been released\n");
-	__io_terminated = 1;
-
 	reply = dbus_message_new_method_return(apDBusMsg);
 
 	if (!reply) 
@@ -496,6 +493,7 @@ btrCore_BTAgentRelease (
 		fprintf(stderr, "Unable to create reply message\n");
 		return DBUS_HANDLER_RESULT_NEED_MEMORY;
 	}
+
 	dbus_connection_send(apDBusConn, reply, NULL);
 	dbus_connection_flush(apDBusConn);
 
@@ -802,9 +800,7 @@ btrCore_BTParsePropertyChange (
              // printf("    the new state is: %s\n",value);
             strncpy(apstBTDeviceInfo->pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
             strncpy(apstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-          strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-
-
+            strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
         }
     }
 
@@ -1065,9 +1061,9 @@ BtrCore_BTRegisterAgent (
     DBusMessage *apDBusMsg, *reply;
 	DBusError myerr;
 
-	if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &agent_table, NULL))  {
+	if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
 		fprintf(stderr, "Error registering object path for agent\n");
-		return -1;//an error occured
+		return -1;
 	}
 
 	apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter,"org.bluez.Adapter", "RegisterAgent");
@@ -1089,7 +1085,7 @@ BtrCore_BTRegisterAgent (
 			fprintf(stderr, "%s\n", myerr.message);
 			dbus_error_free(&myerr);
         }
-		return -1;//an error occurred
+		return -1;
 	}
 
 	dbus_message_unref(reply);
@@ -1139,8 +1135,10 @@ BtrCore_BTUnregisterAgent (
 
 	dbus_connection_flush(gpDBusConn);
 
-	dbus_connection_unregister_object_path(gpDBusConn, apBtAgentPath);
-
+	if (!dbus_connection_unregister_object_path(gpDBusConn, apBtAgentPath)) {
+        fprintf(stderr, "Error unregistering object path for agent\n");
+		return -1;
+	}
 
     return 0;
 }
@@ -1905,7 +1903,11 @@ BtrCore_BTPerformDeviceOp (
     int rc = 0;
 
     /* We can enhance the BTRCore with passcode support later point in time */
+#if 0
     const char *capabilities = "NoInputNoOutput";
+#else
+    const char *capabilities = "DisplayYesNo";
+#endif
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTDevOp == enBTDevOpUnknown))
         return -1;
@@ -1982,7 +1984,7 @@ BtrCore_BTConnectDevice (
 ) {
     dbus_bool_t  lDBusOp;
     DBusMessage* lpDBusMsg;
-    char         larDBusIfce[32] = {'\0'};
+    char         larDBusIfce[64] = {'\0'};
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
         return -1;
@@ -2034,16 +2036,16 @@ int
 BtrCore_BTDisconnectDevice (
     void*           apBtConn,
     const char*     apDevPath,
-    enBTDeviceType  aenBTDeviceType
+    enBTDeviceType  aenBTDevType
 ) {
     dbus_bool_t  lDBusOp;
     DBusMessage* lpDBusMsg;
-    char         larDBusIfce[32] = {'\0'};
+    char         larDBusIfce[64] = {'\0'};
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
         return -1;
 
-    switch (aenBTDeviceType) {
+    switch (aenBTDevType) {
     case enBTDevAudioSink:
         strncpy(larDBusIfce, "org.bluez.AudioSink", strlen("org.bluez.AudioSink"));
         break;
@@ -2088,13 +2090,13 @@ BtrCore_BTDisconnectDevice (
 
 int 
 BtrCore_BTRegisterMedia (
-    void*       apBtConn,
-    const char* apBtAdapter,
-    char*       apBtMediaType,
-    void*       apBtUUID,
-    void*       apBtMediaCodec,
-    void*       apBtMediaCapabilities,
-    int         apBtMediaCapabilitiesSize
+    void*           apBtConn,
+    const char*     apBtAdapter,
+    enBTDeviceType  aenBTDevType,
+    void*           apBtUUID,
+    void*           apBtMediaCodec,
+    void*           apBtMediaCapabilities,
+    int             apBtMediaCapabilitiesSize
 ) {
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterArr;
@@ -2103,14 +2105,36 @@ BtrCore_BTRegisterMedia (
     DBusError       lDBusErr;
     dbus_bool_t     lDBusOp;
 
+    const char*     lpBtMediaType;
+
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    //TODO: Check the Mediatype and then add the match
-    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
-    lDBusOp = dbus_connection_register_object_path(gpDBusConn, apBtMediaType, &gDBusMediaEndpointVTable, NULL);
+    switch (aenBTDevType) {
+    case enBTDevAudioSink:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
+        break;
+    case enBTDevAudioSource:
+        lpBtMediaType = BT_MEDIA_A2DP_SINK_ENDPOINT;
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
+        break;
+    case enBTDevHFPHeadset:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
+        break;
+    case enBTDevHFPHeadsetGateway:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.HeadsetGateway'", NULL);
+        break;
+    case enBTDevUnknown:
+    default:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
+        break;
+    }
+
+    lDBusOp = dbus_connection_register_object_path(gpDBusConn, lpBtMediaType, &gDBusMediaEndpointVTable, NULL);
     if (!lDBusOp) {
         fprintf(stderr, "Can't Register Media Object\n");
         return -1;
@@ -2127,7 +2151,7 @@ BtrCore_BTRegisterMedia (
     }
 
     dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_OBJECT_PATH, &apBtMediaType);
+    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_OBJECT_PATH, &lpBtMediaType);
     dbus_message_iter_open_container (&lDBusMsgIter, DBUS_TYPE_ARRAY, "{sv}", &lDBusMsgIterArr);
     {
         DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
@@ -2193,15 +2217,41 @@ BtrCore_BTRegisterMedia (
 
 int
 BtrCore_BTUnRegisterMedia (
-    void*       apBtConn,
-    const char* apBtAdapter,
-    char*       apBtMediaType
+    void*           apBtConn,
+    const char*     apBtAdapter,
+    enBTDeviceType  aenBTDevType
 ) {
     DBusMessage*    lpDBusMsg;
     dbus_bool_t     lDBusOp;
 
+    const char*      lpBtMediaType;
+
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
+
+    switch (aenBTDevType) {
+    case enBTDevAudioSink:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
+        break;
+    case enBTDevAudioSource:
+        lpBtMediaType = BT_MEDIA_A2DP_SINK_ENDPOINT;
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
+        break;
+    case enBTDevHFPHeadset:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
+        break;
+    case enBTDevHFPHeadsetGateway:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.HeadsetGateway'", NULL);
+        break;
+    case enBTDevUnknown:
+    default:
+        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
+        break;
+    }
 
 
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
@@ -2214,7 +2264,7 @@ BtrCore_BTUnRegisterMedia (
         return -1;
     }
 
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtMediaType, DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &lpBtMediaType, DBUS_TYPE_INVALID);
 
     lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
     dbus_message_unref(lpDBusMsg);
@@ -2224,17 +2274,30 @@ BtrCore_BTUnRegisterMedia (
         return -1;
     }
 
-    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, apBtMediaType);
+    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpBtMediaType);
     if (!lDBusOp) {
         fprintf(stderr, "Can't Register Media Object\n");
         return -1;
     }
 
-
-    //TODO: Check the Mediatype and then remove the match
-    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
+    switch (aenBTDevType) {
+    case enBTDevAudioSink:
+        dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
+        break;
+    case enBTDevAudioSource:
+        dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
+        break;
+    case enBTDevHFPHeadset:
+        dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
+        break;
+    case enBTDevHFPHeadsetGateway:
+        dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.HeadsetGateway'", NULL);
+        break;
+    case enBTDevUnknown:
+    default:
+        dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
+        break;
+    }
 
     dbus_connection_flush(gpDBusConn);
 
@@ -2410,14 +2473,13 @@ int
 BtrCore_BTRegisterNegotiateMediacB (
     void*                               apBtConn, 
     const char*                         apBtAdapter, 
-    char*                               apBtMediaType,
     fPtr_BtrCore_BTNegotiateMedia_cB    afpcBNegotiateMedia,
     void*                               apUserData
 ) {
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if (!apBtAdapter || !apBtMediaType || !afpcBNegotiateMedia)
+    if (!apBtAdapter || !afpcBNegotiateMedia)
         return -1;
 
     gfpcBNegotiateMedia = afpcBNegotiateMedia;
@@ -2430,14 +2492,13 @@ int
 BtrCore_BTRegisterTransportPathMediacB (
     void*                                   apBtConn,
     const char*                             apBtAdapter,
-    char*                                   apBtMediaType,
     fPtr_BtrCore_BTTransportPathMedia_cB    afpcBTransportPathMedia,
     void*                                   apUserData
 ) {
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if (!apBtAdapter || !apBtMediaType || !afpcBTransportPathMedia)
+    if (!apBtAdapter || !afpcBTransportPathMedia)
         return -1;
 
     gfpcBTransportPathMedia = afpcBTransportPathMedia;
