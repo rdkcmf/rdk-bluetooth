@@ -1,5 +1,5 @@
 /*
- * btrCore_dbus_bt.c
+ * btrCore_dbus_bluez4.c
  * Implementation of DBus layer abstraction for BT functionality
  */
 
@@ -1059,7 +1059,7 @@ BtrCore_BTRegisterAgent (
         return -1;
 
     DBusMessage *apDBusMsg, *reply;
-	DBusError myerr;
+	DBusError err;
 
 	if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
 		fprintf(stderr, "Error registering object path for agent\n");
@@ -1074,16 +1074,16 @@ BtrCore_BTRegisterAgent (
 
 	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,	DBUS_TYPE_STRING, &capabilities,DBUS_TYPE_INVALID);
 
-	dbus_error_init(&myerr);
+	dbus_error_init(&err);
 
-	reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &myerr);
+	reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
 
 	dbus_message_unref(apDBusMsg);
 	if (!reply) {
 		fprintf(stderr, "Unable to register agent\n");
-		if (dbus_error_is_set(&myerr)) {
-			fprintf(stderr, "%s\n", myerr.message);
-			dbus_error_free(&myerr);
+		if (dbus_error_is_set(&err)) {
+			fprintf(stderr, "%s\n", err.message);
+			dbus_error_free(&err);
         }
 		return -1;
 	}
@@ -1107,6 +1107,7 @@ BtrCore_BTUnregisterAgent (
 
 	DBusMessage *apDBusMsg, *reply;
 	DBusError err;
+
 	apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter, "org.bluez.Adapter", "UnregisterAgent");
 	if (!apDBusMsg) {
         fprintf(stderr, "Can't allocate new method call\n");
@@ -1264,7 +1265,7 @@ BtrCore_BTReleaseAdapterPath (
 
     if (gpcBTAdapterPath) {
 
-         if (gpcBTAdapterPath != apBtAdapter)
+        if (gpcBTAdapterPath != apBtAdapter)
             fprintf(stderr, "ERROR: Looks like Adapter path has been changed by User\n");
 
         free(gpcBTAdapterPath);
@@ -1474,7 +1475,7 @@ BtrCore_BTSetAdapterProp (
     dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
     dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &lDBusKey);
     dbus_message_iter_open_container(&lDBusMsgIter, DBUS_TYPE_VARIANT, lDBusTypeAsString, &lDBusMsgIterValue);
-        dbus_message_iter_append_basic(&lDBusMsgIterValue, lDBusType, apvVal);
+    dbus_message_iter_append_basic(&lDBusMsgIterValue, lDBusType, apvVal);
     dbus_message_iter_close_container(&lDBusMsgIter, &lDBusMsgIterValue);
 
     dbus_error_init(&lDBusErr);

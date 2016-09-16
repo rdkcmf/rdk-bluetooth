@@ -50,6 +50,18 @@ typedef enum _enBTAdapterProp {
     enBTAdPropUnknown
 } enBTAdapterProp;
 
+typedef enum _enBTMediaControl {
+	enBTMediaPlay,
+	enBTMediaPause,
+	enBTMediaStop,
+	enBTMediaNext,
+	enBTMediaPrevious,
+	enBTMediaFastForward,
+	enBTMediaRewind,
+	enBTMediaVolumeUp,
+	enBTMediaVolumeDown
+} enBTMediaControl;
+
 /* Structure Types */
 typedef struct _stBTDeviceInfo {
     int             bPaired;
@@ -134,5 +146,12 @@ int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapte
                                             fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia, void* apUserData);
 int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
+
+/////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
+int   BtrCore_MediaPlayControl (void* apBtConn, const char* apBtAdapterPath, enBTMediaControl aenBTMediaOper);
+char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath);
+char* BTrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
+int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);                                                
+
 
 #endif // __BTR_CORE_DBUS_BT_H__
