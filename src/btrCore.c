@@ -997,7 +997,11 @@ BTRCore_GetAdapterDiscoverableStatus (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
+#if defined(USE_BLUEZ4)
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter", "Discoverable", &discoverable)) {
+#elif defined(USE_BLUEZ5)
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter1", "Discoverable", &discoverable)) {
+#endif
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
@@ -1092,7 +1096,11 @@ BTRCore_GetAdapterName (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
+#if defined(USE_BLUEZ4)
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter", "Name", name)) {
+#elif defined(USE_BLUEZ5)
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter1", "Name", name)) {
+#endif
         printf("%s:%d - Get value for org.bluez.Adapter.Name = %s\n", __FUNCTION__, __LINE__, name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
@@ -1151,7 +1159,11 @@ BTRCore_GetAdapterPower (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
+#if defined(USE_BLUEZ4)
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter", "Powered", &powerStatus)) {
+#elif defined(USE_BLUEZ5)
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter1", "Powered", &powerStatus)) {
+#endif
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;

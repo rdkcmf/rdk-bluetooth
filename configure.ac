@@ -33,17 +33,42 @@ PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.32.0])
 
 BTR_CORE_SRC="src"
 BTR_CORE_TEST="tests"
+BTR_IFCE_DBUS_BLUEZ4=" "
+BTR_IFCE_DBUS_BLUEZ5=" "
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
+
+# Check Btr-ifce
+AC_ARG_ENABLE(btr-ifce,
+              AS_HELP_STRING([--enable-btr-ifce], [Use bluez4/bluez5/custom]),
+              [
+                case "${enableval}" in
+                    bluez4) have_bluez4="yes";;
+                    bluez5) have_bluez5="yes";;
+                    *) AC_MSG_ERROR([bad value ${enableval} for --enable-btr-ifce]) ;;
+                esac
+              ] ,
+              [have_bluez4="yes"])
+
+AS_IF([test "x$have_bluez4" = "xyes"], [
+    AC_DEFINE(USE_BLUEZ4, 1, [Build with bluez4 support])
+], [])
+
+AS_IF([test "x$have_bluez5" = "xyes"], [
+    AC_DEFINE(USE_BLUEZ5, 1, [Build with bluez5 support])
+], [])
+
+AM_CONDITIONAL([BTR_IFCE_DBUS_BLUEZ4], [test x$have_bluez4 = xyes])
+AM_CONDITIONAL([BTR_IFCE_DBUS_BLUEZ5], [test x$have_bluez5 = xyes])
+
 
 AC_SUBST(BTR_CORE_SRC)
 AC_SUBST(BTR_CORE_TEST)
 
 # Checks for library functions.
 
-#AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([Makefile
                  src/Makefile
                  tests/Makefile])

@@ -10,7 +10,9 @@
 /* External Library Headers */
 #include <bluetooth/uuid.h>
 #include <bluetooth/audio/a2dp-codecs.h>
+#if defined(USE_BLUEZ4)
 #include <bluetooth/audio/ipc.h>
+#endif
 
 
 /* Local Headers */
@@ -21,12 +23,56 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 
+#if defined(USE_BLUEZ4)
+#define BTR_A2DP_CHANNEL_MODE_MONO          BT_A2DP_CHANNEL_MODE_MONO
+#define BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL  BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL
+#define BTR_A2DP_CHANNEL_MODE_STEREO        BT_A2DP_CHANNEL_MODE_STEREO
+#define BTR_A2DP_CHANNEL_MODE_JOINT_STEREO  BT_A2DP_CHANNEL_MODE_JOINT_STEREO
+
+#define BTR_SBC_SAMPLING_FREQ_16000         BT_SBC_SAMPLING_FREQ_16000
+#define BTR_SBC_SAMPLING_FREQ_32000         BT_SBC_SAMPLING_FREQ_32000
+#define BTR_SBC_SAMPLING_FREQ_44100         BT_SBC_SAMPLING_FREQ_44100
+#define BTR_SBC_SAMPLING_FREQ_48000         BT_SBC_SAMPLING_FREQ_48000
+
+#define BTR_A2DP_ALLOCATION_SNR             BT_A2DP_ALLOCATION_SNR
+#define BTR_A2DP_ALLOCATION_LOUDNESS        BT_A2DP_ALLOCATION_LOUDNESS
+
+#define BTR_A2DP_SUBBANDS_4                 BT_A2DP_SUBBANDS_4
+#define BTR_A2DP_SUBBANDS_8                 BT_A2DP_SUBBANDS_8
+
+#define BTR_A2DP_BLOCK_LENGTH_4             BT_A2DP_BLOCK_LENGTH_4
+#define BTR_A2DP_BLOCK_LENGTH_8             BT_A2DP_BLOCK_LENGTH_8
+#define BTR_A2DP_BLOCK_LENGTH_12            BT_A2DP_BLOCK_LENGTH_12
+#define BTR_A2DP_BLOCK_LENGTH_16            BT_A2DP_BLOCK_LENGTH_16
+#elif defined(USE_BLUEZ5)
+#define BTR_A2DP_CHANNEL_MODE_MONO          SBC_CHANNEL_MODE_MONO
+#define BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL  SBC_CHANNEL_MODE_DUAL_CHANNEL
+#define BTR_A2DP_CHANNEL_MODE_STEREO        SBC_CHANNEL_MODE_STEREO
+#define BTR_A2DP_CHANNEL_MODE_JOINT_STEREO  SBC_CHANNEL_MODE_JOINT_STEREO
+
+#define BTR_SBC_SAMPLING_FREQ_16000         SBC_SAMPLING_FREQ_16000
+#define BTR_SBC_SAMPLING_FREQ_32000         SBC_SAMPLING_FREQ_32000
+#define BTR_SBC_SAMPLING_FREQ_44100         SBC_SAMPLING_FREQ_44100
+#define BTR_SBC_SAMPLING_FREQ_48000         SBC_SAMPLING_FREQ_48000
+
+#define BTR_A2DP_ALLOCATION_SNR             SBC_ALLOCATION_SNR
+#define BTR_A2DP_ALLOCATION_LOUDNESS        SBC_ALLOCATION_LOUDNESS
+
+#define BTR_A2DP_SUBBANDS_4                 SBC_SUBBANDS_4
+#define BTR_A2DP_SUBBANDS_8                 SBC_SUBBANDS_8
+
+#define BTR_A2DP_BLOCK_LENGTH_4             SBC_BLOCK_LENGTH_4
+#define BTR_A2DP_BLOCK_LENGTH_8             SBC_BLOCK_LENGTH_8
+#define BTR_A2DP_BLOCK_LENGTH_12            SBC_BLOCK_LENGTH_12
+#define BTR_A2DP_BLOCK_LENGTH_16            SBC_BLOCK_LENGTH_16
+#endif
+
 /* Static Function Prototypes */
 static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
 
 
 /* Static Global Variables Defs */
-static int          gBTMediaSBCSampFreqPref = BT_SBC_SAMPLING_FREQ_48000;
+static int          gBTMediaSBCSampFreqPref = BTR_SBC_SAMPLING_FREQ_48000;
 //TODO: Mutex protect this
 static a2dp_sbc_t*  gpBTMediaSBCConfig = NULL;
 static char*        gpcAVMediaTransportPath = NULL;
@@ -44,32 +90,32 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
     uint8_t au8AudioChannelsMode
 ) {
     switch (au8SamplingFreq) {
-    case BT_SBC_SAMPLING_FREQ_16000:
-    case BT_SBC_SAMPLING_FREQ_32000:
+    case BTR_SBC_SAMPLING_FREQ_16000:
+    case BTR_SBC_SAMPLING_FREQ_32000:
         return 53;
 
-    case BT_SBC_SAMPLING_FREQ_44100:
+    case BTR_SBC_SAMPLING_FREQ_44100:
         switch (au8AudioChannelsMode) {
-        case BT_A2DP_CHANNEL_MODE_MONO:
-        case BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
+        case BTR_A2DP_CHANNEL_MODE_MONO:
+        case BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
             return 31;
 
-        case BT_A2DP_CHANNEL_MODE_STEREO:
-        case BT_A2DP_CHANNEL_MODE_JOINT_STEREO:
+        case BTR_A2DP_CHANNEL_MODE_STEREO:
+        case BTR_A2DP_CHANNEL_MODE_JOINT_STEREO:
             return 53;
 
         default:
             fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
             return 53;
         }
-    case BT_SBC_SAMPLING_FREQ_48000:
+    case BTR_SBC_SAMPLING_FREQ_48000:
         switch (au8AudioChannelsMode) {
-        case BT_A2DP_CHANNEL_MODE_MONO:
-        case BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
+        case BTR_A2DP_CHANNEL_MODE_MONO:
+        case BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
             return 29;
 
-        case BT_A2DP_CHANNEL_MODE_STEREO:
-        case BT_A2DP_CHANNEL_MODE_JOINT_STEREO:
+        case BTR_A2DP_CHANNEL_MODE_STEREO:
+        case BTR_A2DP_CHANNEL_MODE_JOINT_STEREO:
             return 51;
 
         default:
@@ -103,14 +149,14 @@ BTRCore_AVMedia_Init (
 
     a2dp_sbc_t lstBtA2dpCapabilities;
 
-    lstBtA2dpCapabilities.channel_mode       = BT_A2DP_CHANNEL_MODE_MONO | BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
-                                               BT_A2DP_CHANNEL_MODE_STEREO | BT_A2DP_CHANNEL_MODE_JOINT_STEREO;
-    lstBtA2dpCapabilities.frequency          = BT_SBC_SAMPLING_FREQ_16000 | BT_SBC_SAMPLING_FREQ_32000 |
-                                               BT_SBC_SAMPLING_FREQ_44100 | BT_SBC_SAMPLING_FREQ_48000;
-    lstBtA2dpCapabilities.allocation_method  = BT_A2DP_ALLOCATION_SNR | BT_A2DP_ALLOCATION_LOUDNESS;
-    lstBtA2dpCapabilities.subbands           = BT_A2DP_SUBBANDS_4 | BT_A2DP_SUBBANDS_8;
-    lstBtA2dpCapabilities.block_length       = BT_A2DP_BLOCK_LENGTH_4 | BT_A2DP_BLOCK_LENGTH_8 |
-                                               BT_A2DP_BLOCK_LENGTH_12 | BT_A2DP_BLOCK_LENGTH_16;
+    lstBtA2dpCapabilities.channel_mode       = BTR_A2DP_CHANNEL_MODE_MONO | BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
+                                               BTR_A2DP_CHANNEL_MODE_STEREO | BTR_A2DP_CHANNEL_MODE_JOINT_STEREO;
+    lstBtA2dpCapabilities.frequency          = BTR_SBC_SAMPLING_FREQ_16000 | BTR_SBC_SAMPLING_FREQ_32000 |
+                                               BTR_SBC_SAMPLING_FREQ_44100 | BTR_SBC_SAMPLING_FREQ_48000;
+    lstBtA2dpCapabilities.allocation_method  = BTR_A2DP_ALLOCATION_SNR | BTR_A2DP_ALLOCATION_LOUDNESS;
+    lstBtA2dpCapabilities.subbands           = BTR_A2DP_SUBBANDS_4 | BTR_A2DP_SUBBANDS_8;
+    lstBtA2dpCapabilities.block_length       = BTR_A2DP_BLOCK_LENGTH_4 | BTR_A2DP_BLOCK_LENGTH_8 |
+                                               BTR_A2DP_BLOCK_LENGTH_12 | BTR_A2DP_BLOCK_LENGTH_16;
     lstBtA2dpCapabilities.min_bitpool        = MIN_BITPOOL;
     lstBtA2dpCapabilities.max_bitpool        = MAX_BITPOOL;
 
@@ -268,56 +314,56 @@ btrCore_AVMedia_NegotiateMedia_cb (
     memset(&lstBTMediaSBCConfig, 0, sizeof(a2dp_sbc_t));
     lstBTMediaSBCConfig.frequency = gBTMediaSBCSampFreqPref;
 
-    if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_JOINT_STEREO) {
-        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_JOINT_STEREO;
+    if (apBtMediaSBCCaps->channel_mode & BTR_A2DP_CHANNEL_MODE_JOINT_STEREO) {
+        lstBTMediaSBCConfig.channel_mode = BTR_A2DP_CHANNEL_MODE_JOINT_STEREO;
     }
-    else if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_STEREO) {
-        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_STEREO;
+    else if (apBtMediaSBCCaps->channel_mode & BTR_A2DP_CHANNEL_MODE_STEREO) {
+        lstBTMediaSBCConfig.channel_mode = BTR_A2DP_CHANNEL_MODE_STEREO;
     }
-    else if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL) {
-        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL;
+    else if (apBtMediaSBCCaps->channel_mode & BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL) {
+        lstBTMediaSBCConfig.channel_mode = BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL;
     }
-    else if (apBtMediaSBCCaps->channel_mode & BT_A2DP_CHANNEL_MODE_MONO) {
-        lstBTMediaSBCConfig.channel_mode = BT_A2DP_CHANNEL_MODE_MONO;
+    else if (apBtMediaSBCCaps->channel_mode & BTR_A2DP_CHANNEL_MODE_MONO) {
+        lstBTMediaSBCConfig.channel_mode = BTR_A2DP_CHANNEL_MODE_MONO;
     } 
     else {
         fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported channel modes\n");
         return NULL;
     }
 
-    if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_16) {
-        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_16;
+    if (apBtMediaSBCCaps->block_length & BTR_A2DP_BLOCK_LENGTH_16) {
+        lstBTMediaSBCConfig.block_length = BTR_A2DP_BLOCK_LENGTH_16;
     }
-    else if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_12) {
-        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_12;
+    else if (apBtMediaSBCCaps->block_length & BTR_A2DP_BLOCK_LENGTH_12) {
+        lstBTMediaSBCConfig.block_length = BTR_A2DP_BLOCK_LENGTH_12;
     }
-    else if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_8) {
-        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_8;
+    else if (apBtMediaSBCCaps->block_length & BTR_A2DP_BLOCK_LENGTH_8) {
+        lstBTMediaSBCConfig.block_length = BTR_A2DP_BLOCK_LENGTH_8;
     }
-    else if (apBtMediaSBCCaps->block_length & BT_A2DP_BLOCK_LENGTH_4) {
-        lstBTMediaSBCConfig.block_length = BT_A2DP_BLOCK_LENGTH_4;
+    else if (apBtMediaSBCCaps->block_length & BTR_A2DP_BLOCK_LENGTH_4) {
+        lstBTMediaSBCConfig.block_length = BTR_A2DP_BLOCK_LENGTH_4;
     }
     else {
         fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported block lengths\n");
         return NULL;
     }
 
-    if (apBtMediaSBCCaps->subbands & BT_A2DP_SUBBANDS_8) {
-        lstBTMediaSBCConfig.subbands = BT_A2DP_SUBBANDS_8;
+    if (apBtMediaSBCCaps->subbands & BTR_A2DP_SUBBANDS_8) {
+        lstBTMediaSBCConfig.subbands = BTR_A2DP_SUBBANDS_8;
     }
-    else if (apBtMediaSBCCaps->subbands & BT_A2DP_SUBBANDS_4) {
-        lstBTMediaSBCConfig.subbands = BT_A2DP_SUBBANDS_4;
+    else if (apBtMediaSBCCaps->subbands & BTR_A2DP_SUBBANDS_4) {
+        lstBTMediaSBCConfig.subbands = BTR_A2DP_SUBBANDS_4;
     }
     else {
         fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported subbands\n");
         return NULL;
     }
 
-    if (apBtMediaSBCCaps->allocation_method & BT_A2DP_ALLOCATION_LOUDNESS) {
-        lstBTMediaSBCConfig.allocation_method = BT_A2DP_ALLOCATION_LOUDNESS;
+    if (apBtMediaSBCCaps->allocation_method & BTR_A2DP_ALLOCATION_LOUDNESS) {
+        lstBTMediaSBCConfig.allocation_method = BTR_A2DP_ALLOCATION_LOUDNESS;
     }
-    else if (apBtMediaSBCCaps->allocation_method & BT_A2DP_ALLOCATION_SNR) {
-        lstBTMediaSBCConfig.allocation_method = BT_A2DP_ALLOCATION_SNR;
+    else if (apBtMediaSBCCaps->allocation_method & BTR_A2DP_ALLOCATION_SNR) {
+        lstBTMediaSBCConfig.allocation_method = BTR_A2DP_ALLOCATION_SNR;
     }
 
     lstBTMediaSBCConfig.min_bitpool = (uint8_t) MAX(MIN_BITPOOL, apBtMediaSBCCaps->min_bitpool);
@@ -408,14 +454,14 @@ btrCore_AVMedia_TransportPath_cb (
     else {
         a2dp_sbc_t lstBtA2dpCapabilities;
 
-        lstBtA2dpCapabilities.channel_mode       = BT_A2DP_CHANNEL_MODE_MONO | BT_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
-                                                   BT_A2DP_CHANNEL_MODE_STEREO | BT_A2DP_CHANNEL_MODE_JOINT_STEREO;
-        lstBtA2dpCapabilities.frequency          = BT_SBC_SAMPLING_FREQ_16000 | BT_SBC_SAMPLING_FREQ_32000 |
-                                                   BT_SBC_SAMPLING_FREQ_44100 | BT_SBC_SAMPLING_FREQ_48000;
-        lstBtA2dpCapabilities.allocation_method  = BT_A2DP_ALLOCATION_SNR | BT_A2DP_ALLOCATION_LOUDNESS;
-        lstBtA2dpCapabilities.subbands           = BT_A2DP_SUBBANDS_4 | BT_A2DP_SUBBANDS_8;
-        lstBtA2dpCapabilities.block_length       = BT_A2DP_BLOCK_LENGTH_4 | BT_A2DP_BLOCK_LENGTH_8 |
-                                                   BT_A2DP_BLOCK_LENGTH_12 | BT_A2DP_BLOCK_LENGTH_16;
+        lstBtA2dpCapabilities.channel_mode       = BTR_A2DP_CHANNEL_MODE_MONO | BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
+                                                   BTR_A2DP_CHANNEL_MODE_STEREO | BTR_A2DP_CHANNEL_MODE_JOINT_STEREO;
+        lstBtA2dpCapabilities.frequency          = BTR_SBC_SAMPLING_FREQ_16000 | BTR_SBC_SAMPLING_FREQ_32000 |
+                                                   BTR_SBC_SAMPLING_FREQ_44100 | BTR_SBC_SAMPLING_FREQ_48000;
+        lstBtA2dpCapabilities.allocation_method  = BTR_A2DP_ALLOCATION_SNR | BTR_A2DP_ALLOCATION_LOUDNESS;
+        lstBtA2dpCapabilities.subbands           = BTR_A2DP_SUBBANDS_4 | BTR_A2DP_SUBBANDS_8;
+        lstBtA2dpCapabilities.block_length       = BTR_A2DP_BLOCK_LENGTH_4 | BTR_A2DP_BLOCK_LENGTH_8 |
+                                                   BTR_A2DP_BLOCK_LENGTH_12 | BTR_A2DP_BLOCK_LENGTH_16;
         lstBtA2dpCapabilities.min_bitpool        = MIN_BITPOOL;
         lstBtA2dpCapabilities.max_bitpool        = MAX_BITPOOL;
 

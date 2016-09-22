@@ -2,7 +2,15 @@ SUBDIRS =
 
 INCLUDE_FILES = $(DBUS_CFLAGS)
 
+if BTR_IFCE_DBUS_BLUEZ4
 BTRCORE_IFCE_SRCS = bt-ifce/btrCore_dbus_bluez4.c
+else !BTR_IFCE_DBUS_BLUEZ4
+if BTR_IFCE_DBUS_BLUEZ5
+BTRCORE_IFCE_SRCS = bt-ifce/btrCore_dbus_bluez5.c
+endif
+endif
+
+
 BTRCORE_IFCE_INC = -I${top_srcdir}/include/bt-ifce
 
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include $(BTRCORE_IFCE_INC)
