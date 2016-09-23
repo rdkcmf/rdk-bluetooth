@@ -151,7 +151,9 @@ int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAd
 int   BtrCore_MediaPlayControl (void* apBtConn, const char* apBtAdapterPath, enBTMediaControl aenBTMediaOper);
 char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath);
 char* BTrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
-int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);                                                
+int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
+int   BtrCoreGetTrackInformation (void* apBtConn, const char* apBtAdapterPath);
+int   BtrCoreCheckPlayerBrowsable(void* apBtConn, const char* apBtAdapterPath);
 
 
 #endif // __BTR_CORE_DBUS_BT_H__
