@@ -20,205 +20,208 @@ void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 //for BT audio input testing
 static pthread_t fileWriteThread;
-static char *message2 = "SBC Write Thread Started";
 static int  iret1;
 static int writeSBC = 0;
 unsigned int BT_loop = 0;
 
-//for connection callback testing
-static int acceptConnection = 0;
-//for GetTransport functionality automatic on device connect
-int liDataPath = 0;
-int lidataReadMTU = 0;
-int lidataWriteMTU = 0;
-int myadapter = 0;
-stBTRCoreAdapter        lstBTRCoreAdapter;
-tBTRCoreHandle lhBTRCore = NULL;
-static int connectedDeviceIndex=0;
+
+typedef struct appDataStruct{
+    tBTRCoreHandle  hBTRCore;
+    int             iDataPath;
+    int             iDataReadMTU;
+    int             iDataWriteMTU;
+} appDataStruct;
+
 
 #define NO_ADAPTER 1234
 
-
-static void 
-GetTransport (
-    void
-) {
-    if (lidataReadMTU == 0) { //if we never did this before
-        lstBTRCoreAdapter.adapter_number = myadapter;
-
-        BTRCore_AcquireDeviceDataPath(lhBTRCore, connectedDeviceIndex , enBTRCoreMobileAudioIn, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
-        printf("Device Data Path = %d \n", liDataPath);
-        printf("Device Data Read MTU = %d \n", lidataReadMTU);
-        printf("Device Data Write MTU= %d \n", lidataWriteMTU);
-    }
-}
+//for connection callback testing
+static int acceptConnection = 0;
+static int connectedDeviceIndex=0;
 
 void *
 DoSBCwrite (
     void* ptr
 ) {
-    char *message;
-    message = (char *) ptr;
+    char *message = "SBC Write Thread Started";
     char * myfifo = "/tmp/myfifo";
     int fd;
+    appDataStruct* pstAppData = (appDataStruct*)ptr;
+
     /* create the FIFO (named pipe) */
     mkfifo(myfifo, 0666);
     printf("Thread starting: %s \n", message);
     fd = open(myfifo, O_WRONLY );//not sure if I need nonblock or not the first time I tried it it failed. then I tried nonblock, no audio
     printf("BT data flowing...\n");
-           do{ 
-            sleep (1);
-            
-            }while (writeSBC == 0);
+
+    do { 
+        sleep (1);
+    } while (writeSBC == 0);
            
-                       {
-          	 int tmp;
-		unsigned char sigByte1 = 0;
-	            unsigned char bitpool = 0;
-				int blocks;
-				int computed_len;
-				int frame_length = 0;
-//				unsigned char channel_mode;
-//				unsigned char alloc_method;
-				int sub_bands;
-				
-				unsigned char bit_blocks;
-				unsigned char bit_channel_mode;
-//				unsigned char bit_alloc_method;
-				unsigned char bit_sub_bands;
-                int k;
-                int z;
-                int y;//for first time processing
-                unsigned char x;
-                int first_time_thru;
-                int sbcFrameState = 0;
-                int bytes2write=0;
-                unsigned char temp;
-                int read_return;
-               //  FILE *w_ptr;
-                // w_ptr=fopen("/tmp/myfifo", "wb");
-                 char buffy[1024];//hope MTU is not bigger than this, or we could get hurt...
-                 k=0;
-                 first_time_thru = 1;
-                 while (k < BT_loop)
-                 {
-                  //I guess the in is the out, so try 5 as our reading fd
-                  read_return = read(liDataPath,buffy,lidataReadMTU);
-                  /////////insert FIRST TIME CODE
-                  y=0;
-                  while (first_time_thru)
-				  {
-					x = buffy[y];
-					y++;
-				   if (x == 0x9C)
-				    {
-				       printf("first sbc frame detected\n");
-				       //get another byte
-				       x = buffy[y];
-					   y++;
-				sigByte1 = x;//we will use this later for parsing
-				       bit_blocks = (x & 0x30) >> 4;
-				       bit_channel_mode = (x & 0x0C) >> 2;
-				    //   bit_alloc_method = (x & 0x02) >> 1;
-				       bit_sub_bands = (x & 0x01);
-				       sub_bands = (bit_sub_bands + 1) * 4;
-				       blocks = (bit_blocks + 1) * 4;
-				 //get another byte
-				       x = buffy[y];
-					   y++;
-				       bitpool = x;
-				//get the length
-				     printf("channel mode 0x%x\n",bit_channel_mode);
-				     printf("nrof_subbands 0x%x\n",sub_bands);
-				     printf("nrof_blocks 0x%x\n",blocks);
-				     printf("bitpool 0x%x\n",bitpool );
-					switch (bit_channel_mode) {
-					case 0x00:
-						bit_blocks /= 2;
-						tmp = blocks * bitpool;
-						break;
-					case 0x01:
-						tmp = blocks * bitpool * 2;
-						break;
-					case 0x02:
-						tmp = blocks * bitpool;
-						break;
-					case 0x03:
-						tmp = blocks * bitpool + sub_bands;
-						break;
-					default:
-						return 0;
-					}
-				 computed_len = sub_bands + ((tmp + 7) / 8);
-				frame_length = computed_len + 4;
-				//printf("tmp = %d\n",tmp);
-				//printf("computed length is %d\n",computed_len);
-				printf("frame length is %d\n",frame_length);
-				first_time_thru = 0;
-				//we now know how long the frames are. and what the two signature bytes after the sync are
-				//lets not bother with this frame, instead start searching now, based on what we know.
-				    }
-                              }
-  
-                  //////END FIRST TIME CODE now that we know the details, lets parse
-                  if (read_return > 0)
-                   {  //
-                  if ( (k % 1000) == 0)
-                    {
-                      printf("reading %d - %d - %d\n",read_return,k,BT_loop);
+   {
+        int tmp;
+        unsigned char sigByte1 = 0;
+        unsigned char bitpool = 0;
+        int blocks;
+        int computed_len;
+        int frame_length = 0;
+        //unsigned char channel_mode;
+        //unsigned char alloc_method;
+        int sub_bands;
+        
+        unsigned char bit_blocks;
+        unsigned char bit_channel_mode;
+        //unsigned char bit_alloc_method;
+        unsigned char bit_sub_bands;
+        int k;
+        int z;
+        int y;//for first time processing
+        unsigned char x;
+        int first_time_thru;
+        int sbcFrameState = 0;
+        int bytes2write=0;
+        unsigned char temp;
+        int read_return;
+        //FILE *w_ptr;
+        //w_ptr=fopen("/tmp/myfifo", "wb");
+        char buffy[1024];//hope MTU is not bigger than this, or we could get hurt...
+        k=0;
+        first_time_thru = 1;
+
+        while (k < BT_loop) {
+            //I guess the in is the out, so try 5 as our reading fd
+            read_return = read(pstAppData->iDataPath, buffy, pstAppData->iDataReadMTU);
+            /////////insert FIRST TIME CODE
+            y=0;
+
+            while (first_time_thru) {
+                x = buffy[y];
+                y++;
+
+                if (x == 0x9C) {
+                    printf("first sbc frame detected\n");
+                    //get another byte
+                    x = buffy[y];
+                    y++;
+                    sigByte1 = x;//we will use this later for parsing
+                    bit_blocks = (x & 0x30) >> 4;
+                    bit_channel_mode = (x & 0x0C) >> 2;
+                    //   bit_alloc_method = (x & 0x02) >> 1;
+                    bit_sub_bands = (x & 0x01);
+                    sub_bands = (bit_sub_bands + 1) * 4;
+                    blocks = (bit_blocks + 1) * 4;
+                    //get another byte
+                    x = buffy[y];
+                    y++;
+                    bitpool = x;
+                    //get the length
+                    printf("channel mode 0x%x\n",bit_channel_mode);
+                    printf("nrof_subbands 0x%x\n",sub_bands);
+                    printf("nrof_blocks 0x%x\n",blocks);
+                    printf("bitpool 0x%x\n",bitpool );
+
+                    switch (bit_channel_mode) {
+                        case 0x00:
+                        bit_blocks /= 2;
+                        tmp = blocks * bitpool;
+                        break;
+                        case 0x01:
+                        tmp = blocks * bitpool * 2;
+                        break;
+                        case 0x02:
+                        tmp = blocks * bitpool;
+                        break;
+                        case 0x03:
+                        tmp = blocks * bitpool + sub_bands;
+                        break;
+                        default:
+                        return 0;
                     }
-                   k++;
-                   //fwrite(buffy, 1 , read_return, fp);
-                   //remove the sbc data from rtp
-                   for(z=0;z<read_return;z++)
-                    {
-                     x=buffy[z];
-                    if ((sbcFrameState == 0) && (x == 0x9C))
-                    {
-                    sbcFrameState = 1;
-                     }
-                     if ((sbcFrameState == 1) && (x == sigByte1))
-                     {
-                     sbcFrameState = 2;
-                       }
-                    if ((sbcFrameState == 2) && (x == bitpool))
-                        {
+
+                    computed_len = sub_bands + ((tmp + 7) / 8);
+                    frame_length = computed_len + 4;
+                    //printf("tmp = %d\n",tmp);
+                    //printf("computed length is %d\n",computed_len);
+                    printf("frame length is %d\n",frame_length);
+                    first_time_thru = 0;
+                    //we now know how long the frames are. and what the two signature bytes after the sync are
+                    //lets not bother with this frame, instead start searching now, based on what we know.
+                }
+            }
+
+            //////END FIRST TIME CODE now that we know the details, lets parse
+            if (read_return > 0) {
+                if ( (k % 1000) == 0) {
+                    printf("reading %d - %d - %d\n",read_return,k,BT_loop);
+                }
+
+                k++;
+                //fwrite(buffy, 1 , read_return, fp);
+                //remove the sbc data from rtp
+
+                for(z=0;z<read_return;z++) {
+                    x=buffy[z];
+                    if ((sbcFrameState == 0) && (x == 0x9C)) {
+                        sbcFrameState = 1;
+                    }
+
+                    if ((sbcFrameState == 1) && (x == sigByte1)) {
+                        sbcFrameState = 2;
+                    }
+
+                    if ((sbcFrameState == 2) && (x == bitpool)) {
                         sbcFrameState = 3;
-   
-                      sbcFrameState = 4;
-                      bytes2write=frame_length-2;///113 + 2 sig bytes
-                     //write 0x9C plus header info
-                     temp = 0x9C;
-                  //   fwrite(&temp,1,1,w_ptr);
-                   write(fd,&temp,1);
-                     temp = sigByte1;
-                   //     fwrite(&temp,1,1,w_ptr);
-                     write(fd,&temp,1);
 
+                        sbcFrameState = 4;
+                        bytes2write=frame_length-2;///113 + 2 sig bytes
+                        //write 0x9C plus header info
+                        temp = 0x9C;
+                        //   fwrite(&temp,1,1,w_ptr);
+                        write(fd,&temp,1);
+                        temp = sigByte1;
+                        //     fwrite(&temp,1,1,w_ptr);
+                        write(fd,&temp,1);
                     }
-                   if (bytes2write)
-                        {
+
+                    if (bytes2write) {
                         bytes2write--;
-                          //write x
-                          //fwrite(&x,1,1,w_ptr);
-                         write(fd,&x,1);
-                      if (bytes2write == 0)
-                          sbcFrameState = 0;//reset the state machine
-                         }
-     
-                    }//end for
+                        //write x
+                        //fwrite(&x,1,1,w_ptr);
+                        write(fd,&x,1);
 
+                        if (bytes2write == 0)
+                            sbcFrameState = 0;//reset the state machine
+                    }
+                }//end for
+            }
 
-                   }
-                  usleep(50);//chandresh did this, so lets try?
-                 
-               }
-             // fclose(w_ptr);
-             close(fd);
-           unlink(myfifo); 
-           }
+            usleep(50);//chandresh did this, so lets try?
+        }
+
+        // fclose(w_ptr);
+        close(fd);
+        unlink(myfifo); 
+    }
 
     return NULL;
+}
+
+
+
+static void
+GetTransport (
+    appDataStruct* pstAppData
+) {
+    BTRCore_AcquireDeviceDataPath ( pstAppData->hBTRCore, 
+                                    connectedDeviceIndex,
+                                    enBTRCoreMobileAudioIn,
+                                    &pstAppData->iDataPath,
+                                    &pstAppData->iDataReadMTU,
+                                    &pstAppData->iDataWriteMTU);
+
+    printf("Device Data Path = %d \n",      pstAppData->iDataPath);
+    printf("Device Data Read MTU = %d \n",  pstAppData->iDataReadMTU);
+    printf("Device Data Write MTU= %d \n",  pstAppData->iDataWriteMTU);
 }
 
 
@@ -301,12 +304,17 @@ sendSBCFileOverBT (
 
 int
 cb_connection_authentication (
-    stBTRCoreConnAuthCBInfo* apstConnAuthCbInfo
+    stBTRCoreConnCBInfo* apstConnCbInfo
 ) {
 #if 0
     printf("\n\nConnection attempt by: %s\n",path);
 #endif
-    printf("Choose 32 to accept the connection or 33 to deny the connection\n\n");
+    printf("Choose 35 to accept the connection/verify pin-passcode or 36 to deny the connection/discard pin-passcode\n\n");
+
+    if (apstConnCbInfo->ui32devPassKey) {
+        printf("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
+    }    
+
     do {
         usleep(20000);
     } while (acceptConnection == 0);
@@ -334,7 +342,7 @@ cb_unsolicited_bluetooth_status (
     printf("app level cb device status change: new state is %s\n",p_StatusCB->cDeviceCurrState);
     if ((strcmp(p_StatusCB->cDevicePrevState,"connected") == 0) && (strcmp(p_StatusCB->cDeviceCurrState,"playing") == 0)) {
         printf("transition to playing, get the transport info...\n");
-        GetTransport();
+        GetTransport((appDataStruct*)apvUserData);
     }
 
     return;
@@ -371,10 +379,11 @@ printMenu (
     printf("29. BT audio input test\n");
     printf("30. install agent for accepting connections NoInputNoOutput\n");
     printf("31. install agent for accepting connections DisplayYesNo\n");
-    printf("32. Accept a connection request\n");
-    printf("33. Deny a connection request\n");
-    printf("34. Register connection callback to allow accepting or rejection of connections.\n");
-    printf("35. Uninstall agent - allows device-initiated pairing\n");
+    printf("32. Uninstall agent - allows device-initiated pairing\n");
+    printf("33. Register connection-in intimation callback.\n");
+    printf("34. Register connection authentication callback to allow accepting or rejection of connections.\n");
+    printf("35. Accept a connection request\n");
+    printf("36. Deny a connection request\n");
 
     printf("88. debug test\n");
     printf("99. Exit\n");
@@ -385,22 +394,29 @@ int
 main (
     void
 ) {
+    tBTRCoreHandle lhBTRCore = NULL;
 
     int choice;
     int devnum;
     int default_adapter = NO_ADAPTER;
 	stBTRCoreGetAdapters    GetAdapters;
+    stBTRCoreAdapter        lstBTRCoreAdapter;
 	stBTRCoreStartDiscovery StartDiscovery;
 
     char  default_path[128];
     char* agent_path = NULL;
     char myData[2048];
+    int myadapter = 0;
     int bfound;
     int i;
 
     char *sbcEncodedFileName = NULL;
     
     char myService[16];//for testing findService API
+
+    appDataStruct stAppData;
+
+    memset(&stAppData, 0, sizeof(stAppData));
 
     snprintf(default_path, sizeof(default_path), "/org/bluez/agent_%d", getpid());
 
@@ -421,13 +437,14 @@ main (
         return -1;
     }
 
+    stAppData.hBTRCore = lhBTRCore;
     //register callback for unsolicted events, such as powering off a bluetooth device
-    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, NULL);
+    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
 
     //display a menu of choices
     printMenu();
     //start Bluetooth input data writing thread - supports BT in audio test
-    iret1 = pthread_create( &fileWriteThread, NULL, DoSBCwrite, (void*) message2);
+    iret1 = pthread_create( &fileWriteThread, NULL, DoSBCwrite, (void*) &stAppData);
     do {
         printf("Enter a choice...\n");
         scanf("%d", &choice);
@@ -507,6 +524,7 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
                 printf("device connect process completed.\n");
             }
             break;
@@ -529,7 +547,7 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
-                connectedDeviceIndex = devnum;//TODO update this if remote device initiates connection.
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
                 printf("device connect process completed.\n");
             }
             break;
@@ -695,10 +713,10 @@ main (
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &liDataPath, &lidataReadMTU, &lidataWriteMTU);
-                printf("Device Data Path = %d \n", liDataPath);
-                printf("Device Data Read MTU = %d \n", lidataReadMTU);
-                printf("Device Data Write MTU= %d \n", lidataWriteMTU);
+                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
+                printf("Device Data Path = %d \n", stAppData.iDataPath);
+                printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
+                printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
             }
             break;
         case 22:
@@ -710,17 +728,17 @@ main (
                 devnum = getChoice();
                 BTRCore_ReleaseDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers);
 
-                liDataPath      = 0;
-                lidataReadMTU   = 0;
-                lidataWriteMTU  = 0;
+                stAppData.iDataPath      = 0;
+                stAppData.iDataReadMTU   = 0;
+                stAppData.iDataWriteMTU  = 0;
             }
             break;
         case 23:
             printf("Enter Encoded SBC file location to send to BT Headset/Speakers...\n");
             sbcEncodedFileName = getEncodedSBCFile();
             if (sbcEncodedFileName) {
-                printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, liDataPath);
-                sendSBCFileOverBT(sbcEncodedFileName, liDataPath, lidataWriteMTU);
+                printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, stAppData.iDataPath);
+                sendSBCFileOverBT(sbcEncodedFileName, stAppData.iDataPath, stAppData.iDataWriteMTU);
                 free(sbcEncodedFileName);
                 sbcEncodedFileName = NULL;
             }
@@ -728,39 +746,43 @@ main (
                 printf(" Invalid file location\n");
             }
             break;
-       case 29:
-           printf("rtp deplayload and play some music over BT\n");
-           printf("about how many minutes to play?\n");
-           choice = getChoice();
-           BT_loop = 6000 * choice;//6000 equates to roughly one minute
-           writeSBC = 1;
-           sleep(2);
-           system("gst-launch-1.0 filesrc location=/tmp/myfifo   ! sbcparse ! sbcdec ! brcmpcmsink");
-           break;
-       case 30:
-             printf("install agent - NoInputNoOutput\n");
-             BTRCore_RegisterAgent(lhBTRCore, 0);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
-             break;
-       case 31:
-             printf("install agent - DisplayYesNo\n");
-             BTRCore_RegisterAgent(lhBTRCore, 1);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
-             break;
-       case 32:
-             printf("accept the connection\n");
-             acceptConnection = 1;
-             break;
-        case 33:
-             printf("deny the connection\n");
-             acceptConnection = 2;//anything but 1 means do not connect
-             break;
-        case 34:
-             printf("register authentication CB\n");
-             BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
+        case 29:
+            printf("rtp deplayload and play some music over BT\n");
+            printf("about how many minutes to play?\n");
+            choice = getChoice();
+            BT_loop = 6000 * choice;//6000 equates to roughly one minute
+            writeSBC = 1;
+            sleep(2);
+            system("gst-launch-1.0 filesrc location=/tmp/myfifo   ! sbcparse ! sbcdec ! brcmpcmsink");
             break;
-         case 35:
-             printf("uninstall agent - DisplayYesNo\n");
-             BTRCore_UnregisterAgent(lhBTRCore);
-             break;
+        case 30:
+            printf("install agent - NoInputNoOutput\n");
+            BTRCore_RegisterAgent(lhBTRCore, 0);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
+            break;
+        case 31:
+            printf("install agent - DisplayYesNo\n");
+            BTRCore_RegisterAgent(lhBTRCore, 1);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
+            break;
+        case 32:
+            printf("uninstall agent - DisplayYesNo\n");
+            BTRCore_UnregisterAgent(lhBTRCore);
+            break;
+        case 33:
+            printf("register connection-in Intimation CB\n");
+            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            break;
+        case 34:
+            printf("register authentication CB\n");
+            BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            break;
+        case 35:
+            printf("accept the connection\n");
+            acceptConnection = 1;
+            break;
+        case 36:
+            printf("deny the connection\n");
+            acceptConnection = 2;//anything but 1 means do not connect
+            break;
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;

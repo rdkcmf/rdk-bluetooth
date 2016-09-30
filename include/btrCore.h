@@ -84,10 +84,10 @@ typedef struct _stBTRCoreDevStateCBInfo {
    char cDeviceCurrState[BTRCORE_STRINGS_MAX_LEN];
 } stBTRCoreDevStateCBInfo;
 
-typedef struct _stBTRCoreConnAuthCBInfo {
-    int test;
+typedef struct _stBTRCoreConnCBInfo {
+    unsigned int ui32devPassKey;
     char cConnAuthDeviceName[BTRCORE_STRINGS_MAX_LEN];
-} stBTRCoreConnAuthCBInfo;
+} stBTRCoreConnCBInfo;
 
 /*BT Adapter*/
 typedef struct _stBTRCoreAdapter {
@@ -154,7 +154,8 @@ typedef struct _stBTRCoreSupportedServiceList {
 
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevices astBTRCoreScannedDevice);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCBInfo* apstDevStateCbInfo, void* apvUserData);
-typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnAuthCBInfo* apstConnAuthCbInfo);
+typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
+typedef int  (*BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
 
 
 /*
@@ -274,6 +275,9 @@ enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCor
 
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
 enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afptrBTRCoreStatusCB, void* apUserData);
+
+/*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
+enBTRCoreRet BTRCore_RegisterConnectionIntimationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnIntimCb afptrBTRCoreConnAuthCB, void* apUserData);
 
 /*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
 enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnAuthCb afptrBTRCoreConnAuthCB, void* apUserData);

@@ -108,7 +108,9 @@ typedef struct _stBTDeviceSupportedServiceList
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps);
 typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps);
+typedef int (*fPtr_BtrCore_BTConnIntim_cB)(const char* apBtDeviceName, unsigned int aui32devPassKey, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuth_cB)(const char* apBtDeviceName, void* apUserData);
+
 
 //callback to process connection requests:
 int (*p_ConnAuth_callback) ();
@@ -123,7 +125,7 @@ int   BtrCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const 
 int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, char** apcArrBtAdapterPath);
 char* BtrCore_BTGetAdapterPath (void* apBtConn, const char* apBtAdapter);
 int   BtrCore_BTReleaseAdapterPath (void* apBtConn, const char* apBtAdapter);
-int   BtrCore_BTGetProp (void* apBtConn, const char* pDevicePath, const char* pInterface, const char* pKey, void* pValue);
+int   BtrCore_BTGetProp (void* apBtConn, const char* pDevicePath, const char* pKey, void* pValue);
 int   BtrCore_BTSetAdapterProp (void* apBtConn, const char* apBtAdapter, enBTAdapterProp aenBTAdapterProp, void* apvVal);
 int   BtrCore_BTStartDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTStopDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
@@ -141,6 +143,7 @@ int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, i
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
 int   BtrCore_BTSendReceiveMessages (void* apBtConn);
 int   BtrCore_BTRegisterDevStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTDevStatusUpdate_cB afpcBDevStatusUpdate, void* apUserData);
+int   BtrCore_BTRegisterConnIntimationcB (void* apBtConn, fPtr_BtrCore_BTConnIntim_cB afpcBConnIntim, void* apUserData);
 int   BtrCore_BTRegisterConnAuthcB (void* apBtConn, fPtr_BtrCore_BTConnAuth_cB afpcBConnAuth, void* apUserData);
 int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapter,
                                             fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia, void* apUserData);
@@ -150,7 +153,7 @@ int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAd
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
 int   BtrCore_MediaPlayControl (void* apBtConn, const char* apBtAdapterPath, enBTMediaControl aenBTMediaOper);
 char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath);
-char* BTrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
+char* BtrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
 int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
 int   BtrCoreGetTrackInformation (void* apBtConn, const char* apBtAdapterPath);
 int   BtrCoreCheckPlayerBrowsable(void* apBtConn, const char* apBtAdapterPath);

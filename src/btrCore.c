@@ -34,10 +34,11 @@ typedef struct _stBTRCoreHdl {
 
     stBTRCoreDevStateCBInfo     stDevStateCbInfo;
 
-    stBTRCoreConnAuthCBInfo     stConnAuthCbInfo;
+    stBTRCoreConnCBInfo         stConnCbInfo;
 
     BTRCore_DeviceDiscoveryCb   fptrBTRCoreDeviceDiscoveryCB;
     BTRCore_StatusCb            fptrBTRCoreStatusCB;
+    BTRCore_ConnIntimCb         fptrBTRCoreConnIntimCB; 
     BTRCore_ConnAuthCb          fptrBTRCoreConnAuthCB; 
 
     void*                       pvCBUserData;
@@ -61,6 +62,7 @@ static void btrCore_ShowSignalStrength (short strength);
 
 /* Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
+static int btrCore_BTDeviceConnectionIntimation_cb(const char* apBtDeviceName, unsigned int aui32devPassKey, void* apUserData);
 static int btrCore_BTDeviceAuthetication_cb(const char* apBtDeviceName, void* apUserData);
 
 
@@ -114,7 +116,8 @@ btrCore_InitDataSt (
     strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
     strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
 
-    memset(apsthBTRCore->stConnAuthCbInfo.cConnAuthDeviceName, '\0', BTRCORE_STRINGS_MAX_LEN);
+    apsthBTRCore->stConnCbInfo.ui32devPassKey = 0;
+    memset(apsthBTRCore->stConnCbInfo.cConnAuthDeviceName, '\0', BTRCORE_STRINGS_MAX_LEN);
 
     apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB = NULL;
     apsthBTRCore->fptrBTRCoreStatusCB = NULL;
@@ -525,6 +528,11 @@ BTRCore_Init (
 
     if(BtrCore_BTRegisterDevStatusUpdatecB(pstlhBTRCore->connHandle, &btrCore_BTDeviceStatusUpdate_cb, pstlhBTRCore)) {
         fprintf(stderr, "%s:%d:%s - Failed to Register Device Status CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
+    }
+
+    if(BtrCore_BTRegisterConnIntimationcB(pstlhBTRCore->connHandle, &btrCore_BTDeviceConnectionIntimation_cb, pstlhBTRCore)) {
+        fprintf(stderr, "%s:%d:%s - Failed to Register Connection Intimation CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
@@ -997,11 +1005,7 @@ BTRCore_GetAdapterDiscoverableStatus (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-#if defined(USE_BLUEZ4)
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter", "Discoverable", &discoverable)) {
-#elif defined(USE_BLUEZ5)
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter1", "Discoverable", &discoverable)) {
-#endif
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "Discoverable", &discoverable)) {
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
@@ -1096,11 +1100,7 @@ BTRCore_GetAdapterName (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-#if defined(USE_BLUEZ4)
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter", "Name", name)) {
-#elif defined(USE_BLUEZ5)
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter1", "Name", name)) {
-#endif
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "Name", name)) {
         printf("%s:%d - Get value for org.bluez.Adapter.Name = %s\n", __FUNCTION__, __LINE__, name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
@@ -1159,11 +1159,7 @@ BTRCore_GetAdapterPower (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-#if defined(USE_BLUEZ4)
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter", "Powered", &powerStatus)) {
-#elif defined(USE_BLUEZ5)
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "org.bluez.Adapter1", "Powered", &powerStatus)) {
-#endif
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "Powered", &powerStatus)) {
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;
@@ -1959,6 +1955,35 @@ BTRCore_RegisterStatusCallback (
 
 
 enBTRCoreRet
+BTRCore_RegisterConnectionIntimationCallback (
+    tBTRCoreHandle      hBTRCore,
+    BTRCore_ConnIntimCb afptrBTRCoreConnIntimCB,
+    void*               apUserData
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreNotInitialized\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    (void)pstlhBTRCore;
+
+    if (!pstlhBTRCore->fptrBTRCoreConnIntimCB) {
+        pstlhBTRCore->fptrBTRCoreConnIntimCB = afptrBTRCoreConnIntimCB;
+        printf("%s:%d - BT Conn In Intimation Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+    }
+    else {
+        printf("%s:%d - BT Conn In Intimation Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
 BTRCore_RegisterConnectionAuthenticationCallback (
     tBTRCoreHandle      hBTRCore,
     BTRCore_ConnAuthCb  afptrBTRCoreConnAuthCB,
@@ -2093,6 +2118,27 @@ btrCore_BTDeviceStatusUpdate_cb (
 
 
 static int
+btrCore_BTDeviceConnectionIntimation_cb (
+    const char*     apBtDeviceName,
+    unsigned int    aui32devPassKey,
+    void*           apUserData
+) {
+    int i32DevConnIntimRet = 0;
+    stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
+
+    if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnAuthCB)) {
+        lpstlhBTRCore->stConnCbInfo.ui32devPassKey = aui32devPassKey;
+        if (apBtDeviceName)
+            strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
+
+        i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo);
+    }
+
+    return i32DevConnIntimRet;
+}
+
+
+static int
 btrCore_BTDeviceAuthetication_cb (
     const char*     apBtDeviceName,
     void*           apUserData
@@ -2102,8 +2148,8 @@ btrCore_BTDeviceAuthetication_cb (
 
     if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnAuthCB)) {
         if (apBtDeviceName) {
-            strncpy(lpstlhBTRCore->stConnAuthCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
-            i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnAuthCbInfo);
+            strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
+            i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo);
         }
     }
 
