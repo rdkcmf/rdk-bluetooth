@@ -584,7 +584,7 @@ btrCore_BTAgentRequestConfirmation (
     void*           userdata
 ) {
 	DBusMessage *reply;
-	const char *path; 
+	const char *path;
     unsigned int passKey = 0;;
 
     const char *dev_name; //pass the dev name to the callback for app to use
@@ -600,7 +600,7 @@ btrCore_BTAgentRequestConfirmation (
 
     if (gfpcBConnectionIntimation) {
         printf("calling ConnIntimation cb with %s...\n",path);
-        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
+        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName
 
         if (dev_name != NULL) {
             yesNo = gfpcBConnectionIntimation(dev_name, passKey, gpcBConnIntimUserData);
@@ -652,7 +652,7 @@ btrCore_BTAgentAuthorize (
 
     if (gfpcBConnectionAuthentication) {
         printf("calling ConnAuth cb with %s...\n",path);
-        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
+        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName
 
         if (dev_name != NULL) {
             yesNo = gfpcBConnectionAuthentication(dev_name, gpcBConnAuthUserData);
@@ -1912,9 +1912,11 @@ BtrCore_BTGetPairedDeviceInfo (
 	DBusPendingCall* pending;
 	bool 			adapterFound = FALSE;
 
+
+	char* 		pdeviceInterface = "org.bluez.Device1";
 	char* 		adapter_path;
 	char*		dbusObject2;
-	char		paths[10][248];
+	char		paths[32][256];
 	char  		objectPath [10][512];
 	char  		objectData [30][512];
 	int         i = 0;
@@ -2049,12 +2051,14 @@ BtrCore_BTGetPairedDeviceInfo (
 		}
 
 	}
+	num = d;
 
 	/* Update the number of devices */
 	pPairedDeviceInfo->numberOfDevices = num;
 
 	/* Update the paths of these devices */
 	for ( i = 0; i < num; i++) {
+		memset(pPairedDeviceInfo->devicePath[i], '\0', sizeof(pPairedDeviceInfo->devicePath[i]));
 		strcpy(pPairedDeviceInfo->devicePath[i], paths[i]);
 	}
 	dbus_message_unref(reply);
@@ -2063,9 +2067,18 @@ BtrCore_BTGetPairedDeviceInfo (
 	for ( i = 0; i < num; i++) {
 		msg = dbus_message_new_method_call("org.bluez", pPairedDeviceInfo->devicePath[i], "org.freedesktop.DBus.Properties", "GetAll");
 		dbus_message_iter_init_append(msg, &args);
-		dbus_message_append_args(msg, DBUS_TYPE_STRING, "org.bluez.Device1", DBUS_TYPE_INVALID);
+		dbus_message_append_args(msg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
+
+		dbus_error_init(&err);
+		if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1))
+		{
+		printf("failed to send message");
+		return -1;
+		}
+
 		dbus_connection_flush(gpDBusConn);
 		dbus_message_unref(msg);
+		msg = NULL;
 
 		dbus_pending_call_block(pending);
 		reply =  dbus_pending_call_steal_reply(pending);
