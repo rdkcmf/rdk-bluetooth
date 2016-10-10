@@ -1014,7 +1014,6 @@ btrCore_BTMediaEndpointClearConfiguration (
 }
 
 
-
 /* Interfaces */
 void*
 BtrCore_BTInitGetConnection (
@@ -1031,7 +1030,7 @@ BtrCore_BTInitGetConnection (
         return NULL;
     }
 
-    fprintf(stderr, "DBus Debug DBus Connection Name %s\n", dbus_bus_get_unique_name (lpDBusConn));
+    printf("DBus Debug DBus Connection Name %s\n", dbus_bus_get_unique_name (lpDBusConn));
     gpDBusConn = lpDBusConn;
 
     if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusAgentFilter_cb, NULL, NULL)) {
@@ -1769,7 +1768,9 @@ BtrCore_BTDiscoverDeviceServices (
 
     dbus_message_append_args(msg, DBUS_TYPE_STRING, &pSearchString, DBUS_TYPE_INVALID);
     dbus_error_init(&err);
-    reply = dbus_connection_send_with_reply_and_block(apBtConn, msg, -1, &err);
+
+    /* Set the timeout as 2.5 sec */
+    reply = dbus_connection_send_with_reply_and_block(apBtConn, msg, 2500, &err);
 
     dbus_message_unref(msg);
 
@@ -1777,7 +1778,7 @@ BtrCore_BTDiscoverDeviceServices (
         fprintf(stderr, "Failure attempting to Discover Services\n");
 
         if (dbus_error_is_set(&err)) {
-            fprintf(stderr, "%s\n", err.message);
+            fprintf(stderr, "Reason for the Failure is %s\n", err.message);
             dbus_error_free(&err);
         }
 
