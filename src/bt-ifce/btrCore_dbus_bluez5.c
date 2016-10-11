@@ -46,7 +46,8 @@ static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage* apD
 static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage* apDBusMsg);
 static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDBusMsg);
 
-
+//New BlueZ5 compatible function to list scanned devices
+static int BtrCore_BTGetScannedDeviceInfo (stBTDeviceInfo* lstBTScannedDeviceInfo);
 
 /* Static Global Variables Defs */
 static char *passkey = NULL;
@@ -124,10 +125,11 @@ btrCore_BTDBusAgentFilter_cb (
         }
     }
 
-    if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter1", "DeviceFound")) {
+    if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "InterfacesAdded")) {
         printf("Device Found!\n");
 
-        i32OpRet = btrCore_BTParseDevice(apDBusMsg, &lstBTDeviceInfo);
+        //i32OpRet = btrCore_BTParseDevice(apDBusMsg, &lstBTDeviceInfo);  //Removed and Modified with new function BtrCore_BTGetScannedDeviceInfo compatible with BlueZ5
+        i32OpRet = BtrCore_BTGetScannedDeviceInfo(&lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate && !i32OpRet) {
             if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStFound, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
@@ -790,12 +792,12 @@ btrCore_BTParseDevice (
         return -1;
     }
 
-    if (!dbus_message_get_args( apDBusMsg, NULL,
+    /*if (!dbus_message_get_args( apDBusMsg, NULL,
                                 DBUS_TYPE_STRING, &pcBTDevAddr,
                                 DBUS_TYPE_INVALID)) {
         fprintf(stderr, "%s:%d:%s - dbus_message_get_args Failed\n", __FILE__, __LINE__, __FUNCTION__);
         //return -1; Users of btrCore_BTParseDevice should not call it if the message contains no valid args
-    }
+    }*/
 
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
     if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
@@ -1898,6 +1900,192 @@ BtrCore_BTStopDiscovery (
 }
 
 
+static int BtrCore_BTGetScannedDeviceInfo (stBTDeviceInfo* lstBTScannedDeviceInfo) {
+	DBusMessage* 	msg;
+	DBusMessageIter rootIter;
+	DBusMessageIter args;
+	DBusError   	lDBusErr;
+	DBusError 		err;
+	DBusPendingCall* pending;
+	bool 			adapterFound = FALSE;
+
+
+	char* 		pdeviceInterface = "org.bluez.Device1";
+	char* 		adapter_path;
+	char*		dbusObject2;
+	char		paths[32][256];
+	char  		objectPath [10][512];
+	char  		objectData [30][512];
+	int         i = 0;
+	int         num = 0;
+	int 		a = 0;
+	int 		b = 0;
+	int 		d = 0;
+
+
+	if (!gpDBusConn)
+		return -1;
+
+	dbus_error_init(&lDBusErr);
+	DBusMessage* reply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+	if (!reply) {
+		printf("%s:%d - org.bluez.Manager.ListAdapters returned an error: '%s'\n", __FUNCTION__, __LINE__, err.message);
+		dbus_error_free(&err);
+	}
+
+	if (dbus_message_iter_init(reply, &rootIter) && //point iterator to reply message
+		DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&rootIter)) //get the type of message that iter points to
+	{
+
+		DBusMessageIter arrayElementIter;
+		dbus_message_iter_recurse(&rootIter, &arrayElementIter); //assign new iterator to first element of array
+
+
+
+		while(!adapterFound){
+			if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&arrayElementIter))
+			{
+
+				DBusMessageIter dictEntryIter;
+				dbus_message_iter_recurse(&arrayElementIter,&dictEntryIter ); //assign new iterator to first element of (get all dict entries of 1st level (all object paths)
+
+				if (DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type(&dictEntryIter))
+				{
+
+					dbus_message_iter_get_basic(&dictEntryIter, &adapter_path);
+					strcpy(objectPath[a],adapter_path);
+					++a;
+				}
+				dbus_message_iter_next(&dictEntryIter);
+				if (DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&dictEntryIter))
+				{
+					DBusMessageIter innerArrayIter;
+					dbus_message_iter_recurse(&dictEntryIter, &innerArrayIter);
+
+					while (dbus_message_iter_has_next(&innerArrayIter)){
+						if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&innerArrayIter))
+						{
+							DBusMessageIter innerDictEntryIter;
+							dbus_message_iter_recurse(&innerArrayIter,&innerDictEntryIter ); //assign new iterator to first element of
+
+							if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter))
+							{
+								char *dbusObject;
+								dbus_message_iter_get_basic(&innerDictEntryIter, &dbusObject);
+
+
+							}
+
+
+							/////// NEW //////////
+
+
+							dbus_message_iter_next(&innerDictEntryIter);
+							if (DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&innerDictEntryIter))
+							{
+								DBusMessageIter innerArrayIter2;
+								dbus_message_iter_recurse(&innerDictEntryIter, &innerArrayIter2);
+
+								while (dbus_message_iter_has_next(&innerArrayIter2)){
+									if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&innerArrayIter2))
+									{
+										DBusMessageIter innerDictEntryIter2;
+										dbus_message_iter_recurse(&innerArrayIter2,&innerDictEntryIter2); //assign new iterator to first element of
+										if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter2))
+										{
+
+											dbus_message_iter_get_basic(&innerDictEntryIter2, &dbusObject2);
+										}
+
+
+										////////////// NEW 2 ////////////
+										dbus_message_iter_next(&innerDictEntryIter2);
+										DBusMessageIter innerDictEntryIter3;
+										char *dbusObject3;
+
+										dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
+										if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3))
+										{
+											dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
+											strcpy(objectData[b],dbusObject3);
+											++b;
+										}
+										else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3))
+										{
+											bool *device_prop = FALSE;
+											dbus_message_iter_get_basic(&innerDictEntryIter3, &device_prop);
+											if (strcmp(dbusObject2, "Paired") == 0 && !device_prop)
+											{
+												strcpy(paths[d], adapter_path);
+												++d;
+											}
+
+										}
+
+									}
+									if(!dbus_message_iter_has_next(&innerArrayIter2)) {break;} //check to see if end of 3rd array
+									else {dbus_message_iter_next(&innerArrayIter2);}
+
+								}
+
+							}
+
+							////////// NEW ////////////
+						}
+						if(!dbus_message_iter_has_next(&innerArrayIter)) {break;} //check to see if end of 2nd array
+						else {dbus_message_iter_next(&innerArrayIter);}
+					}
+				}
+
+				if(!dbus_message_iter_has_next(&arrayElementIter)) break; //check to see if end of 1st array
+				else dbus_message_iter_next(&arrayElementIter);
+
+			}//while loop end --used to traverse array
+
+		}
+
+	}
+	num = d;
+	dbus_message_unref(reply);
+
+	for ( i = 0; i < num; i++) {
+		msg = dbus_message_new_method_call("org.bluez", paths[i], "org.freedesktop.DBus.Properties", "GetAll");
+		dbus_message_iter_init_append(msg, &args);
+		dbus_message_append_args(msg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
+
+		dbus_error_init(&err);
+		if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1))
+		{
+		printf("failed to send message");
+		return -1;
+		}
+
+		dbus_connection_flush(gpDBusConn);
+		dbus_message_unref(msg);
+		msg = NULL;
+
+		dbus_pending_call_block(pending);
+		reply =  dbus_pending_call_steal_reply(pending);
+		dbus_pending_call_unref(pending);
+
+        if (reply != NULL) {
+            if (0 != btrCore_BTParseDevice(reply, lstBTScannedDeviceInfo)) {
+                printf ("Parsing the device %s failed..\n", paths[i]);
+                dbus_message_unref(reply);
+                return -1;
+            }
+            else {
+				dbus_message_unref(reply);
+				return 0;
+            }
+        }
+        dbus_message_unref(reply);
+    }
+
+    return 0;
+}
+
+
 int
 BtrCore_BTGetPairedDeviceInfo (
     void*                   apBtConn,
@@ -2290,7 +2478,8 @@ BtrCore_BTPerformDeviceOp (
 	DBusError 		err;
 	bool 			adapterFound = FALSE;
 
-	char* 			adapter_path;
+	char* 			adapter_path = NULL;
+	char*			deviceObjectPath;
 	char 			deviceOpString[64] = {'\0'};
 	char  			objectPath [10][512];
 	char  			objectData [30][512];
@@ -2302,24 +2491,24 @@ BtrCore_BTPerformDeviceOp (
         return -1;
 
 
-    switch (aenBTDevOp) {
-        case enBTDevOpFindPairedDev:
-            strcpy(deviceOpString, "FindDevice");
-            break;
-        case enBTDevOpCreatePairedDev:
-            strcpy(deviceOpString, "Pair");
-            break;
-        case enBTDevOpRemovePairedDev:
-            strcpy(deviceOpString, "RemoveDevice");
-            break;
-        case enBTDevOpUnknown:
-        default:
-            rc = -1;
-            break;
-    }
+	switch (aenBTDevOp) {
+		case enBTDevOpFindPairedDev:
+		strcpy(deviceOpString, "FindDevice");
+		break;
+		case enBTDevOpCreatePairedDev:
+		strcpy(deviceOpString, "Pair");
+		break;
+		case enBTDevOpRemovePairedDev:
+		strcpy(deviceOpString, "RemoveDevice");
+		break;
+		case enBTDevOpUnknown:
+		default:
+		rc = -1;
+		break;
+	}
 
-    if (rc == -1)
-        return rc;
+	if (rc == -1)
+		return rc;
 
 
 	if (aenBTDevOp == enBTDevOpFindPairedDev) {
@@ -2404,7 +2593,6 @@ BtrCore_BTPerformDeviceOp (
 												if (strcmp(apcDevPath, objectData[b]) == 0)
 												{
 													++b;
-													//printf("Found Device!:%s", adapter_path);
 													adapterFound = TRUE;
 													return 0;
 												}
@@ -2458,9 +2646,128 @@ BtrCore_BTPerformDeviceOp (
 		dbus_message_unref(msg);
 	}
 
+
+
 	else if (aenBTDevOp == enBTDevOpCreatePairedDev) {
+		reply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+
+		if (dbus_message_iter_init(reply, &rootIter) && //point iterator to reply message
+			DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&rootIter)) //get the type of message that iter points to
+		{
+
+			DBusMessageIter arrayElementIter;
+			dbus_message_iter_recurse(&rootIter, &arrayElementIter); //assign new iterator to first element of array
+
+
+
+			while(!adapterFound){
+				if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&arrayElementIter))
+				{
+
+					DBusMessageIter dictEntryIter;
+					dbus_message_iter_recurse(&arrayElementIter,&dictEntryIter ); //assign new iterator to first element of (get all dict entries of 1st level (all object paths)
+
+					if (DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type(&dictEntryIter))
+					{
+
+						dbus_message_iter_get_basic(&dictEntryIter, &adapter_path);
+						strcpy(objectPath[a],adapter_path);
+						++a;
+					}
+					dbus_message_iter_next(&dictEntryIter);
+					if (DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&dictEntryIter))
+					{
+						DBusMessageIter innerArrayIter;
+						dbus_message_iter_recurse(&dictEntryIter, &innerArrayIter);
+
+						while (dbus_message_iter_has_next(&innerArrayIter)){
+							if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&innerArrayIter))
+							{
+								DBusMessageIter innerDictEntryIter;
+								dbus_message_iter_recurse(&innerArrayIter,&innerDictEntryIter ); //assign new iterator to first element of
+
+								if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter))
+								{
+									char *dbusObject;
+									dbus_message_iter_get_basic(&innerDictEntryIter, &dbusObject);
+
+									////// getting default adapter path //////
+
+								}
+
+
+								/////// NEW //////////
+
+
+								dbus_message_iter_next(&innerDictEntryIter);
+								if (DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&innerDictEntryIter))
+								{
+									DBusMessageIter innerArrayIter2;
+									dbus_message_iter_recurse(&innerDictEntryIter, &innerArrayIter2);
+
+									while (dbus_message_iter_has_next(&innerArrayIter2)){
+										if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&innerArrayIter2))
+										{
+											DBusMessageIter innerDictEntryIter2;
+											dbus_message_iter_recurse(&innerArrayIter2,&innerDictEntryIter2); //assign new iterator to first element of
+											if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter2))
+											{
+												char *dbusObject2;
+												dbus_message_iter_get_basic(&innerDictEntryIter2, &dbusObject2);
+											}
+
+
+											////////////// NEW 2 ////////////
+											dbus_message_iter_next(&innerDictEntryIter2);
+											DBusMessageIter innerDictEntryIter3;
+											char *dbusObject3;
+
+											dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
+											if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3))
+											{
+												dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
+												strcpy(objectData[b],dbusObject3);
+												if (strcmp(apcDevPath, objectData[b]) == 0)
+												{
+													++b;
+													strcpy(deviceObjectPath,adapter_path);
+													adapterFound = TRUE;
+												}
+											}
+											else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3))
+											{
+												bool *device_prop = FALSE;
+												dbus_message_iter_get_basic(&innerDictEntryIter3, &device_prop);
+											}
+
+										}
+										if(!dbus_message_iter_has_next(&innerArrayIter2)) {break;} //check to see if end of 3rd array
+										else {dbus_message_iter_next(&innerArrayIter2);}
+
+									}
+
+								}
+
+								////////// NEW ////////////
+							}
+							if(!dbus_message_iter_has_next(&innerArrayIter)) {break;} //check to see if end of 2nd array
+							else {dbus_message_iter_next(&innerArrayIter);}
+						}
+					}
+
+					if(!dbus_message_iter_has_next(&arrayElementIter)) break; //check to see if end of 1st array
+					else dbus_message_iter_next(&arrayElementIter);
+
+				}//while loop end --used to traverse arra
+
+			}
+		}
+
+		dbus_error_init(&err);
+		dbus_message_unref(reply);
+
 		msg = dbus_message_new_method_call("org.bluez",
-		apBtAgentPath,
+		deviceObjectPath,
 		"org.bluez.Device1",
 		deviceOpString);
 		if (!msg) {
@@ -2471,19 +2778,16 @@ BtrCore_BTPerformDeviceOp (
 		dbus_error_init(&err);
 		dbus_message_unref(msg);
 
-	}
+		if (!reply) {
+			fprintf(stderr, "Pairing failed...\n");
 
-
-
-	if (!reply) {
-
-		fprintf(stderr, "Pairing failed...\n");
-
-		if (dbus_error_is_set(&err)) {
-			fprintf(stderr, "%s\n", err.message);
-			dbus_error_free(&err);
+			if (dbus_error_is_set(&err)) {
+				fprintf(stderr, "%s\n", err.message);
+				dbus_error_free(&err);
 		}
 		return -1;
+		}
+
 	}
 
 	return 0;
