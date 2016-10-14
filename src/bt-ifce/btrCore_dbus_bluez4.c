@@ -68,7 +68,7 @@ static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
 };
 
 static const DBusObjectPathVTable gDBusAgentVTable = {
-	.message_function = btrCore_BTAgentMessageHandler_cb,
+    .message_function = btrCore_BTAgentMessageHandler_cb,
 };
 
 
@@ -294,20 +294,20 @@ btrCore_BTAgentMessageHandler_cb (
     if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Release"))
         return btrCore_BTAgentRelease (apDBusConn, apDBusMsg, userdata);
 
-	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent",	"RequestPinCode"))
-		return btrCore_BTAgentRequestPincode(apDBusConn, apDBusMsg, userdata);
+    if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent",    "RequestPinCode"))
+        return btrCore_BTAgentRequestPincode(apDBusConn, apDBusMsg, userdata);
 
-	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent",	"RequestPasskey"))
-		return btrCore_BTAgentRequestPasskey(apDBusConn, apDBusMsg, userdata);
+    if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent",    "RequestPasskey"))
+        return btrCore_BTAgentRequestPasskey(apDBusConn, apDBusMsg, userdata);
 
-	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "RequestConfirmation"))
-		return btrCore_BTAgentRequestConfirmation(apDBusConn, apDBusMsg, userdata);
+    if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "RequestConfirmation"))
+        return btrCore_BTAgentRequestConfirmation(apDBusConn, apDBusMsg, userdata);
 
-	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Authorize"))
-		return btrCore_BTAgentAuthorize(apDBusConn, apDBusMsg, userdata);
+    if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Authorize"))
+        return btrCore_BTAgentAuthorize(apDBusConn, apDBusMsg, userdata);
 
-	if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Cancel"))
-		return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, userdata);
+    if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Cancel"))
+        return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, userdata);
 
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
@@ -383,26 +383,26 @@ btrCore_BTAgentRelease (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-	DBusMessage *reply;
+    DBusMessage *reply;
 
-	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
-		fprintf(stderr, "Invalid arguments for Release method");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for Release method");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
 
-	reply = dbus_message_new_method_return(apDBusMsg);
+    reply = dbus_message_new_method_return(apDBusMsg);
 
-	if (!reply) {
-		fprintf(stderr, "Unable to create reply message\n");
-		return DBUS_HANDLER_RESULT_NEED_MEMORY;
-	}
+    if (!reply) {
+        fprintf(stderr, "Unable to create reply message\n");
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
 
-	dbus_connection_send(apDBusConn, reply, NULL);
-	dbus_connection_flush(apDBusConn);
+    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_flush(apDBusConn);
 
-	dbus_message_unref(reply);
+    dbus_message_unref(reply);
        //return the result
-	return DBUS_HANDLER_RESULT_HANDLED;
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 
@@ -412,38 +412,38 @@ btrCore_BTAgentRequestPincode (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-	DBusMessage*    reply;
-	const char*     path;
+    DBusMessage*    reply;
+    const char*     path;
 
-	if (!passkey)
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    if (!passkey)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) {
-		fprintf(stderr, "Invalid arguments for RequestPinCode method");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for RequestPinCode method");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
 
-	if (do_reject) {
-		reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
-		goto sendmsg;
-	}
+    if (do_reject) {
+        reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+        goto sendmsg;
+    }
 
-	reply = dbus_message_new_method_return(apDBusMsg);
-	if (!reply) {
-		fprintf(stderr, "Can't create reply message\n");
-		return DBUS_HANDLER_RESULT_NEED_MEMORY;
-	}
+    reply = dbus_message_new_method_return(apDBusMsg);
+    if (!reply) {
+        fprintf(stderr, "Can't create reply message\n");
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
 
-	printf("Pincode request for device %s\n", path);
-	dbus_message_append_args(reply, DBUS_TYPE_STRING, &passkey,DBUS_TYPE_INVALID);
+    printf("Pincode request for device %s\n", path);
+    dbus_message_append_args(reply, DBUS_TYPE_STRING, &passkey,DBUS_TYPE_INVALID);
 
 sendmsg:
-	dbus_connection_send(apDBusConn, reply, NULL);
-	dbus_connection_flush(apDBusConn);
+    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_flush(apDBusConn);
 
-	dbus_message_unref(reply);
+    dbus_message_unref(reply);
 
-	return DBUS_HANDLER_RESULT_HANDLED;
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 
@@ -453,32 +453,32 @@ btrCore_BTAgentRequestPasskey (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-	DBusMessage*    reply;
-	const char*     path;
-	unsigned int    int_passkey;
+    DBusMessage*    reply;
+    const char*     path;
+    unsigned int    int_passkey;
 
-	if (!passkey)
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    if (!passkey)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-	if (!dbus_message_get_args(apDBusMsg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID))  {
-		fprintf(stderr, "Invalid arguments for RequestPasskey method");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
+    if (!dbus_message_get_args(apDBusMsg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID))  {
+        fprintf(stderr, "Invalid arguments for RequestPasskey method");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
 
-	reply = dbus_message_new_method_return(apDBusMsg);
-	if (!reply) {
-		fprintf(stderr, "Can't create reply message\n");
-		return DBUS_HANDLER_RESULT_NEED_MEMORY;
-	}
+    reply = dbus_message_new_method_return(apDBusMsg);
+    if (!reply) {
+        fprintf(stderr, "Can't create reply message\n");
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
 
-	printf("Passkey request for device %s\n", path);
-	int_passkey = strtoul(passkey, NULL, 10);
-	dbus_message_append_args(reply, DBUS_TYPE_UINT32, &int_passkey, DBUS_TYPE_INVALID);
+    printf("Passkey request for device %s\n", path);
+    int_passkey = strtoul(passkey, NULL, 10);
+    dbus_message_append_args(reply, DBUS_TYPE_UINT32, &int_passkey, DBUS_TYPE_INVALID);
 
-	dbus_connection_send(apDBusConn, reply, NULL);
-	dbus_connection_flush(apDBusConn);
-	dbus_message_unref(reply);
-	return DBUS_HANDLER_RESULT_HANDLED;
+    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_flush(apDBusConn);
+    dbus_message_unref(reply);
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 
@@ -488,20 +488,20 @@ btrCore_BTAgentRequestConfirmation (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-	DBusMessage *reply;
-	const char *path; 
+    DBusMessage *reply;
+    const char *path; 
     unsigned int passKey = 0;;
 
     const char *dev_name; //pass the dev name to the callback for app to use
     int yesNo;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_UINT32, &passKey, DBUS_TYPE_INVALID)) {
-		fprintf(stderr, "Invalid arguments for Authorize method");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
+        fprintf(stderr, "Invalid arguments for Authorize method");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
 
 
-	printf("btrCore_BTAgentRequestConfirmation: PASSKEY for %s is %6d\n", path, passKey);
+    printf("btrCore_BTAgentRequestConfirmation: PASSKEY for %s is %6d\n", path, passKey);
 
     if (gfpcBConnectionIntimation) {
         printf("calling ConnIntimation cb with %s...\n",path);
@@ -524,18 +524,18 @@ btrCore_BTAgentRequestConfirmation (
 
     gpcBConnAuthPassKey = passKey;
 
-	reply = dbus_message_new_method_return(apDBusMsg);
-	if (!reply) {
-		fprintf(stderr, "Can't create reply message\n");
-		return DBUS_HANDLER_RESULT_NEED_MEMORY;
-	}
+    reply = dbus_message_new_method_return(apDBusMsg);
+    if (!reply) {
+        fprintf(stderr, "Can't create reply message\n");
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
 
 sendReqConfError:
-	dbus_connection_send(apDBusConn, reply, NULL);
-	dbus_connection_flush(apDBusConn);
-	dbus_message_unref(reply);
+    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_flush(apDBusConn);
+    dbus_message_unref(reply);
 
-	return DBUS_HANDLER_RESULT_HANDLED;
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 
@@ -545,15 +545,15 @@ btrCore_BTAgentAuthorize (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-	DBusMessage *reply;
-	const char *path, *uuid;
+    DBusMessage *reply;
+    const char *path, *uuid;
     const char *dev_name; //pass the dev name to the callback for app to use
     int yesNo;
 
-	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
-		fprintf(stderr, "Invalid arguments for Authorize method");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for Authorize method");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
 
     if (gfpcBConnectionAuthentication) {
         printf("calling ConnAuth cb with %s...\n",path);
@@ -576,20 +576,20 @@ btrCore_BTAgentAuthorize (
 
     gpcBConnAuthPassKey = 0;
 
-	reply = dbus_message_new_method_return(apDBusMsg);
-	if (!reply) {
-		fprintf(stderr, "Can't create reply message\n");
-		return DBUS_HANDLER_RESULT_NEED_MEMORY;
-	}
+    reply = dbus_message_new_method_return(apDBusMsg);
+    if (!reply) {
+        fprintf(stderr, "Can't create reply message\n");
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
 
-	printf("Authorizing request for %s\n", path);
+    printf("Authorizing request for %s\n", path);
 
 sendAuthError:
-	dbus_connection_send(apDBusConn, reply, NULL);
-	dbus_connection_flush(apDBusConn);
-	dbus_message_unref(reply);
+    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_flush(apDBusConn);
+    dbus_message_unref(reply);
 
-	return DBUS_HANDLER_RESULT_HANDLED;
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 
@@ -599,25 +599,25 @@ btrCore_BTAgentCancelMessage (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-	DBusMessage *reply;
+    DBusMessage *reply;
 
-	if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
-		fprintf(stderr, "Invalid arguments for passkey confirmation method");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
-	printf("Request canceled\n");
-	reply = dbus_message_new_method_return(apDBusMsg);
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
+        fprintf(stderr, "Invalid arguments for passkey confirmation method");
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+    printf("Request canceled\n");
+    reply = dbus_message_new_method_return(apDBusMsg);
 
-	if (!reply) {
-		fprintf(stderr, "Can't create reply message\n");
-		return DBUS_HANDLER_RESULT_NEED_MEMORY;
-	}
+    if (!reply) {
+        fprintf(stderr, "Can't create reply message\n");
+        return DBUS_HANDLER_RESULT_NEED_MEMORY;
+    }
 
-	dbus_connection_send(apDBusConn, reply, NULL);
-	dbus_connection_flush(apDBusConn);
+    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_flush(apDBusConn);
 
-	dbus_message_unref(reply);
-	return DBUS_HANDLER_RESULT_HANDLED;
+    dbus_message_unref(reply);
+    return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 
@@ -1132,38 +1132,38 @@ BtrCore_BTRegisterAgent (
         return -1;
 
     DBusMessage *apDBusMsg, *reply;
-	DBusError err;
+    DBusError err;
 
-	if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
-		fprintf(stderr, "Error registering object path for agent\n");
-		return -1;
-	}
-
-	apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter,"org.bluez.Adapter", "RegisterAgent");
-    if (!apDBusMsg) {
-		fprintf(stderr, "Error allocating new method call\n");
-		return -1;
+    if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
+        fprintf(stderr, "Error registering object path for agent\n");
+        return -1;
     }
 
-	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,	DBUS_TYPE_STRING, &capabilities,DBUS_TYPE_INVALID);
+    apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter,"org.bluez.Adapter", "RegisterAgent");
+    if (!apDBusMsg) {
+        fprintf(stderr, "Error allocating new method call\n");
+        return -1;
+    }
 
-	dbus_error_init(&err);
+    dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,    DBUS_TYPE_STRING, &capabilities,DBUS_TYPE_INVALID);
 
-	reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
+    dbus_error_init(&err);
 
-	dbus_message_unref(apDBusMsg);
-	if (!reply) {
-		fprintf(stderr, "Unable to register agent\n");
-		if (dbus_error_is_set(&err)) {
-			fprintf(stderr, "%s\n", err.message);
-			dbus_error_free(&err);
+    reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
+
+    dbus_message_unref(apDBusMsg);
+    if (!reply) {
+        fprintf(stderr, "Unable to register agent\n");
+        if (dbus_error_is_set(&err)) {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
         }
-		return -1;
-	}
+        return -1;
+    }
 
-	dbus_message_unref(reply);
+    dbus_message_unref(reply);
 
-	dbus_connection_flush(gpDBusConn);
+    dbus_connection_flush(gpDBusConn);
 
     return 0;
 }
@@ -1178,41 +1178,41 @@ BtrCore_BTUnregisterAgent (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-	DBusMessage *apDBusMsg, *reply;
-	DBusError err;
+    DBusMessage *apDBusMsg, *reply;
+    DBusError err;
 
-	apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter, "org.bluez.Adapter", "UnregisterAgent");
-	if (!apDBusMsg) {
+    apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter, "org.bluez.Adapter", "UnregisterAgent");
+    if (!apDBusMsg) {
         fprintf(stderr, "Can't allocate new method call\n");
         return -1;
     }
 
-	dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
+    dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
 
-	dbus_error_init(&err);
+    dbus_error_init(&err);
 
-	reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
+    reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
 
-	dbus_message_unref(apDBusMsg);
+    dbus_message_unref(apDBusMsg);
 
-	if (!reply) {
-		fprintf(stderr, "Can't unregister agent\n");
-		if (dbus_error_is_set(&err))  {
-			fprintf(stderr, "%s\n", err.message);
-			dbus_error_free(&err);
-		}
+    if (!reply) {
+        fprintf(stderr, "Can't unregister agent\n");
+        if (dbus_error_is_set(&err))  {
+            fprintf(stderr, "%s\n", err.message);
+            dbus_error_free(&err);
+        }
 
-		return -1;//this was an error case
-	}
+        return -1;//this was an error case
+    }
 
-	dbus_message_unref(reply);
+    dbus_message_unref(reply);
 
-	dbus_connection_flush(gpDBusConn);
+    dbus_connection_flush(gpDBusConn);
 
-	if (!dbus_connection_unregister_object_path(gpDBusConn, apBtAgentPath)) {
+    if (!dbus_connection_unregister_object_path(gpDBusConn, apBtAgentPath)) {
         fprintf(stderr, "Error unregistering object path for agent\n");
-		return -1;
-	}
+        return -1;
+    }
 
     return 0;
 }
@@ -1972,17 +1972,17 @@ BtrCore_BTPerformDeviceOp (
     const char*     apcDevPath,
     enBTDeviceOp    aenBTDevOp
 ) {
-    DBusMessage* 	msg;
-    DBusMessage* 	reply;
-    DBusError 		err;
-    char 			deviceOpString[64] = {'\0'};
-    int 			rc = 0;
+    DBusMessage*     msg;
+    DBusMessage*     reply;
+    DBusError        err;
+    char             deviceOpString[64] = {'\0'};
+    int              rc = 0;
 
     /* We can enhance the BTRCore with passcode support later point in time */
 #if 0
-    const char*		capabilities = "NoInputNoOutput";
+    const char*      capabilities = "NoInputNoOutput";
 #else
-    const char*		capabilities = "DisplayYesNo";
+    const char*      capabilities = "DisplayYesNo";
 #endif
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTDevOp == enBTDevOpUnknown))

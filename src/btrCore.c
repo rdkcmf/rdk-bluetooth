@@ -629,7 +629,7 @@ BTRCore_DeInit (
 enBTRCoreRet
 BTRCore_RegisterAgent (
     tBTRCoreHandle  hBTRCore,
-    int 			iBTRCapMode
+    int             iBTRCapMode
 ) {
    // const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
     char capabilities[32] = {'\0'};
@@ -1019,7 +1019,7 @@ enBTRCoreRet
 BTRCore_SetAdapterDeviceName (
     tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter,
-	char*				apcAdapterDeviceName
+    char*                apcAdapterDeviceName
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -1027,17 +1027,17 @@ BTRCore_SetAdapterDeviceName (
         fprintf(stderr, "%s:%d:%s - enBTRCoreNotInitialized\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreNotInitialized;
     }
-	else if (!apcAdapterDeviceName) {
+    else if (!apcAdapterDeviceName) {
         fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreInvalidArg;
-	}
+    }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-	if(apstBTRCoreAdapter->pcAdapterDevName) {
-		free(apstBTRCoreAdapter->pcAdapterDevName);
-		apstBTRCoreAdapter->pcAdapterDevName = NULL;
-	}
+    if(apstBTRCoreAdapter->pcAdapterDevName) {
+        free(apstBTRCoreAdapter->pcAdapterDevName);
+        apstBTRCoreAdapter->pcAdapterDevName = NULL;
+    }
 
     apstBTRCoreAdapter->pcAdapterDevName = strdup(apcAdapterDeviceName); //TODO: Free this memory
 
