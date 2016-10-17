@@ -918,6 +918,34 @@ btrCore_BTParseDevice (
                 apstBTDeviceInfo->i32RSSI = i16RSSI;
                 printf("apstBTDeviceInfo->i32RSSI = %d i16RSSI = %d\n", apstBTDeviceInfo->i32RSSI, i16RSSI);
             }
+            else if (strcmp (pcKey, "UUIDs") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+
+                dbus_type = dbus_message_iter_get_arg_type (&variant_i);
+                if (dbus_type == DBUS_TYPE_ARRAY) {
+                    int count = 0;
+                    DBusMessageIter variant_j;
+                    dbus_message_iter_recurse(&variant_i, &variant_j);
+
+                    while ((dbus_type = dbus_message_iter_get_arg_type (&variant_j)) != DBUS_TYPE_INVALID)
+                    {
+                        if ((dbus_type == DBUS_TYPE_STRING) && (count < BT_MAX_DEVICE_PROFILE))
+                        {
+                            char *pVal = NULL;
+                            dbus_message_iter_get_basic (&variant_j, &pVal);
+                            printf ("UUID value is %s\n", pVal);
+                            strncpy(apstBTDeviceInfo->aUUIDs[count], pVal, (BT_MAX_UUID_STR_LEN - 1));
+                            count++;
+                        }
+                        dbus_message_iter_next (&variant_j);
+                    }
+                }
+                else
+                {
+                    printf("apstBTDeviceInfo->Services; Not an Array\n");
+                }
+            }
         }
 
         if (!dbus_message_iter_next(&element_i))

@@ -89,6 +89,16 @@ typedef struct _stBTRCoreConnCBInfo {
     char cConnAuthDeviceName[BTRCORE_STRINGS_MAX_LEN];
 } stBTRCoreConnCBInfo;
 
+typedef struct _stBTRCoreSupportedService {
+    unsigned int uuid_value;
+    BD_NAME profile_name;
+} stBTRCoreSupportedService;
+
+typedef struct _stBTRCoreSupportedServiceList {
+    int numberOfService;
+    stBTRCoreSupportedService profile[BTRCORE_MAX_DEVICE_PROFILE];
+} stBTRCoreSupportedServiceList;
+
 /*BT Adapter*/
 typedef struct _stBTRCoreAdapter {
     U8      adapter_number;
@@ -115,6 +125,7 @@ typedef struct _stBTRCoreScannedDevices {
    BD_NAME device_name;
    BD_NAME device_address;
    enBTRCoreDeviceType device_type;
+   stBTRCoreSupportedServiceList device_profile;
    int RSSI;
    unsigned int vendor_id;
    BOOLEAN found;
@@ -125,6 +136,7 @@ typedef struct _stBTRCoreKnownDevice {
    BD_NAME device_name;
    BD_NAME device_address;
    enBTRCoreDeviceType device_type;
+   stBTRCoreSupportedServiceList device_profile;
    BD_NAME bd_path;
    int RSSI;
    unsigned int vendor_id;
@@ -141,16 +153,6 @@ typedef struct _stBTRCorePairedDevicesCount {
     int numberOfDevices;
     stBTRCoreKnownDevice devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCorePairedDevicesCount;
-
-typedef struct _stBTRCoreSupportedService {
-    unsigned int uuid_value;
-    BD_NAME profile_name;
-} stBTRCoreSupportedService;
-
-typedef struct _stBTRCoreSupportedServiceList {
-    int numberOfService;
-    stBTRCoreSupportedService profile[BTRCORE_MAX_DEVICE_PROFILE];
-} stBTRCoreSupportedServiceList;
 
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevices astBTRCoreScannedDevice);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCBInfo* apstDevStateCbInfo, void* apvUserData);

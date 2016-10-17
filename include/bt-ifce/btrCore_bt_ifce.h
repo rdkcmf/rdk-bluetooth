@@ -7,6 +7,7 @@
 #define __BTR_CORE_DBUS_BT_H__
 
 #define BT_MAX_STR_LEN          256
+#define BT_MAX_UUID_STR_LEN      64
 #define BT_MAX_NUM_DEVICE        32
 #define BT_MAX_DEVICE_PROFILE    32
 
@@ -78,6 +79,7 @@ typedef struct _stBTDeviceInfo {
     char            pcAddress[BT_MAX_STR_LEN];
     char            pcAlias[BT_MAX_STR_LEN];
     char            pcIcon[BT_MAX_STR_LEN];
+    char            aUUIDs[BT_MAX_DEVICE_PROFILE][BT_MAX_UUID_STR_LEN];
     char pcDevicePrevState[BT_MAX_STR_LEN];
     char pcDeviceCurrState[BT_MAX_STR_LEN];
     // TODO: Array of strings UUIDs;

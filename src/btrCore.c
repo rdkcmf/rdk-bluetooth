@@ -13,6 +13,7 @@
 #include "btrCore.h"
 #include "btrCore_avMedia.h"
 #include "btrCore_bt_ifce.h"
+#include "btrCore_service.h"
 
 
 typedef struct _stBTRCoreHdl {
@@ -59,6 +60,7 @@ static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCo
 static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static const char* btrCore_GetKnownDeviceName (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static void btrCore_ShowSignalStrength (short strength);
+static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut);
 
 /* Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
@@ -266,6 +268,10 @@ btrCore_SetScannedDeviceInfo (
             apsthBTRCore->stScannedDevicesArr[i].vendor_id = apsthBTRCore->stFoundDevice.vendor_id;
             apsthBTRCore->stScannedDevicesArr[i].device_type = apsthBTRCore->stFoundDevice.device_type;
             apsthBTRCore->stScannedDevicesArr[i].deviceId = apsthBTRCore->stFoundDevice.deviceId;
+
+            /* Copy the profile supports */
+            memcpy (&apsthBTRCore->stScannedDevicesArr[i].device_profile, &apsthBTRCore->stFoundDevice.device_profile, sizeof(stBTRCoreSupportedServiceList));
+
             apsthBTRCore->numOfScannedDevices++;
             break;
         }
@@ -298,7 +304,7 @@ btrCore_PopulateListOfPairedDevices (
     stBTRCoreHdl*   apsthBTRCore,
     const char*     pAdapterPath
 ) {
-    int i;
+    int i, j;
     stBTPairedDeviceInfo pairedDeviceInfo;
 
     memset (&pairedDeviceInfo, 0, sizeof(pairedDeviceInfo));
@@ -312,6 +318,15 @@ btrCore_PopulateListOfPairedDevices (
             apsthBTRCore->stKnownDevicesArr[i].vendor_id      =    pairedDeviceInfo.deviceInfo[i].ui16Vendor;
             apsthBTRCore->stKnownDevicesArr[i].device_type    =    btrCore_MapClassIDtoDeviceType(pairedDeviceInfo.deviceInfo[i].ui32Class);
             apsthBTRCore->stKnownDevicesArr[i].deviceId  =    btrCore_GenerateUniqueDeviceID(pairedDeviceInfo.deviceInfo[i].pcAddress);
+
+            for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
+                if (pairedDeviceInfo.deviceInfo[i].aUUIDs[j][0] == '\0')
+                    break;
+                else
+                    apsthBTRCore->stKnownDevicesArr[i].device_profile.profile[j].uuid_value = btrCore_BTParseUUIDValue(pairedDeviceInfo.deviceInfo[i].aUUIDs[j],
+                                                                                                                       apsthBTRCore->stKnownDevicesArr[i].device_profile.profile[j].profile_name);
+            }
+            apsthBTRCore->stKnownDevicesArr[i].device_profile.numberOfService = j;
         }
 
         return enBTRCoreSuccess;
@@ -2030,6 +2045,7 @@ btrCore_BTDeviceStatusUpdate_cb (
         break;
         case enBTDevStFound: {
             if (apstBTDeviceInfo) {
+                int j = 0;
                 tBTRCoreDevId   lBTRCoreDevId = 0;
                 stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
@@ -2048,6 +2064,13 @@ btrCore_BTDeviceStatusUpdate_cb (
                 printf("%s:%d - pcAlias = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcAlias);
                 printf("%s:%d - pcIcon = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcIcon);
 
+                for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
+                    if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')
+                        break;
+                    else
+                        printf("%s:%d - aUUIDs = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->aUUIDs[j]);
+                }
+
                 // TODO: Think of a way to move this to taskThread
                 lBTRCoreDevId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
                 if (btrCore_GetScannedDeviceAddress(apUserData, lBTRCoreDevId) != NULL) {
@@ -2061,6 +2084,17 @@ btrCore_BTDeviceStatusUpdate_cb (
                     lpstlhBTRCore->stFoundDevice.deviceId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
                     strcpy(lpstlhBTRCore->stFoundDevice.device_name, apstBTDeviceInfo->pcName);
                     strcpy(lpstlhBTRCore->stFoundDevice.device_address, apstBTDeviceInfo->pcAddress);
+
+                    /* Populate the profile supported */
+                    for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
+                        if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')
+                            break;
+                        else
+                            lpstlhBTRCore->stFoundDevice.device_profile.profile[j].uuid_value = btrCore_BTParseUUIDValue(apstBTDeviceInfo->aUUIDs[j],
+                                                                                                                         lpstlhBTRCore->stFoundDevice.device_profile.profile[j].profile_name);
+                    }
+                    lpstlhBTRCore->stFoundDevice.device_profile.numberOfService = j;
+
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
                     if (lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB)
                     {
@@ -2155,4 +2189,81 @@ btrCore_BTDeviceAuthetication_cb (
 
     return i32DevAuthRet;
 } 
+
+static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut)
+{
+    char aUUID[8];
+    unsigned int uuid_value = 0;
+
+
+    if (pUUIDString)
+    {
+        /* Arrive at short form of UUID */
+        aUUID[0] = '0';
+        aUUID[1] = 'x';
+        aUUID[2] = pUUIDString[4];
+        aUUID[3] = pUUIDString[5];
+        aUUID[4] = pUUIDString[6];
+        aUUID[5] = pUUIDString[7];
+        aUUID[6] = '\0';
+
+        uuid_value = strtol(aUUID, NULL, 16);
+
+        /* Have the name by list comparision */
+        if (strcasecmp (aUUID, BTR_CORE_SP) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_SP_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HEADSET) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HEADSET_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_A2SRC) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_A2SRC_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_A2SNK) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_A2SNK_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AVRTG) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AVRTG_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AAD) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AAD_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AVRCT) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AVRCT_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AVREMOTE) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AVREMOTE_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HS_AG) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HS_AG_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HANDSFREE) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HANDSFREE_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HAG) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HAG_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HEADSET2) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HEADSET2_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_GEN_AUDIO) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_GEN_AUDIO_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_PNP) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_PNP_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_GEN_ATRIB) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_GEN_ATRIB_TEXT);
+
+        else
+            strcpy (pServiceNameOut, "Not Identified");
+    }
+    else
+        strcpy (pServiceNameOut, "Not Identified");
+
+    return uuid_value;
+}
+
+
+
 /* End of File */
