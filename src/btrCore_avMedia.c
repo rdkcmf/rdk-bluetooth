@@ -137,7 +137,8 @@ BTRCore_AVMedia_Init (
     void*       apBtConn,
     const char* apBtAdapter
 ) {
-    int lBtAVMediaRegisterRet   = -1;
+    int lBtAVMediaASinkRegRet   = -1;
+    int lBtAVMediaASrcRegRet    = -1;
     int lBtAVMediaNegotiateRet  = -1;
     int lBtAVMediaTransportPRet = -1;
 
@@ -169,7 +170,7 @@ BTRCore_AVMedia_Init (
     memcpy(gpBTMediaSBCConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
     gpcAVMediaTransportPath = NULL;
 
-    lBtAVMediaRegisterRet = BtrCore_BTRegisterMedia(apBtConn,
+    lBtAVMediaASinkRegRet = BtrCore_BTRegisterMedia(apBtConn,
                                                     apBtAdapter,
                                                     enBTDevAudioSink,
                                                     A2DP_SOURCE_UUID,
@@ -178,27 +179,27 @@ BTRCore_AVMedia_Init (
                                                     sizeof(lstBtA2dpCapabilities));
 
 
-   lBtAVMediaRegisterRet = BtrCore_BTRegisterMedia(apBtConn,
-                                                    apBtAdapter,
-                                                    enBTDevAudioSource,
-                                                    A2DP_SINK_UUID,
-                                                    A2DP_CODEC_SBC,
-                                                    (void*)&lstBtA2dpCapabilities,
-                                                    sizeof(lstBtA2dpCapabilities));
+    lBtAVMediaASrcRegRet = BtrCore_BTRegisterMedia(apBtConn,
+                                                   apBtAdapter,
+                                                   enBTDevAudioSource,
+                                                   A2DP_SINK_UUID,
+                                                   A2DP_CODEC_SBC,
+                                                   (void*)&lstBtA2dpCapabilities,
+                                                   sizeof(lstBtA2dpCapabilities));
 
-    if (!lBtAVMediaRegisterRet)
+    if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet)
        lBtAVMediaNegotiateRet = BtrCore_BTRegisterNegotiateMediacB(apBtConn,
                                                                    apBtAdapter,
                                                                    &btrCore_AVMedia_NegotiateMedia_cb,
                                                                    NULL);
 
-    if (!lBtAVMediaRegisterRet && !lBtAVMediaNegotiateRet)
+    if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet)
         lBtAVMediaTransportPRet = BtrCore_BTRegisterTransportPathMediacB(apBtConn,
                                                                          apBtAdapter,
                                                                          &btrCore_AVMedia_TransportPath_cb,
                                                                          NULL);
 
-    if (!lBtAVMediaRegisterRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet)
+    if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
     return lenBTRCoreRet;
@@ -210,20 +211,21 @@ BTRCore_AVMedia_DeInit (
     void*       apBtConn,
     const char* apBtAdapter
 ) {
-    int lBtAVMediaRet = -1;
-    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
+    int lBtAVMediaASinkUnRegRet   = -1;
+    int lBtAVMediaASrcUnRegRet    = -1;
+    enBTRCoreRet lenBTRCoreRet  = enBTRCoreFailure;
 
     if (apBtConn == NULL || apBtAdapter == NULL) {
         return enBTRCoreInvalidArg;
     }
 
-    lBtAVMediaRet = BtrCore_BTUnRegisterMedia(apBtConn,
-                                              apBtAdapter,
-                                              enBTDevAudioSource);
+    lBtAVMediaASrcUnRegRet = BtrCore_BTUnRegisterMedia(apBtConn,
+                                                       apBtAdapter,
+                                                       enBTDevAudioSource);
 
-    lBtAVMediaRet = BtrCore_BTUnRegisterMedia(apBtConn,
-                                              apBtAdapter,
-                                              enBTDevAudioSink);
+    lBtAVMediaASinkUnRegRet = BtrCore_BTUnRegisterMedia(apBtConn,
+                                                        apBtAdapter,
+                                                        enBTDevAudioSink);
 
     //TODO: Mutex protect this
     if (gpBTMediaSBCConfig) {
@@ -237,7 +239,7 @@ BTRCore_AVMedia_DeInit (
         gpcAVMediaTransportPath = NULL;
     }
 
-    if (!lBtAVMediaRet)
+    if (!lBtAVMediaASrcUnRegRet && !lBtAVMediaASinkUnRegRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
     return lenBTRCoreRet;

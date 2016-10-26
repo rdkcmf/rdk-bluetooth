@@ -43,6 +43,19 @@ typedef enum _enBTRCoreDeviceClass {
     enBTRCoreAV_Unknown          = 0x00,
 } enBTRCoreDeviceClass;
 
+typedef enum _enBTRCoreMediaCtrl {
+    enBTRCoreMediaPlay,
+    enBTRCoreMediaPause,
+    enBTRCoreMediaStop,
+    enBTRCoreMediaNext,
+    enBTRCoreMediaPrevious,
+    enBTRCoreMediaFastForward,
+    enBTRCoreMediaRewind,
+    enBTRCoreMediaVolumeUp,
+    enBTRCoreMediaVolumeDown
+} enBTRCoreMediaCtrl;
+
+
 /*platform specific data lengths */
 typedef unsigned char   U8;
 typedef unsigned short  U16;
@@ -271,6 +284,8 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
 
 /*BTRCore_ReleaseDeviceDataPath*/
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
+
+enBTRCoreRet BTRCore_MediaPlayControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl  aenBTRCoreDMCtrl);
 
 /* Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB, void* apUserData);

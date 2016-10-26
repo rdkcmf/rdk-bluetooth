@@ -153,7 +153,7 @@ int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAd
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
 
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
-int   BtrCore_MediaPlayControl (void* apBtConn, const char* apBtAdapterPath, enBTMediaControl aenBTMediaOper);
+int   BtrCore_BTDevMediaPlayControl (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType, enBTMediaControl aenBTMediaOper);
 char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath);
 char* BtrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
 int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);

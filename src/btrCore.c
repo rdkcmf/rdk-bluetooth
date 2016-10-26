@@ -1915,6 +1915,94 @@ BTRCore_ReleaseDeviceDataPath (
 
 
 enBTRCoreRet
+BTRCore_MediaPlayControl (
+    tBTRCoreHandle      hBTRCore, 
+    tBTRCoreDevId       aBTRCoreDevId, 
+    enBTRCoreDeviceType aenBTRCoreDevType,
+    enBTRCoreMediaCtrl  aenBTRCoreDMCtrl
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    const char*     pDeviceAddress = NULL;
+    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
+    BOOLEAN         lbBTDeviceConnected = FALSE; 
+    int             loop = 0;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreNotInitialized\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+    else if (aBTRCoreDevId < 0) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (pstlhBTRCore->numOfPairedDevices == 0) {
+        fprintf(stderr, "%s:%d:%s - Possibly the list is not populated; like booted and connecting\n", __FILE__, __LINE__, __FUNCTION__);
+        /* Keep the list upto date */
+        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
+    }
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        fprintf(stderr, "%s:%d:%s - There is no device paried for this adapter\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreFailure;
+    }
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
+        pDeviceAddress = pstKnownDevice->bd_path;
+    }
+    else {
+        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
+    }
+
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
+        fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreDeviceNotFound;
+    }
+
+    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
+    // before making the connect call
+    switch (aenBTRCoreDevType) {
+    case enBTRCoreSpeakers:
+    case enBTRCoreHeadSet:
+        lenBTDeviceType = enBTDevAudioSink;
+        break;
+    case enBTRCoreMobileAudioIn:
+    case enBTRCorePCAudioIn:
+        lenBTDeviceType = enBTDevAudioSource;
+        break;
+    case enBTRCoreUnknown:
+    default:
+        lenBTDeviceType = enBTDevUnknown;
+        break;
+    }
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected;
+    }
+    else {
+        for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++) {
+            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[loop].deviceId)
+                lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[loop].device_connected;
+        }
+    }
+
+    if (lbBTDeviceConnected == FALSE)
+        return enBTRCoreFailure;
+
+    if (BtrCore_BTDevMediaPlayControl(pstlhBTRCore->connHandle, pDeviceAddress, lenBTDeviceType, aenBTRCoreDMCtrl) != 0) {
+        fprintf(stderr, "%s:%d:%s - Connect to device failed\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
 BTRCore_RegisterDiscoveryCallback (
     tBTRCoreHandle              hBTRCore, 
     BTRCore_DeviceDiscoveryCb   afptrBTRCoreDeviceDiscoveryCB,
@@ -2190,14 +2278,17 @@ btrCore_BTDeviceAuthetication_cb (
     return i32DevAuthRet;
 } 
 
-static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut)
-{
+
+static unsigned int
+btrCore_BTParseUUIDValue (
+    const char* pUUIDString,
+    char*       pServiceNameOut
+) {
     char aUUID[8];
     unsigned int uuid_value = 0;
 
 
-    if (pUUIDString)
-    {
+    if (pUUIDString) {
         /* Arrive at short form of UUID */
         aUUID[0] = '0';
         aUUID[1] = 'x';

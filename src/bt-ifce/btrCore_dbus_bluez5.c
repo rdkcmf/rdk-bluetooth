@@ -3393,70 +3393,63 @@ char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath)
 
 
 /* Control Media on Remote BT Device*/
-
-int BtrCore_MediaPlayControl (void* apBtConn, const char* apBtAdapterPath, enBTMediaControl aenBTMediaOper)
-{
+int
+BtrCore_BTDevMediaPlayControl (
+    void*            apBtConn,
+    const char*      apDevPath,
+    enBTDeviceType   aenBTDevType,
+    enBTMediaControl aenBTMediaOper
+) {
     DBusMessage*    lpDBusMsg;
     dbus_bool_t     lDBusOp;
-    char             mediaOper[64] = {'\0'};
+    char            mediaOper[16] = {'\0'};
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
-    {
         return -1;
-    }
 
     switch (aenBTMediaOper) {
-        case enBTMediaPlay:
+    case enBTMediaPlay:
         strcpy(mediaOper, "Play");
         break;
-
-        case enBTMediaPause:
+    case enBTMediaPause:
         strcpy(mediaOper, "Pause");
         break;
-
-        case enBTMediaStop:
+    case enBTMediaStop:
         strcpy(mediaOper, "Stop");
         break;
-
-        case enBTMediaNext:
+    case enBTMediaNext:
         strcpy(mediaOper, "Next");
         break;
-
-        case enBTMediaPrevious:
+    case enBTMediaPrevious:
         strcpy(mediaOper, "Previous");
         break;
-
-        case enBTMediaFastForward:
+    case enBTMediaFastForward:
         strcpy(mediaOper, "FastForward");
         break;
-
-        case enBTMediaRewind:
+    case enBTMediaRewind:
         strcpy(mediaOper, "Rewind");
         break;
-
-        case enBTMediaVolumeUp:
+    case enBTMediaVolumeUp:
         strcpy(mediaOper, "VolumeUp");
         break;
-
-        case enBTMediaVolumeDown:
+    case enBTMediaVolumeDown:
         strcpy(mediaOper, "VolumeDown");
         break;
     }
 
 
-    lpDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapterPath, "org.bluez.MediaControl1", mediaOper);
+    lpDBusMsg = dbus_message_new_method_call("org.bluez", apDevPath, "org.bluez.MediaControl1", mediaOper);
 
     if (lpDBusMsg == NULL) {
         printf("Cannot allocate Dbus message to play media file\n\n");
     }
 
     lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
-
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
         fprintf(stderr, "Not enough memory for message send\n");
-            return -1;
+        return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
