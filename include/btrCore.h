@@ -24,24 +24,31 @@ typedef enum _enBTRCoreDeviceType {
 } enBTRCoreDeviceType;
 
 typedef enum _enBTRCoreDeviceClass {
-    enBTRCoreAV_WearableHeadset  = 0x04,
-    enBTRCoreAV_Handsfree        = 0x08,
-    enBTRCoreAV_Reserved         = 0x0C,
-    enBTRCoreAV_Microphone       = 0x10,
-    enBTRCoreAV_Loudspeaker      = 0x14,
-    enBTRCoreAV_Headphones       = 0x18,
-    enBTRCoreAV_PortableAudio    = 0x1C,
-    enBTRCoreAV_CarAudio         = 0x20,
-    enBTRCoreAV_STB              = 0x24,
-    enBTRCoreAV_HIFIAudioDevice  = 0x28,
-    enBTRCoreAV_VCR              = 0x2C,
-    enBTRCoreAV_VideoCamera      = 0x30,
-    enBTRCoreAV_Camcoder         = 0x34,
-    enBTRCoreAV_VideoMonitor     = 0x38,
-    enBTRCoreAV_TV               = 0x3C,
-    enBTRCoreAV_VideoConference  = 0x40,
-    enBTRCoreAV_Unknown          = 0x00,
+    enBTRCore_DC_WearableHeadset  = 0x04,
+    enBTRCore_DC_Handsfree        = 0x08,
+    enBTRCore_DC_Reserved         = 0x0C,
+    enBTRCore_DC_Microphone       = 0x10,
+    enBTRCore_DC_Loudspeaker      = 0x14,
+    enBTRCore_DC_Headphones       = 0x18,
+    enBTRCore_DC_PortableAudio    = 0x1C,
+    enBTRCore_DC_CarAudio         = 0x20,
+    enBTRCore_DC_STB              = 0x24,
+    enBTRCore_DC_HIFIAudioDevice  = 0x28,
+    enBTRCore_DC_VCR              = 0x2C,
+    enBTRCore_DC_VideoCamera      = 0x30,
+    enBTRCore_DC_Camcoder         = 0x34,
+    enBTRCore_DC_VideoMonitor     = 0x38,
+    enBTRCore_DC_TV               = 0x3C,
+    enBTRCore_DC_VideoConference  = 0x40,
+    enBTRCore_DC_Unknown          = 0x00,
 } enBTRCoreDeviceClass;
+
+typedef enum _enBTRCoreDeviceStatus {
+    enBTRCore_DS_Inited,
+    enBTRCore_DS_Connected,
+    enBTRCore_DS_Disconnected,
+    enBTRCore_DS_Playing
+} enBTRCoreDeviceStatus;
 
 typedef enum _enBTRCoreMediaCtrl {
     enBTRCoreMediaPlay,
@@ -92,9 +99,8 @@ typedef struct _stBTRCoreFilterMode {
 } stBTRCoreFilterMode;
 
 typedef struct _stBTRCoreDevStateCBInfo {
-   char cDeviceType[BTRCORE_STRINGS_MAX_LEN];
-   char cDevicePrevState[BTRCORE_STRINGS_MAX_LEN];
-   char cDeviceCurrState[BTRCORE_STRINGS_MAX_LEN];
+   enBTRCoreDeviceStatus eDevicePrevState;
+   enBTRCoreDeviceStatus eDeviceCurrState;
 } stBTRCoreDevStateCBInfo;
 
 typedef struct _stBTRCoreConnCBInfo {

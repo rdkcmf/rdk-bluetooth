@@ -338,9 +338,10 @@ cb_unsolicited_bluetooth_status (
     stBTRCoreDevStateCBInfo* p_StatusCB,
     void*                    apvUserData
 ) {
-    printf("device status change: %s\n",p_StatusCB->cDeviceType);
-    printf("app level cb device status change: new state is %s\n",p_StatusCB->cDeviceCurrState);
-    if ((strcmp(p_StatusCB->cDevicePrevState,"connected") == 0) && (strcmp(p_StatusCB->cDeviceCurrState,"playing") == 0)) {
+    //printf("device status change: %d\n",p_StatusCB->eDeviceType);
+    printf("app level cb device status change: new state is %d\n",p_StatusCB->eDeviceCurrState);
+    if ((p_StatusCB->eDevicePrevState == enBTRCore_DS_Connected) &&
+        (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Playing)) {
         printf("transition to playing, get the transport info...\n");
         GetTransport((appDataStruct*)apvUserData);
     }

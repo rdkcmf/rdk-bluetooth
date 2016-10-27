@@ -162,8 +162,9 @@ btrCore_BTDBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
+        btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, NULL, NULL)) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
     }
@@ -186,7 +187,7 @@ btrCore_BTDBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
-         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
+        btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
@@ -211,10 +212,12 @@ btrCore_BTDBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
+        btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, NULL, NULL)) {
+            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
+
     }
 
     if (!dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
@@ -893,9 +896,37 @@ btrCore_BTParsePropertyChange (
             dbus_message_iter_recurse(&arg_i, &variant_i);
             dbus_message_iter_get_basic(&variant_i, &value);
              // printf("    the new state is: %s\n",value);
-            strncpy(apstBTDeviceInfo->pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
-            strncpy(apstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-            strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+            if (strcmp(gpcDeviceCurrState, value) != 0) {
+                strncpy(apstBTDeviceInfo->pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                strncpy(apstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+            }
+        }
+    }
+    else if (strcmp(bd_addr, "Connected") == 0) {
+        int isConnected = 0;
+
+        // The gpcDeviceCurrState could be either "connecting" or "playing"; just in case, if it comes in other scenario, just ignore
+        if ((strcmp (gpcDeviceCurrState, "connecting") == 0) ||
+            (strcmp (gpcDeviceCurrState, "playing") == 0))
+        {
+            dbus_type = dbus_message_iter_get_arg_type(&arg_i);
+            if (dbus_type == DBUS_TYPE_BOOLEAN)
+            {
+                dbus_message_iter_next(&arg_i);
+                dbus_message_iter_recurse(&arg_i, &variant_i);
+                dbus_message_iter_get_basic(&variant_i, &isConnected);
+
+                if (1 == isConnected)
+                    value = "connected";
+                else if (0 == isConnected)
+                    value = "disconnected";
+
+                strncpy(apstBTDeviceInfo->pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                strncpy(apstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+            }
         }
     }
 

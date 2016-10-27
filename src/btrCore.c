@@ -61,6 +61,7 @@ static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tB
 static const char* btrCore_GetKnownDeviceName (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static void btrCore_ShowSignalStrength (short strength);
 static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut);
+static enBTRCoreDeviceStatus btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
 
 /* Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
@@ -110,13 +111,9 @@ btrCore_InitDataSt (
     }
 
     /* Callback Info */
-    memset(apsthBTRCore->stDevStateCbInfo.cDeviceType,      '\0', BTRCORE_STRINGS_MAX_LEN);
-    memset(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, '\0', BTRCORE_STRINGS_MAX_LEN);
-    memset(apsthBTRCore->stDevStateCbInfo.cDeviceCurrState, '\0', BTRCORE_STRINGS_MAX_LEN);
+    apsthBTRCore->stDevStateCbInfo.eDevicePrevState = enBTRCore_DS_Inited;
+    apsthBTRCore->stDevStateCbInfo.eDeviceCurrState = enBTRCore_DS_Inited;
 
-    strncpy(apsthBTRCore->stDevStateCbInfo.cDeviceType, "Bluez", BTRCORE_STRINGS_MAX_LEN - 1);
-    strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
-    strncpy(apsthBTRCore->stDevStateCbInfo.cDevicePrevState, "Initialized", BTRCORE_STRINGS_MAX_LEN - 1);
 
     apsthBTRCore->stConnCbInfo.ui32devPassKey = 0;
     memset(apsthBTRCore->stConnCbInfo.cConnAuthDeviceName, '\0', BTRCORE_STRINGS_MAX_LEN);
@@ -163,73 +160,73 @@ static enBTRCoreDeviceClass
 btrCore_MapClassIDtoDeviceType (
     unsigned int classID
 ) {
-    enBTRCoreDeviceClass rc = enBTRCoreAV_Unknown;
+    enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
     if (classID & 0x400) {
         unsigned int lastByte = (classID & 0xFF);
 
-        if (lastByte == enBTRCoreAV_WearableHeadset) {
-            printf ("Its a enBTRCoreAV_WearableHeadset \n");
-            rc = enBTRCoreAV_WearableHeadset;
+        if (lastByte == enBTRCore_DC_WearableHeadset) {
+            printf ("Its a enBTRCore_DC_WearableHeadset \n");
+            rc = enBTRCore_DC_WearableHeadset;
         }
-        else if (lastByte == enBTRCoreAV_Handsfree) {
-            printf ("Its a enBTRCoreAV_Handsfree \n");
-            rc = enBTRCoreAV_Handsfree;
+        else if (lastByte == enBTRCore_DC_Handsfree) {
+            printf ("Its a enBTRCore_DC_Handsfree \n");
+            rc = enBTRCore_DC_Handsfree;
         }
-        else if (lastByte == enBTRCoreAV_Reserved) {
-            printf ("Its a enBTRCoreAV_Reserved \n");
-            rc = enBTRCoreAV_Reserved;
+        else if (lastByte == enBTRCore_DC_Reserved) {
+            printf ("Its a enBTRCore_DC_Reserved \n");
+            rc = enBTRCore_DC_Reserved;
         }
-        else if (lastByte == enBTRCoreAV_Microphone) {
-            printf ("Its a enBTRCoreAV_Microphone \n");
-            rc = enBTRCoreAV_Microphone;
+        else if (lastByte == enBTRCore_DC_Microphone) {
+            printf ("Its a enBTRCore_DC_Microphone \n");
+            rc = enBTRCore_DC_Microphone;
         }
-        else if (lastByte == enBTRCoreAV_Loudspeaker) {
-            printf ("Its a enBTRCoreAV_Loudspeaker \n");
-            rc = enBTRCoreAV_Loudspeaker;
+        else if (lastByte == enBTRCore_DC_Loudspeaker) {
+            printf ("Its a enBTRCore_DC_Loudspeaker \n");
+            rc = enBTRCore_DC_Loudspeaker;
         }
-        else if (lastByte == enBTRCoreAV_Headphones) {
-            printf ("Its a enBTRCoreAV_Headphones \n");
-            rc = enBTRCoreAV_Headphones;
+        else if (lastByte == enBTRCore_DC_Headphones) {
+            printf ("Its a enBTRCore_DC_Headphones \n");
+            rc = enBTRCore_DC_Headphones;
         }
-        else if (lastByte == enBTRCoreAV_PortableAudio) {
-            printf ("Its a enBTRCoreAV_PortableAudio \n");
-            rc = enBTRCoreAV_PortableAudio;
+        else if (lastByte == enBTRCore_DC_PortableAudio) {
+            printf ("Its a enBTRCore_DC_PortableAudio \n");
+            rc = enBTRCore_DC_PortableAudio;
         }
-        else if (lastByte == enBTRCoreAV_CarAudio) {
-            printf ("Its a enBTRCoreAV_CarAudio \n");
-            rc = enBTRCoreAV_CarAudio;
+        else if (lastByte == enBTRCore_DC_CarAudio) {
+            printf ("Its a enBTRCore_DC_CarAudio \n");
+            rc = enBTRCore_DC_CarAudio;
         }
-        else if (lastByte == enBTRCoreAV_STB) {
-            printf ("Its a enBTRCoreAV_STB \n");
-            rc = enBTRCoreAV_STB;
+        else if (lastByte == enBTRCore_DC_STB) {
+            printf ("Its a enBTRCore_DC_STB \n");
+            rc = enBTRCore_DC_STB;
         }
-        else if (lastByte == enBTRCoreAV_HIFIAudioDevice) {
-            printf ("Its a enBTRCoreAV_HIFIAudioDevice \n");
-            rc = enBTRCoreAV_HIFIAudioDevice;
+        else if (lastByte == enBTRCore_DC_HIFIAudioDevice) {
+            printf ("Its a enBTRCore_DC_HIFIAudioDevice \n");
+            rc = enBTRCore_DC_HIFIAudioDevice;
         }
-        else if (lastByte == enBTRCoreAV_VCR) {
-            printf ("Its a enBTRCoreAV_VCR \n");
-            rc = enBTRCoreAV_VCR;
+        else if (lastByte == enBTRCore_DC_VCR) {
+            printf ("Its a enBTRCore_DC_VCR \n");
+            rc = enBTRCore_DC_VCR;
         }
-        else if (lastByte == enBTRCoreAV_VideoCamera) {
-            printf ("Its a enBTRCoreAV_VideoCamera \n");
-            rc = enBTRCoreAV_VideoCamera;
+        else if (lastByte == enBTRCore_DC_VideoCamera) {
+            printf ("Its a enBTRCore_DC_VideoCamera \n");
+            rc = enBTRCore_DC_VideoCamera;
         }
-        else if (lastByte == enBTRCoreAV_Camcoder) {
-            printf ("Its a enBTRCoreAV_Camcoder \n");
-            rc = enBTRCoreAV_Camcoder;
+        else if (lastByte == enBTRCore_DC_Camcoder) {
+            printf ("Its a enBTRCore_DC_Camcoder \n");
+            rc = enBTRCore_DC_Camcoder;
         }
-        else if (lastByte == enBTRCoreAV_VideoMonitor) {
-            printf ("Its a enBTRCoreAV_VideoMonitor \n");
-            rc = enBTRCoreAV_VideoMonitor;
+        else if (lastByte == enBTRCore_DC_VideoMonitor) {
+            printf ("Its a enBTRCore_DC_VideoMonitor \n");
+            rc = enBTRCore_DC_VideoMonitor;
         }
-        else if (lastByte == enBTRCoreAV_TV) {
-            printf ("Its a enBTRCoreAV_TV \n");
-            rc = enBTRCoreAV_TV;
+        else if (lastByte == enBTRCore_DC_TV) {
+            printf ("Its a enBTRCore_DC_TV \n");
+            rc = enBTRCore_DC_TV;
         }
-        else if (lastByte == enBTRCoreAV_VideoConference) {
-            printf ("Its a enBTRCoreAV_VideoConference \n");
-            rc = enBTRCoreAV_TV;
+        else if (lastByte == enBTRCore_DC_VideoConference) {
+            printf ("Its a enBTRCore_DC_VideoConference \n");
+            rc = enBTRCore_DC_TV;
         }
     }
     return rc;
@@ -2115,6 +2112,28 @@ BTRCore_RegisterConnectionAuthenticationCallback (
 }
 
 
+enBTRCoreDeviceStatus btrCore_BTParseDeviceConnectionState (const char* pcStateValue)
+{
+    enBTRCoreDeviceStatus rc = enBTRCore_DS_Inited;
+    if ((pcStateValue) && (pcStateValue[0] != '\0'))
+    {
+        printf ("Current State of this connection is @@%s@@\n", pcStateValue);
+        if (strcasecmp ("disconnected", pcStateValue) == 0)
+        {
+            rc = enBTRCore_DS_Disconnected;
+        }
+        else if (strcasecmp ("connected", pcStateValue) == 0)
+        {
+            rc = enBTRCore_DS_Connected;
+        }
+        else if (strcasecmp ("playing", pcStateValue) == 0)
+        {
+            rc = enBTRCore_DS_Playing;
+        }
+    }
+    return rc;
+}
+
 static int
 btrCore_BTDeviceStatusUpdate_cb (
     enBTDeviceType  aeBtDeviceType,
@@ -2220,10 +2239,16 @@ btrCore_BTDeviceStatusUpdate_cb (
         break;
         case enBTDevStPropChanged: {
             stBTRCoreHdl*       lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
-            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL)) {
-                strcpy(lpstlhBTRCore->stDevStateCbInfo.cDevicePrevState,apstBTDeviceInfo->pcDevicePrevState);
-                strcpy(lpstlhBTRCore->stDevStateCbInfo.cDeviceCurrState,apstBTDeviceInfo->pcDeviceCurrState);
-                lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStateCbInfo, lpstlhBTRCore->pvCBUserData);
+            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL))
+            {
+                enBTRCoreDeviceStatus status = btrCore_BTParseDeviceConnectionState(apstBTDeviceInfo->pcDeviceCurrState);
+                if (status != enBTRCore_DS_Inited)
+                {
+                    lpstlhBTRCore->stDevStateCbInfo.eDevicePrevState = lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState;
+                    lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState = status;
+                    /* Invoke the callback */
+                    lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStateCbInfo, lpstlhBTRCore->pvCBUserData);
+                }
             }
         }
         break;

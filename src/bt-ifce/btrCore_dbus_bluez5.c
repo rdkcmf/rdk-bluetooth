@@ -169,8 +169,9 @@ btrCore_BTDBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
+        btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, NULL, NULL)) {
+            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
     }
@@ -193,7 +194,7 @@ btrCore_BTDBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
-         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
+        btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
@@ -218,8 +219,9 @@ btrCore_BTDBusAgentFilter_cb (
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","PropertyChanged")) {
         printf("Device PropertyChanged!\n");
+        btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, NULL, NULL)) {
+            if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
     }
