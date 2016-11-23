@@ -99,8 +99,9 @@ typedef struct _stBTRCoreFilterMode {
 } stBTRCoreFilterMode;
 
 typedef struct _stBTRCoreDevStateCBInfo {
-   enBTRCoreDeviceStatus eDevicePrevState;
-   enBTRCoreDeviceStatus eDeviceCurrState;
+    enBTRCoreDeviceType     eDeviceType;
+    enBTRCoreDeviceStatus   eDevicePrevState;
+    enBTRCoreDeviceStatus   eDeviceCurrState;
 } stBTRCoreDevStateCBInfo;
 
 typedef struct _stBTRCoreConnCBInfo {

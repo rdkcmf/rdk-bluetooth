@@ -212,6 +212,10 @@ static void
 GetTransport (
     appDataStruct* pstAppData
 ) {
+    pstAppData->iDataPath = 0;
+    pstAppData->iDataReadMTU = 0;
+    pstAppData->iDataWriteMTU = 0;
+
     BTRCore_AcquireDeviceDataPath ( pstAppData->hBTRCore, 
                                     connectedDeviceIndex,
                                     enBTRCoreMobileAudioIn,
@@ -340,10 +344,11 @@ cb_unsolicited_bluetooth_status (
 ) {
     //printf("device status change: %d\n",p_StatusCB->eDeviceType);
     printf("app level cb device status change: new state is %d\n",p_StatusCB->eDeviceCurrState);
-    if ((p_StatusCB->eDevicePrevState == enBTRCore_DS_Connected) &&
-        (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Playing)) {
-        printf("transition to playing, get the transport info...\n");
-        GetTransport((appDataStruct*)apvUserData);
+    if ((p_StatusCB->eDevicePrevState == enBTRCore_DS_Connected) && (p_StatusCB->eDeviceCurrState == enBTRCore_DS_Playing)) {
+        if (p_StatusCB->eDeviceType == enBTRCoreMobileAudioIn) {
+            printf("transition to playing, get the transport info...\n");
+            GetTransport((appDataStruct*)apvUserData);
+        }
     }
 
     return;
@@ -714,7 +719,13 @@ main (
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
+
+                stAppData.iDataPath = 0;
+                stAppData.iDataReadMTU = 0;
+                stAppData.iDataWriteMTU = 0;
+
                 BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
+
                 printf("Device Data Path = %d \n", stAppData.iDataPath);
                 printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
                 printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);

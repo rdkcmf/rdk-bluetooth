@@ -406,6 +406,108 @@ btrCore_ShowSignalStrength (
 }
 
 
+static unsigned int
+btrCore_BTParseUUIDValue (
+    const char* pUUIDString,
+    char*       pServiceNameOut
+) {
+    char aUUID[8];
+    unsigned int uuid_value = 0;
+
+
+    if (pUUIDString) {
+        /* Arrive at short form of UUID */
+        aUUID[0] = '0';
+        aUUID[1] = 'x';
+        aUUID[2] = pUUIDString[4];
+        aUUID[3] = pUUIDString[5];
+        aUUID[4] = pUUIDString[6];
+        aUUID[5] = pUUIDString[7];
+        aUUID[6] = '\0';
+
+        uuid_value = strtol(aUUID, NULL, 16);
+
+        /* Have the name by list comparision */
+        if (strcasecmp (aUUID, BTR_CORE_SP) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_SP_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HEADSET) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HEADSET_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_A2SRC) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_A2SRC_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_A2SNK) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_A2SNK_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AVRTG) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AVRTG_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AAD) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AAD_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AVRCT) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AVRCT_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_AVREMOTE) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_AVREMOTE_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HS_AG) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HS_AG_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HANDSFREE) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HANDSFREE_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HAG) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HAG_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_HEADSET2) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_HEADSET2_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_GEN_AUDIO) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_GEN_AUDIO_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_PNP) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_PNP_TEXT);
+
+        else if (strcasecmp (aUUID, BTR_CORE_GEN_ATRIB) == 0)
+            strcpy (pServiceNameOut, BTR_CORE_GEN_ATRIB_TEXT);
+
+        else
+            strcpy (pServiceNameOut, "Not Identified");
+    }
+    else
+        strcpy (pServiceNameOut, "Not Identified");
+
+    return uuid_value;
+}
+
+
+static enBTRCoreDeviceStatus
+btrCore_BTParseDeviceConnectionState (
+    const char* pcStateValue
+) {
+    enBTRCoreDeviceStatus rc = enBTRCore_DS_Inited;
+
+    if ((pcStateValue) && (pcStateValue[0] != '\0')) {
+        printf ("Current State of this connection is @@%s@@\n", pcStateValue);
+
+        if (strcasecmp ("disconnected", pcStateValue) == 0) {
+            rc = enBTRCore_DS_Disconnected;
+        }
+        else if (strcasecmp ("connected", pcStateValue) == 0) {
+            rc = enBTRCore_DS_Connected;
+        }
+        else if (strcasecmp ("playing", pcStateValue) == 0) {
+            rc = enBTRCore_DS_Playing;
+        }
+    }
+
+    return rc;
+}
+
+
+/*  Local Op Threads */
 void*
 DoDispatch (
     void* ptr
@@ -472,9 +574,7 @@ test_func (
 }
 
 
-//////////////////
-//  Interfaces  //
-//////////////////
+/*  Interfaces  */
 enBTRCoreRet
 BTRCore_Init (
     tBTRCoreHandle* phBTRCore
@@ -2112,28 +2212,7 @@ BTRCore_RegisterConnectionAuthenticationCallback (
 }
 
 
-enBTRCoreDeviceStatus btrCore_BTParseDeviceConnectionState (const char* pcStateValue)
-{
-    enBTRCoreDeviceStatus rc = enBTRCore_DS_Inited;
-    if ((pcStateValue) && (pcStateValue[0] != '\0'))
-    {
-        printf ("Current State of this connection is @@%s@@\n", pcStateValue);
-        if (strcasecmp ("disconnected", pcStateValue) == 0)
-        {
-            rc = enBTRCore_DS_Disconnected;
-        }
-        else if (strcasecmp ("connected", pcStateValue) == 0)
-        {
-            rc = enBTRCore_DS_Connected;
-        }
-        else if (strcasecmp ("playing", pcStateValue) == 0)
-        {
-            rc = enBTRCore_DS_Playing;
-        }
-    }
-    return rc;
-}
-
+/*  Incoming Callbacks */
 static int
 btrCore_BTDeviceStatusUpdate_cb (
     enBTDeviceType  aeBtDeviceType,
@@ -2142,6 +2221,27 @@ btrCore_BTDeviceStatusUpdate_cb (
     void*           apUserData
 ) {
     printf("%s:%d - enBTDeviceType = %d enBTDeviceState = %d apstBTDeviceInfo = %p\n", __FUNCTION__, __LINE__, aeBtDeviceType, aeBtDeviceState, apstBTDeviceInfo);
+
+    enBTRCoreDeviceType lenBTRCoreDevType = enBTRCoreUnknown;
+
+    switch (aeBtDeviceType) {
+    case enBTDevAudioSink:
+        lenBTRCoreDevType =  enBTRCoreSpeakers;
+        break;
+    case enBTDevAudioSource:
+        lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+        break;
+    case enBTDevHFPHeadset:
+        lenBTRCoreDevType =  enBTRCoreHeadSet;
+        break;
+    case enBTDevHFPHeadsetGateway:
+        lenBTRCoreDevType =  enBTRCoreHeadSet;
+        break;
+    case enBTDevUnknown:
+    default:
+        lenBTRCoreDevType = enBTRCoreUnknown;
+        break;
+    }
 
     switch (aeBtDeviceState) {
         case enBTDevStCreated: {
@@ -2244,6 +2344,7 @@ btrCore_BTDeviceStatusUpdate_cb (
                 enBTRCoreDeviceStatus status = btrCore_BTParseDeviceConnectionState(apstBTDeviceInfo->pcDeviceCurrState);
                 if (status != enBTRCore_DS_Inited)
                 {
+                    lpstlhBTRCore->stDevStateCbInfo.eDeviceType      = lenBTRCoreDevType;
                     lpstlhBTRCore->stDevStateCbInfo.eDevicePrevState = lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState;
                     lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState = status;
                     /* Invoke the callback */
@@ -2302,84 +2403,6 @@ btrCore_BTDeviceAuthetication_cb (
 
     return i32DevAuthRet;
 } 
-
-
-static unsigned int
-btrCore_BTParseUUIDValue (
-    const char* pUUIDString,
-    char*       pServiceNameOut
-) {
-    char aUUID[8];
-    unsigned int uuid_value = 0;
-
-
-    if (pUUIDString) {
-        /* Arrive at short form of UUID */
-        aUUID[0] = '0';
-        aUUID[1] = 'x';
-        aUUID[2] = pUUIDString[4];
-        aUUID[3] = pUUIDString[5];
-        aUUID[4] = pUUIDString[6];
-        aUUID[5] = pUUIDString[7];
-        aUUID[6] = '\0';
-
-        uuid_value = strtol(aUUID, NULL, 16);
-
-        /* Have the name by list comparision */
-        if (strcasecmp (aUUID, BTR_CORE_SP) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_SP_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_HEADSET) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_HEADSET_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_A2SRC) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_A2SRC_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_A2SNK) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_A2SNK_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_AVRTG) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_AVRTG_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_AAD) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_AAD_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_AVRCT) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_AVRCT_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_AVREMOTE) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_AVREMOTE_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_HS_AG) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_HS_AG_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_HANDSFREE) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_HANDSFREE_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_HAG) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_HAG_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_HEADSET2) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_HEADSET2_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_GEN_AUDIO) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_GEN_AUDIO_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_PNP) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_PNP_TEXT);
-
-        else if (strcasecmp (aUUID, BTR_CORE_GEN_ATRIB) == 0)
-            strcpy (pServiceNameOut, BTR_CORE_GEN_ATRIB_TEXT);
-
-        else
-            strcpy (pServiceNameOut, "Not Identified");
-    }
-    else
-        strcpy (pServiceNameOut, "Not Identified");
-
-    return uuid_value;
-}
-
 
 
 /* End of File */
