@@ -40,8 +40,10 @@ typedef struct _stBTRCoreHdl {
 
     unsigned int                numOfAdapters;
     char*                       adapterPath[BTRCORE_MAX_NUM_BT_ADAPTERS];
+    char*                       adapterAddr[BTRCORE_MAX_NUM_BT_ADAPTERS];
 
     char*                       curAdapterPath;
+    char*                       curAdapterAddr;
 
     unsigned int                numOfScannedDevices;
     stBTRCoreScannedDevices     stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
@@ -94,10 +96,17 @@ btrCore_InitDataSt (
 ) {
     int i;
 
+    /* Current Adapter */
+    apsthBTRCore->curAdapterAddr = (char*)malloc(sizeof(char) * BD_NAME_LEN);
+    memset(apsthBTRCore->curAdapterAddr, '\0', sizeof(char) * BD_NAME_LEN);
+
     /* Adapters */
     for (i = 0; i < BTRCORE_MAX_NUM_BT_ADAPTERS; i++) {
         apsthBTRCore->adapterPath[i] = (char*)malloc(sizeof(char) * BD_NAME_LEN);
         memset(apsthBTRCore->adapterPath[i], '\0', sizeof(char) * BD_NAME_LEN);
+
+        apsthBTRCore->adapterAddr[i] = (char*)malloc(sizeof(char) * BD_NAME_LEN);
+        memset(apsthBTRCore->adapterAddr[i], '\0', sizeof(char) * BD_NAME_LEN);
     }
 
     /* Scanned Devices */
@@ -647,7 +656,13 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    printf("BTRCore_Init - adapter path %s\n", pstlhBTRCore->curAdapterPath);
+    if (BtrCore_BTGetProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, "Address", pstlhBTRCore->curAdapterAddr)) {
+        fprintf(stderr, "%s:%d:%s - Failed to get BT Adapter Address - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
+        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
+        return enBTRCoreInitFailure;
+    }
+
+    printf("BTRCore_Init - Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
 
     /* Initialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
     if (enBTRCoreSuccess != BTRCore_AVMedia_Init(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath)) {
@@ -731,6 +746,16 @@ BTRCore_DeInit (
             free(pstlhBTRCore->adapterPath[i]);
             pstlhBTRCore->adapterPath[i] = NULL;
         }
+
+        if (pstlhBTRCore->adapterAddr[i]) {
+            free(pstlhBTRCore->adapterAddr[i]);
+            pstlhBTRCore->adapterAddr[i] = NULL;
+        }
+    }
+
+    if (pstlhBTRCore->curAdapterAddr) {
+        free(pstlhBTRCore->curAdapterAddr);
+        pstlhBTRCore->curAdapterAddr = NULL;
     }
 
     if (pstlhBTRCore->agentPath) {
@@ -836,7 +861,13 @@ BTRCore_GetListOfAdapters (
         pstListAdapters->number_of_adapters = pstlhBTRCore->numOfAdapters;
         for (i = 0; i < pstListAdapters->number_of_adapters; i++) {
             memset(pstListAdapters->adapter_path[i], '\0', sizeof(pstListAdapters->adapter_path[i]));
-            strncpy(pstListAdapters->adapter_path[i], pstlhBTRCore->adapterPath[i], BD_NAME_LEN);
+            strncpy(pstListAdapters->adapter_path[i], pstlhBTRCore->adapterPath[i], BD_NAME_LEN - 1);
+
+            memset(pstListAdapters->adapterAddr[i], '\0', sizeof(pstListAdapters->adapterAddr[i]));
+            if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pstlhBTRCore->adapterPath[i], "Address", pstlhBTRCore->adapterAddr[i])) {
+                strncpy(pstListAdapters->adapterAddr[i], pstlhBTRCore->adapterAddr[i], BD_NAME_LEN - 1);
+            }
+
             rc = enBTRCoreSuccess;
         }
     }
@@ -999,6 +1030,37 @@ BTRCore_DisableAdapter (
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
+BTRCore_GetAdapterAddr (
+    tBTRCoreHandle      hBTRCore,
+    unsigned char       aui8adapterIdx,
+    char*               apui8adapterAddr
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    int             i = 0;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreNotInitialized\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+    else if (!apui8adapterAddr) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    for (i = 0; i < pstlhBTRCore->numOfAdapters; i++) {
+        if (aui8adapterIdx == i) {
+            strncpy(apui8adapterAddr, pstlhBTRCore->adapterAddr[i], BD_NAME_LEN - 1);
+            break;
+        }
     }
 
     return enBTRCoreSuccess;

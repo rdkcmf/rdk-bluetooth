@@ -108,6 +108,7 @@ typedef struct _stBTRCoreGetAdapters {
 typedef struct _stBTRCoreListAdapters {
    U8 number_of_adapters;
    BD_NAME adapter_path[BTRCORE_MAX_NUM_BT_ADAPTERS];
+   BD_NAME adapterAddr[BTRCORE_MAX_NUM_BT_ADAPTERS];
 } stBTRCoreListAdapters;
 
 typedef struct _stBTRCoreFilterMode {
@@ -239,6 +240,8 @@ enBTRCoreRet BTRCore_EnableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* a
 
 /* BTRCore_DisableAdapter disable specific adapter*/
 enBTRCoreRet BTRCore_DisableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
+
+enBTRCoreRet BTRCore_GetAdapterAddr (tBTRCoreHandle hBTRCore, unsigned char aui8adapterIdx, char* apui8adapterAddr);
 
 /* BTRCore_SetDiscoverable set adapter as discoverable or not discoverable*/
 enBTRCoreRet BTRCore_SetDiscoverable (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
