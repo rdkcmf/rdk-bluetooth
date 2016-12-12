@@ -85,20 +85,21 @@
 #define BTR_A2DP_BLOCK_LENGTH_16            SBC_BLOCK_LENGTH_16
 #endif
 
+
+typedef struct _stBTRCoreAVMediaHdl {
+    a2dp_sbc_t*  pstBTMediaConfig;
+    int          iBTMediaDefSampFreqPref;
+    char*        pcAVMediaTransportPath;
+} stBTRCoreAVMediaHdl;
+
+
 /* Static Function Prototypes */
 static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
 
 
-/* Static Global Variables Defs */
-static int          gBTMediaSBCSampFreqPref = BTR_SBC_SAMPLING_FREQ_48000;
-//TODO: Mutex protect this
-static a2dp_sbc_t*  gpBTMediaSBCConfig = NULL;
-static char*        gpcAVMediaTransportPath = NULL;
-
-
 /* Callbacks */
-static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps);
-static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath, void* apBtMediaCaps);
+static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps, void* apUserData);
+static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
 
 
 /* Static Function Definition */
@@ -152,19 +153,27 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
 //////////////////
 enBTRCoreRet
 BTRCore_AVMedia_Init (
-    void*       apBtConn,
-    const char* apBtAdapter
+    tBTRCoreAVMediaHdl* phBTRCoreAVM,
+    void*               apBtConn,
+    const char*         apBtAdapter
 ) {
-    int lBtAVMediaASinkRegRet   = -1;
-    int lBtAVMediaASrcRegRet    = -1;
-    int lBtAVMediaNegotiateRet  = -1;
-    int lBtAVMediaTransportPRet = -1;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    int                     lBtAVMediaASinkRegRet   = -1;
+    int                     lBtAVMediaASrcRegRet    = -1;
+    int                     lBtAVMediaNegotiateRet  = -1;
+    int                     lBtAVMediaTransportPRet = -1;
+    enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
-    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
-
-    if (apBtConn == NULL || apBtAdapter == NULL) {
+    if (!phBTRCoreAVM || !apBtConn || !apBtAdapter) {
         return enBTRCoreInvalidArg;
     }
+
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)malloc(sizeof(stBTRCoreAVMediaHdl));
+    if (!pstlhBTRCoreAVM)
+        return enBTRCoreInitFailure;
+
+    memset(pstlhBTRCoreAVM, 0, sizeof(stBTRCoreAVMediaHdl));
 
     a2dp_sbc_t lstBtA2dpCapabilities;
 
@@ -179,14 +188,16 @@ BTRCore_AVMedia_Init (
     lstBtA2dpCapabilities.min_bitpool        = MIN_BITPOOL;
     lstBtA2dpCapabilities.max_bitpool        = MAX_BITPOOL;
 
-    //TODO: Mutex protect this
-    gpBTMediaSBCConfig = (a2dp_sbc_t*)malloc(sizeof(a2dp_sbc_t));
-    if (!gpBTMediaSBCConfig)
+    pstlhBTRCoreAVM->pstBTMediaConfig = (a2dp_sbc_t*)malloc(sizeof(a2dp_sbc_t));
+    if (!pstlhBTRCoreAVM->pstBTMediaConfig) {
+        free(pstlhBTRCoreAVM);
+        pstlhBTRCoreAVM = NULL;
         return enBTRCoreInitFailure;
+    }
 
-    //TODO: Mutex protect this
-    memcpy(gpBTMediaSBCConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
-    gpcAVMediaTransportPath = NULL;
+    memcpy(pstlhBTRCoreAVM->pstBTMediaConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
+    pstlhBTRCoreAVM->iBTMediaDefSampFreqPref = BTR_SBC_SAMPLING_FREQ_48000;
+    pstlhBTRCoreAVM->pcAVMediaTransportPath  = NULL;
 
     lBtAVMediaASinkRegRet = BtrCore_BTRegisterMedia(apBtConn,
                                                     apBtAdapter,
@@ -209,16 +220,23 @@ BTRCore_AVMedia_Init (
        lBtAVMediaNegotiateRet = BtrCore_BTRegisterNegotiateMediacB(apBtConn,
                                                                    apBtAdapter,
                                                                    &btrCore_AVMedia_NegotiateMedia_cb,
-                                                                   NULL);
+                                                                   pstlhBTRCoreAVM);
 
     if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet)
         lBtAVMediaTransportPRet = BtrCore_BTRegisterTransportPathMediacB(apBtConn,
                                                                          apBtAdapter,
                                                                          &btrCore_AVMedia_TransportPath_cb,
-                                                                         NULL);
+                                                                         pstlhBTRCoreAVM);
 
     if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet)
         lenBTRCoreRet = enBTRCoreSuccess;
+
+    if (lenBTRCoreRet != enBTRCoreSuccess) {
+        free(pstlhBTRCoreAVM);
+        pstlhBTRCoreAVM = NULL;
+    }
+
+    *phBTRCoreAVM  = (tBTRCoreAVMediaHdl)pstlhBTRCoreAVM;
 
     return lenBTRCoreRet;
 }
@@ -226,16 +244,20 @@ BTRCore_AVMedia_Init (
 
 enBTRCoreRet
 BTRCore_AVMedia_DeInit (
-    void*       apBtConn,
-    const char* apBtAdapter
+    tBTRCoreAVMediaHdl  hBTRCoreAVM,
+    void*               apBtConn,
+    const char*         apBtAdapter
 ) {
-    int lBtAVMediaASinkUnRegRet   = -1;
-    int lBtAVMediaASrcUnRegRet    = -1;
-    enBTRCoreRet lenBTRCoreRet  = enBTRCoreFailure;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    int                     lBtAVMediaASinkUnRegRet   = -1;
+    int                     lBtAVMediaASrcUnRegRet    = -1;
+    enBTRCoreRet            lenBTRCoreRet  = enBTRCoreFailure;
 
-    if (apBtConn == NULL || apBtAdapter == NULL) {
+    if (!hBTRCoreAVM || !apBtConn || !apBtAdapter) {
         return enBTRCoreInvalidArg;
     }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     lBtAVMediaASrcUnRegRet = BtrCore_BTUnRegisterMedia(apBtConn,
                                                        apBtAdapter,
@@ -245,20 +267,25 @@ BTRCore_AVMedia_DeInit (
                                                         apBtAdapter,
                                                         enBTDevAudioSink);
 
-    //TODO: Mutex protect this
-    if (gpBTMediaSBCConfig) {
-        free(gpBTMediaSBCConfig);
-        gpBTMediaSBCConfig = NULL;
+    if (pstlhBTRCoreAVM->pstBTMediaConfig) {
+        free(pstlhBTRCoreAVM->pstBTMediaConfig);
+        pstlhBTRCoreAVM->pstBTMediaConfig = NULL;
     }
 
-    //TODO: Mutex protect this
-    if (gpcAVMediaTransportPath) {
-        free(gpcAVMediaTransportPath);
-        gpcAVMediaTransportPath = NULL;
+    if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
+        free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
+        pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;
     }
 
     if (!lBtAVMediaASrcUnRegRet && !lBtAVMediaASinkUnRegRet)
         lenBTRCoreRet = enBTRCoreSuccess;
+
+
+    if (hBTRCoreAVM) {
+        (void) pstlhBTRCoreAVM;
+        free(hBTRCoreAVM);
+        hBTRCoreAVM = NULL;
+    }
 
     return lenBTRCoreRet;
 }
@@ -266,26 +293,29 @@ BTRCore_AVMedia_DeInit (
 
 enBTRCoreRet
 BTRCore_AVMedia_AcquireDataPath (
-    void*       apBtConn,
-    const char* apBtAdapter,
-    int*        apDataPath,
-    int*        apDataReadMTU,
-    int*        apDataWriteMTU
+    tBTRCoreAVMediaHdl  hBTRCoreAVM,
+    void*               apBtConn,
+    const char*         apBtAdapter,
+    int*                apDataPath,
+    int*                apDataReadMTU,
+    int*                apDataWriteMTU
 ) {
-    int lBtAVMediaRet = -1;
-    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    int                     lBtAVMediaRet = -1;
+    enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
-    if (apBtConn == NULL || apBtAdapter == NULL) {
+    if (!hBTRCoreAVM || !apBtConn || !apBtAdapter) {
         return enBTRCoreInvalidArg;
     }
 
-    if (gpcAVMediaTransportPath == NULL) {
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+    (void) pstlhBTRCoreAVM;
+
+    if (pstlhBTRCoreAVM->pcAVMediaTransportPath == NULL) {
         return enBTRCoreFailure;
     }
 
-    lBtAVMediaRet = BtrCore_BTAcquireDevDataPath (apBtConn, gpcAVMediaTransportPath, apDataPath, apDataReadMTU, apDataWriteMTU);
-
-    if (!lBtAVMediaRet)
+    if (!(lBtAVMediaRet = BtrCore_BTAcquireDevDataPath (apBtConn, pstlhBTRCoreAVM->pcAVMediaTransportPath, apDataPath, apDataReadMTU, apDataWriteMTU)))
         lenBTRCoreRet = enBTRCoreSuccess;
 
     return lenBTRCoreRet;
@@ -294,23 +324,25 @@ BTRCore_AVMedia_AcquireDataPath (
 
 enBTRCoreRet
 BTRCore_AVMedia_ReleaseDataPath (
-    void*       apBtConn,
-    const char* apBtAdapter
+    tBTRCoreAVMediaHdl  hBTRCoreAVM,
+    void*               apBtConn,
+    const char*         apBtAdapter
 ) {
-    int lBtAVMediaRet = -1;
-    enBTRCoreRet lenBTRCoreRet = enBTRCoreFailure;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    int                     lBtAVMediaRet = -1;
+    enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
-    if (apBtConn == NULL || apBtAdapter == NULL) {
+    if (!hBTRCoreAVM || !apBtConn || !apBtAdapter) {
         return enBTRCoreInvalidArg;
     }
 
-    if (gpcAVMediaTransportPath == NULL) {
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (pstlhBTRCoreAVM->pcAVMediaTransportPath == NULL) {
         return enBTRCoreFailure;
     }
 
-    lBtAVMediaRet = BtrCore_BTReleaseDevDataPath(apBtConn, gpcAVMediaTransportPath);
-
-    if (!lBtAVMediaRet)
+    if (!(lBtAVMediaRet = BtrCore_BTReleaseDevDataPath(apBtConn, pstlhBTRCoreAVM->pcAVMediaTransportPath)))
         lenBTRCoreRet = enBTRCoreSuccess;
 
     return lenBTRCoreRet;
@@ -319,20 +351,24 @@ BTRCore_AVMedia_ReleaseDataPath (
 
 static void*
 btrCore_AVMedia_NegotiateMedia_cb (
-    void* apBtMediaCaps
+    void* apBtMediaCaps,
+    void* apUserData
 ) {
-    a2dp_sbc_t* apBtMediaSBCCaps = NULL;
-    a2dp_sbc_t  lstBTMediaSBCConfig;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    a2dp_sbc_t*             apBtMediaSBCCaps = NULL;
+    a2dp_sbc_t              lstBTMediaSBCConfig;
 
     if (!apBtMediaCaps) {
         fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: Invalid input MT Media Capabilities\n");
         return NULL;
     } 
 
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
+
     apBtMediaSBCCaps = (a2dp_sbc_t*)apBtMediaCaps;
 
     memset(&lstBTMediaSBCConfig, 0, sizeof(a2dp_sbc_t));
-    lstBTMediaSBCConfig.frequency = gBTMediaSBCSampFreqPref;
+    lstBTMediaSBCConfig.frequency = pstlhBTRCoreAVM->iBTMediaDefSampFreqPref;
 
     if (apBtMediaSBCCaps->channel_mode & BTR_A2DP_CHANNEL_MODE_JOINT_STEREO) {
         lstBTMediaSBCConfig.channel_mode = BTR_A2DP_CHANNEL_MODE_JOINT_STEREO;
@@ -400,41 +436,52 @@ btrCore_AVMedia_NegotiateMedia_cb (
     fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
     fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
-    //TODO: Mutex protect this
-    if (gpBTMediaSBCConfig) {
-        gpBTMediaSBCConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
-        gpBTMediaSBCConfig->frequency           =  lstBTMediaSBCConfig.frequency;
-        gpBTMediaSBCConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
-        gpBTMediaSBCConfig->subbands            =  lstBTMediaSBCConfig.subbands;
-        gpBTMediaSBCConfig->block_length        =  lstBTMediaSBCConfig.block_length;
-        gpBTMediaSBCConfig->min_bitpool         =  lstBTMediaSBCConfig.min_bitpool;
-        gpBTMediaSBCConfig->max_bitpool         =  lstBTMediaSBCConfig.max_bitpool;
+    if (pstlhBTRCoreAVM) {
+        if (pstlhBTRCoreAVM->pstBTMediaConfig) {
+            pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
+            pstlhBTRCoreAVM->pstBTMediaConfig->frequency           =  lstBTMediaSBCConfig.frequency;
+            pstlhBTRCoreAVM->pstBTMediaConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
+            pstlhBTRCoreAVM->pstBTMediaConfig->subbands            =  lstBTMediaSBCConfig.subbands;
+            pstlhBTRCoreAVM->pstBTMediaConfig->block_length        =  lstBTMediaSBCConfig.block_length;
+            pstlhBTRCoreAVM->pstBTMediaConfig->min_bitpool         =  lstBTMediaSBCConfig.min_bitpool;
+            pstlhBTRCoreAVM->pstBTMediaConfig->max_bitpool         =  lstBTMediaSBCConfig.max_bitpool;
+        }
     }
 
-    return (void*)gpBTMediaSBCConfig;
+    if (pstlhBTRCoreAVM)
+        return (void*)(pstlhBTRCoreAVM->pstBTMediaConfig);
+    else
+        return NULL;
 }
 
 
 static const char*
 btrCore_AVMedia_TransportPath_cb (
     const char* apBtMediaTransportPath,
-    void*       apBtMediaCaps
+    void*       apBtMediaCaps,
+    void*       apUserData
 ) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+
     if (!apBtMediaTransportPath) {
         fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Invalid transport path\n");
         return NULL;
     }
 
-    //TODO: Mutex protect this
-    if (gpcAVMediaTransportPath) {
-        if(!strncmp(gpcAVMediaTransportPath, apBtMediaTransportPath, strlen(gpcAVMediaTransportPath)))
-            fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Freeing 0x%8x:%s\n", (unsigned int)gpcAVMediaTransportPath, gpcAVMediaTransportPath);
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
 
-        free(gpcAVMediaTransportPath);
-        gpcAVMediaTransportPath = NULL;
-    }
-    else {
-        gpcAVMediaTransportPath = strdup(apBtMediaTransportPath);
+    if (pstlhBTRCoreAVM) { 
+        if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
+            if(!strncmp(pstlhBTRCoreAVM->pcAVMediaTransportPath, apBtMediaTransportPath, strlen(pstlhBTRCoreAVM->pcAVMediaTransportPath)))
+                fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Freeing 0x%8x:%s\n", 
+                            (unsigned int)pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
+
+            free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
+            pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;
+        }
+        else {
+            pstlhBTRCoreAVM->pcAVMediaTransportPath = strdup(apBtMediaTransportPath);
+        }
     }
 
     if (apBtMediaCaps) {
@@ -460,15 +507,16 @@ btrCore_AVMedia_TransportPath_cb (
         fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
         fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
-        //TODO: Mutex protect this
-        if (gpBTMediaSBCConfig) {
-            gpBTMediaSBCConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
-            gpBTMediaSBCConfig->frequency           =  lstBTMediaSBCConfig.frequency;
-            gpBTMediaSBCConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
-            gpBTMediaSBCConfig->subbands            =  lstBTMediaSBCConfig.subbands;
-            gpBTMediaSBCConfig->block_length        =  lstBTMediaSBCConfig.block_length;
-            gpBTMediaSBCConfig->min_bitpool         =  lstBTMediaSBCConfig.min_bitpool;
-            gpBTMediaSBCConfig->max_bitpool         =  lstBTMediaSBCConfig.max_bitpool;
+        if (pstlhBTRCoreAVM) {
+            if (pstlhBTRCoreAVM->pstBTMediaConfig) {
+                pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;
+                pstlhBTRCoreAVM->pstBTMediaConfig->frequency           =  lstBTMediaSBCConfig.frequency;
+                pstlhBTRCoreAVM->pstBTMediaConfig->allocation_method   =  lstBTMediaSBCConfig.allocation_method;
+                pstlhBTRCoreAVM->pstBTMediaConfig->subbands            =  lstBTMediaSBCConfig.subbands;
+                pstlhBTRCoreAVM->pstBTMediaConfig->block_length        =  lstBTMediaSBCConfig.block_length;
+                pstlhBTRCoreAVM->pstBTMediaConfig->min_bitpool         =  lstBTMediaSBCConfig.min_bitpool;
+                pstlhBTRCoreAVM->pstBTMediaConfig->max_bitpool         =  lstBTMediaSBCConfig.max_bitpool;
+            }
         }
     }
     else {
@@ -485,11 +533,15 @@ btrCore_AVMedia_TransportPath_cb (
         lstBtA2dpCapabilities.min_bitpool        = MIN_BITPOOL;
         lstBtA2dpCapabilities.max_bitpool        = MAX_BITPOOL;
 
-        //TODO: Mutex protect this
-        if (gpBTMediaSBCConfig) {
-            memcpy(gpBTMediaSBCConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
+        if (pstlhBTRCoreAVM) {
+            if (pstlhBTRCoreAVM->pstBTMediaConfig) {
+                memcpy(pstlhBTRCoreAVM->pstBTMediaConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
+            }
         }
     }
 
-    return gpcAVMediaTransportPath;
+    if (pstlhBTRCoreAVM)
+        return pstlhBTRCoreAVM->pcAVMediaTransportPath;
+    else
+        return NULL;
 }

@@ -76,6 +76,8 @@ static char* gpcBTDAdapterPath = NULL;
 static char* gpcBTAdapterPath = NULL;
 static char* gpcDevTransportPath = NULL;
 static void* gpcBDevStatusUserData = NULL;
+static void* gpcBNegMediaUserData = NULL;
+static void* gpcBTransPathMediaUserData = NULL;
 static void* gpcBConnIntimUserData = NULL;
 static void* gpcBConnAuthUserData = NULL;
 
@@ -969,7 +971,7 @@ btrCore_BTMediaEndpointSelectConfiguration (
     }
 
     if (gfpcBNegotiateMedia) {
-        if(!(lpOutputMediaCaps = gfpcBNegotiateMedia(lpInputMediaCaps))) {
+        if(!(lpOutputMediaCaps = gfpcBNegotiateMedia(lpInputMediaCaps, gpcBNegMediaUserData))) {
             return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to select configuration");
         }
     }
@@ -1050,7 +1052,7 @@ btrCore_BTMediaEndpointSetConfiguration (
     gpcDevTransportPath = strdup(lDevTransportPath);
 
     if (gfpcBTransportPathMedia) {
-        if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, config))) {
+        if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, config, gpcBTransPathMediaUserData))) {
             fprintf(stderr, "Stored - Transport Path 0x%8x:%s\n", (unsigned int)lStoredDevTransportPath, lStoredDevTransportPath);
         }
     }
@@ -1081,7 +1083,7 @@ btrCore_BTMediaEndpointClearConfiguration (
     }
 
     if (gfpcBTransportPathMedia) {
-        if(!(lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, NULL))) {
+        if(!(lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, NULL, gpcBTransPathMediaUserData))) {
             fprintf(stderr, "Cleared - Transport Path %s\n", lDevTransportPath);
         }
     }
@@ -1120,6 +1122,8 @@ BtrCore_BTInitGetConnection (
 
     gpcBConnAuthPassKey             = 0;
 
+    gpcBTransPathMediaUserData      = NULL;
+    gpcBNegMediaUserData            = NULL;
     gpcBConnIntimUserData           = NULL;
     gpcBConnAuthUserData            = NULL;
     gpcBDevStatusUserData           = NULL;
@@ -1148,6 +1152,8 @@ BtrCore_BTDeInitReleaseConnection (
     gpcBDevStatusUserData           = NULL;
     gpcBConnAuthUserData            = NULL;
     gpcBConnIntimUserData           = NULL;
+    gpcBNegMediaUserData            = NULL;
+    gpcBTransPathMediaUserData      = NULL;
 
     gpcBConnAuthPassKey             = 0;
 
@@ -2649,7 +2655,8 @@ BtrCore_BTRegisterNegotiateMediacB (
     if (!apBtAdapter || !afpcBNegotiateMedia)
         return -1;
 
-    gfpcBNegotiateMedia = afpcBNegotiateMedia;
+    gfpcBNegotiateMedia  = afpcBNegotiateMedia;
+    gpcBNegMediaUserData = apUserData;
 
     return 0;
 }
@@ -2668,7 +2675,8 @@ BtrCore_BTRegisterTransportPathMediacB (
     if (!apBtAdapter || !afpcBTransportPathMedia)
         return -1;
 
-    gfpcBTransportPathMedia = afpcBTransportPathMedia;
+    gfpcBTransportPathMedia    = afpcBTransportPathMedia;
+    gpcBTransPathMediaUserData = apUserData;
 
     return 0;
 }

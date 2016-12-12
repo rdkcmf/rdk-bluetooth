@@ -206,7 +206,7 @@ typedef int  (*BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
 // TODO: Combine interfaces which perform the same functionality
 
 /* Generic call to init any needed stack.. may be called during powerup*/
-enBTRCoreRet BTRCore_Init (tBTRCoreHandle* hBTRCore);
+enBTRCoreRet BTRCore_Init (tBTRCoreHandle* phBTRCore);
 
 /* Deinitialze and free BTRCore */
 enBTRCoreRet BTRCore_DeInit (tBTRCoreHandle hBTRCore);

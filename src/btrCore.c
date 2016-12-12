@@ -35,7 +35,10 @@
 
 
 typedef struct _stBTRCoreHdl {
-    void*                       connHandle;
+
+    tBTRCoreAVMediaHdl          avMediaHdl;
+
+    void*                       connHdl;
     char*                       agentPath;
 
     unsigned int                numOfAdapters;
@@ -70,6 +73,7 @@ typedef struct _stBTRCoreHdl {
 } stBTRCoreHdl;
 
 
+/* Static Function Prototypes */
 static void btrCore_InitDataSt (stBTRCoreHdl* apsthBTRCore);
 static tBTRCoreDevId btrCore_GenerateUniqueDeviceID (const char* apcDeviceAddress);
 static enBTRCoreDeviceClass btrCore_MapClassIDtoDeviceType(unsigned int classID);
@@ -332,7 +336,7 @@ btrCore_PopulateListOfPairedDevices (
     stBTPairedDeviceInfo pairedDeviceInfo;
 
     memset (&pairedDeviceInfo, 0, sizeof(pairedDeviceInfo));
-    if (0 == BtrCore_BTGetPairedDeviceInfo (apsthBTRCore->connHandle, pAdapterPath, &pairedDeviceInfo)) {
+    if (0 == BtrCore_BTGetPairedDeviceInfo (apsthBTRCore->connHdl, pAdapterPath, &pairedDeviceInfo)) {
         apsthBTRCore->numOfPairedDevices = pairedDeviceInfo.numberOfDevices;
 
         for (i = 0; i < pairedDeviceInfo.numberOfDevices; i++) {
@@ -547,7 +551,7 @@ DoDispatch (
     printf("%s \n", "Dispatch Thread Started");
 
 
-    if (!((stBTRCoreHdl*)hBTRCore) || !((stBTRCoreHdl*)hBTRCore)->connHandle) {
+    if (!((stBTRCoreHdl*)hBTRCore) || !((stBTRCoreHdl*)hBTRCore)->connHdl) {
         fprintf(stderr, "Dispatch thread failure - BTRCore not initialized\n");
         *penDispThreadExitStatus = enBTRCoreNotInitialized;
         return (void*)penDispThreadExitStatus;
@@ -567,7 +571,7 @@ DoDispatch (
         sched_yield(); // Would like to use some form of yield rather than sleep sometime in the future
 #endif
 
-        if (BtrCore_BTSendReceiveMessages(((stBTRCoreHdl*)hBTRCore)->connHandle) != 0)
+        if (BtrCore_BTSendReceiveMessages(((stBTRCoreHdl*)hBTRCore)->connHdl) != 0)
             break;
     }
 
@@ -624,8 +628,8 @@ BTRCore_Init (
     memset(pstlhBTRCore, 0, sizeof(stBTRCoreHdl));
 
 
-    pstlhBTRCore->connHandle = BtrCore_BTInitGetConnection();
-    if (!pstlhBTRCore->connHandle) {
+    pstlhBTRCore->connHdl = BtrCore_BTInitGetConnection();
+    if (!pstlhBTRCore->connHdl) {
         fprintf(stderr, "%s:%d:%s - Can't get on system bus - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
@@ -634,7 +638,7 @@ BTRCore_Init (
     //init array of scanned , known & found devices
     btrCore_InitDataSt(pstlhBTRCore);
 
-    pstlhBTRCore->agentPath = BtrCore_BTGetAgentPath(pstlhBTRCore->connHandle);
+    pstlhBTRCore->agentPath = BtrCore_BTGetAgentPath(pstlhBTRCore->connHdl);
     if (!pstlhBTRCore->agentPath) {
         fprintf(stderr, "%s:%d:%s - Can't get agent path - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
@@ -649,14 +653,14 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHandle, NULL); //mikek hard code to default adapter for now
+    pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHdl, NULL); //mikek hard code to default adapter for now
     if (!pstlhBTRCore->curAdapterPath) {
         fprintf(stderr, "%s:%d:%s - Failed to get BT Adapter - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
 
-    if (BtrCore_BTGetProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, "Address", pstlhBTRCore->curAdapterAddr)) {
+    if (BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, "Address", pstlhBTRCore->curAdapterAddr)) {
         fprintf(stderr, "%s:%d:%s - Failed to get BT Adapter Address - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
@@ -665,23 +669,23 @@ BTRCore_Init (
     printf("BTRCore_Init - Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
 
     /* Initialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
-    if (enBTRCoreSuccess != BTRCore_AVMedia_Init(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath)) {
+    if (enBTRCoreSuccess != BTRCore_AVMedia_Init(&pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
         fprintf(stderr, "%s:%d:%s - Failed to Init AV Media Subsystem - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
 
-    if(BtrCore_BTRegisterDevStatusUpdatecB(pstlhBTRCore->connHandle, &btrCore_BTDeviceStatusUpdate_cb, pstlhBTRCore)) {
+    if(BtrCore_BTRegisterDevStatusUpdatecB(pstlhBTRCore->connHdl, &btrCore_BTDeviceStatusUpdate_cb, pstlhBTRCore)) {
         fprintf(stderr, "%s:%d:%s - Failed to Register Device Status CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
-    if(BtrCore_BTRegisterConnIntimationcB(pstlhBTRCore->connHandle, &btrCore_BTDeviceConnectionIntimation_cb, pstlhBTRCore)) {
+    if(BtrCore_BTRegisterConnIntimationcB(pstlhBTRCore->connHdl, &btrCore_BTDeviceConnectionIntimation_cb, pstlhBTRCore)) {
         fprintf(stderr, "%s:%d:%s - Failed to Register Connection Intimation CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
-    if(BtrCore_BTRegisterConnAuthcB(pstlhBTRCore->connHandle, &btrCore_BTDeviceAuthetication_cb, pstlhBTRCore)) {
+    if(BtrCore_BTRegisterConnAuthcB(pstlhBTRCore->connHdl, &btrCore_BTDeviceAuthetication_cb, pstlhBTRCore)) {
         fprintf(stderr, "%s:%d:%s - Failed to Register Connection Authentication CB - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
@@ -717,7 +721,7 @@ BTRCore_DeInit (
     
     /* DeInitialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
 
-    if (enBTRCoreSuccess != BTRCore_AVMedia_DeInit(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath)) {
+    if (enBTRCoreSuccess != BTRCore_AVMedia_DeInit(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
         fprintf(stderr, "Failed to DeInit AV Media Subsystem\n");
         enDispThreadExitStatus = enBTRCoreFailure;
     }
@@ -734,7 +738,7 @@ BTRCore_DeInit (
     free(penDispThreadExitStatus);
 
     if (pstlhBTRCore->curAdapterPath) {
-        if (BtrCore_BTReleaseAdapterPath(pstlhBTRCore->connHandle, NULL)) {
+        if (BtrCore_BTReleaseAdapterPath(pstlhBTRCore->connHdl, NULL)) {
             fprintf(stderr, "%s:%d:%s - Failure BtrCore_BTReleaseAdapterPath\n", __FILE__, __LINE__, __FUNCTION__);
         }
         pstlhBTRCore->curAdapterPath = NULL;
@@ -759,17 +763,17 @@ BTRCore_DeInit (
     }
 
     if (pstlhBTRCore->agentPath) {
-        if (BtrCore_BTReleaseAgentPath(pstlhBTRCore->connHandle)) {
+        if (BtrCore_BTReleaseAgentPath(pstlhBTRCore->connHdl)) {
             fprintf(stderr, "%s:%d:%s - Failure BtrCore_BTReleaseAgentPath\n", __FILE__, __LINE__, __FUNCTION__);
         }
         pstlhBTRCore->agentPath = NULL;
     }
 
-    if (pstlhBTRCore->connHandle) {
-        if (BtrCore_BTDeInitReleaseConnection(pstlhBTRCore->connHandle)) {
+    if (pstlhBTRCore->connHdl) {
+        if (BtrCore_BTDeInitReleaseConnection(pstlhBTRCore->connHdl)) {
             fprintf(stderr, "%s:%d:%s - Failure BtrCore_BTDeInitReleaseConnection\n", __FILE__, __LINE__, __FUNCTION__);
         }
-        pstlhBTRCore->connHandle = NULL;
+        pstlhBTRCore->connHdl = NULL;
     }
 
     if (hBTRCore) {
@@ -806,7 +810,7 @@ BTRCore_RegisterAgent (
     }
 
     // printf("Starting agent in mode %s\n",capabilities);
-    if (BtrCore_BTRegisterAgent(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities) < 0) {
+    if (BtrCore_BTRegisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities) < 0) {
         BTRCore_LOG("agent registration ERROR occurred\n");
         return enBTRCorePairingFailed;
     }
@@ -828,7 +832,7 @@ BTRCore_UnregisterAgent (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTUnregisterAgent(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath) < 0) {
+    if (BtrCore_BTUnregisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath) < 0) {
         BTRCore_LOG("agent unregistration  ERROR occurred\n");
         return enBTRCorePairingFailed;//TODO add an enum error code for this situation
     }
@@ -857,14 +861,14 @@ BTRCore_GetListOfAdapters (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetAdapterList(pstlhBTRCore->connHandle, &pstlhBTRCore->numOfAdapters, pstlhBTRCore->adapterPath)) {
+    if (!BtrCore_BTGetAdapterList(pstlhBTRCore->connHdl, &pstlhBTRCore->numOfAdapters, pstlhBTRCore->adapterPath)) {
         pstListAdapters->number_of_adapters = pstlhBTRCore->numOfAdapters;
         for (i = 0; i < pstListAdapters->number_of_adapters; i++) {
             memset(pstListAdapters->adapter_path[i], '\0', sizeof(pstListAdapters->adapter_path[i]));
             strncpy(pstListAdapters->adapter_path[i], pstlhBTRCore->adapterPath[i], BD_NAME_LEN - 1);
 
             memset(pstListAdapters->adapterAddr[i], '\0', sizeof(pstListAdapters->adapterAddr[i]));
-            if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pstlhBTRCore->adapterPath[i], "Address", pstlhBTRCore->adapterAddr[i])) {
+            if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->adapterPath[i], "Address", pstlhBTRCore->adapterAddr[i])) {
                 strncpy(pstListAdapters->adapterAddr[i], pstlhBTRCore->adapterAddr[i], BD_NAME_LEN - 1);
             }
 
@@ -894,7 +898,7 @@ BTRCore_GetAdapters (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetAdapterList(pstlhBTRCore->connHandle, &pstlhBTRCore->numOfAdapters, pstlhBTRCore->adapterPath)) {
+    if (!BtrCore_BTGetAdapterList(pstlhBTRCore->connHdl, &pstlhBTRCore->numOfAdapters, pstlhBTRCore->adapterPath)) {
         pstGetAdapters->number_of_adapters = pstlhBTRCore->numOfAdapters;
         return enBTRCoreSuccess;
     }
@@ -917,7 +921,7 @@ BTRCore_GetAdapter (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHandle, NULL); //mikek hard code to default adapter for now
+    pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHdl, NULL); //mikek hard code to default adapter for now
     if (!pstlhBTRCore->curAdapterPath) {
         fprintf(stderr, "Failed to get BT Adapter");
         return enBTRCoreInvalidAdapter;
@@ -998,7 +1002,7 @@ BTRCore_EnableAdapter (
 
     apstBTRCoreAdapter->enable = TRUE;//does this even mean anything?
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1027,7 +1031,7 @@ BTRCore_DisableAdapter (
 
     apstBTRCoreAdapter->enable = FALSE;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1084,7 +1088,7 @@ BTRCore_SetDiscoverable (
 
     discoverable = apstBTRCoreAdapter->discoverable;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1113,7 +1117,7 @@ BTRCore_SetAdapterDiscoverable (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &isDiscoverable)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &isDiscoverable)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1139,7 +1143,7 @@ BTRCore_SetDiscoverableTimeout (
 
     timeout = apstBTRCoreAdapter->DiscoverableTimeout;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &timeout)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &timeout)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1168,7 +1172,7 @@ BTRCore_SetAdapterDiscoverableTimeout (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &givenTimeout)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &givenTimeout)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1197,7 +1201,7 @@ BTRCore_GetAdapterDiscoverableStatus (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "Discoverable", &discoverable)) {
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, "Discoverable", &discoverable)) {
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
@@ -1233,7 +1237,7 @@ BTRCore_SetAdapterDeviceName (
 
     apstBTRCoreAdapter->pcAdapterDevName = strdup(apcAdapterDeviceName); //TODO: Free this memory
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropName, &(apstBTRCoreAdapter->pcAdapterDevName))) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropName, &(apstBTRCoreAdapter->pcAdapterDevName))) {
         BTRCore_LOG("Set Adapter Property enBTAdPropName - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1261,7 +1265,7 @@ BTRCore_SetAdapterName (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropName, &pAdapterName)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropName, &pAdapterName)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropName - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1292,7 +1296,7 @@ BTRCore_GetAdapterName (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "Name", name)) {
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, "Name", name)) {
         printf("%s:%d - Get value for org.bluez.Adapter.Name = %s\n", __FUNCTION__, __LINE__, name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
@@ -1322,7 +1326,7 @@ BTRCore_SetAdapterPower (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &power)) {
+    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &power)) {
         BTRCore_LOG("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1351,7 +1355,7 @@ BTRCore_GetAdapterPower (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHandle, pAdapterPath, "Powered", &powerStatus)) {
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, "Powered", &powerStatus)) {
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;
@@ -1378,13 +1382,13 @@ BTRCore_StartDiscovery (
 
     btrCore_ClearScannedDevicesList(pstlhBTRCore);
 
-    if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
+    if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
         return enBTRCoreDiscoveryFailure;
     }
 
     sleep(pstStartDiscovery->duration); //TODO: Better to setup a timer which calls BTStopDiscovery
 
-    if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHandle, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
+    if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
         return enBTRCoreDiscoveryFailure;
     }
 
@@ -1411,7 +1415,7 @@ BTRCore_StartDeviceDiscovery (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     btrCore_ClearScannedDevicesList(pstlhBTRCore);
-    if (0 == BtrCore_BTStartDiscovery(pstlhBTRCore->connHandle, pAdapterPath, pstlhBTRCore->agentPath)) {
+    if (0 == BtrCore_BTStartDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
         return enBTRCoreSuccess;
     }
 
@@ -1437,7 +1441,7 @@ BTRCore_StopDeviceDiscovery (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (0 ==  BtrCore_BTStopDiscovery(pstlhBTRCore->connHandle, pAdapterPath, pstlhBTRCore->agentPath)) {
+    if (0 ==  BtrCore_BTStopDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
         return enBTRCoreSuccess;
     }
 
@@ -1521,7 +1525,7 @@ BTRCore_PairDevice (
         return enBTRCoreDeviceNotFound;
     }
 
-    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHandle,
+    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
@@ -1585,7 +1589,7 @@ BTRCore_UnPairDevice (
         return enBTRCoreDeviceNotFound;
     }
 
-    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHandle,
+    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
@@ -1653,7 +1657,7 @@ BTRCore_FindDevice (
     printf(" We will try to find %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
     printf(" address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
-    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHandle,
+    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pstScannedDevice->device_address,
@@ -1700,7 +1704,7 @@ BTRCore_FindService (
     }
 
     printf("Checking for service %s on %s\n", UUID, pDeviceAddress);
-    *found = BtrCore_BTFindServiceSupported (pstlhBTRCore->connHandle, pDeviceAddress, UUID, XMLdata);
+    *found = BtrCore_BTFindServiceSupported (pstlhBTRCore->connHdl, pDeviceAddress, UUID, XMLdata);
     if (*found < 0) {
         return enBTRCoreFailure;
     }
@@ -1750,7 +1754,7 @@ BTRCore_GetSupportedServices (
     memset (pProfileList, 0 , sizeof(stBTRCoreSupportedServiceList));
     memset (&profileList, 0 , sizeof(stBTDeviceSupportedServiceList));
 
-    if (BtrCore_BTDiscoverDeviceServices (pstlhBTRCore->connHandle, pDeviceAddress, &profileList) != 0) {
+    if (BtrCore_BTDiscoverDeviceServices (pstlhBTRCore->connHdl, pDeviceAddress, &profileList) != 0) {
         return enBTRCoreFailure;
     }
 
@@ -1834,7 +1838,7 @@ BTRCore_ConnectDevice (
         break;
     }
 
-    if (BtrCore_BTConnectDevice(pstlhBTRCore->connHandle, pDeviceAddress, lenBTDeviceType) != 0) {
+    if (BtrCore_BTConnectDevice(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType) != 0) {
         fprintf(stderr, "%s:%d:%s - Connect to device failed\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreFailure;
     }
@@ -1913,7 +1917,7 @@ BTRCore_DisconnectDevice (
         break;
     }
 
-    if (BtrCore_BTDisconnectDevice(pstlhBTRCore->connHandle, pDeviceAddress, lenBTDeviceType) != 0) {
+    if (BtrCore_BTDisconnectDevice(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType) != 0) {
         fprintf(stderr, "%s:%d:%s - DisConnect from device failed\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreFailure;
     }
@@ -2007,7 +2011,7 @@ BTRCore_AcquireDeviceDataPath (
     //TODO: Make a Device specific call baced on lenBTDeviceType
     (void)lenBTDeviceType;
 
-    if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->connHandle, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU) != enBTRCoreSuccess) {
+    if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU) != enBTRCoreSuccess) {
         BTRCore_LOG("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
     }
@@ -2082,7 +2086,7 @@ BTRCore_ReleaseDeviceDataPath (
     //TODO: Make a Device specific call baced on lenBTDeviceType
     (void)lenBTDeviceType;
 
-    if(BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->connHandle, pDeviceAddress) != enBTRCoreSuccess) {
+    if(BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress) != enBTRCoreSuccess) {
         BTRCore_LOG("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
     }
@@ -2170,7 +2174,7 @@ BTRCore_MediaPlayControl (
     if (lbBTDeviceConnected == FALSE)
         return enBTRCoreFailure;
 
-    if (BtrCore_BTDevMediaPlayControl(pstlhBTRCore->connHandle, pDeviceAddress, lenBTDeviceType, aenBTRCoreDMCtrl) != 0) {
+    if (BtrCore_BTDevMediaPlayControl(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType, aenBTRCoreDMCtrl) != 0) {
         fprintf(stderr, "%s:%d:%s - Connect to device failed\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCoreFailure;
     }
