@@ -239,8 +239,6 @@ btrCore_BTDBusAgentFilter_cb (
 
     }
 
-    }
-
     if (!i32OpRet)
         return DBUS_HANDLER_RESULT_HANDLED;
     else
