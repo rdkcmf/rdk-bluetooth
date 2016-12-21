@@ -123,7 +123,6 @@ btrCore_BTDBusAgentFilter_cb (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    const char *name, *old, *new;
     int             i32OpRet = -1;
     stBTDeviceInfo  lstBTDeviceInfo;
 
@@ -244,22 +243,6 @@ btrCore_BTDBusAgentFilter_cb (
             if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
-    }
-
-    if (!dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-
-    if (!dbus_message_get_args( apDBusMsg, NULL,
-                                DBUS_TYPE_STRING, &name,
-                                DBUS_TYPE_STRING, &old,
-                                DBUS_TYPE_STRING, &new,
-                                DBUS_TYPE_INVALID)) {
-        fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-    }
-
-    if (!strcmp(name, "org.bluez") && *new == '\0') {
-        fprintf(stderr, "Agent has been terminated\n");
     }
 
     if (!i32OpRet)
@@ -574,7 +557,7 @@ btrCore_BTAgentRequestPasskey (
     DBusMessage*    reply;
     const char*     path;
     unsigned int    int_passkey;
-
+    /* BD Violation ? */
     if (!passkey)
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
@@ -596,6 +579,7 @@ btrCore_BTAgentRequestPasskey (
     dbus_connection_send(apDBusConn, reply, NULL);
     dbus_connection_flush(apDBusConn);
     dbus_message_unref(reply);
+    /* BD Violation ? */
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
@@ -1323,7 +1307,7 @@ BtrCore_BTRegisterAgent (
     dbus_message_unref(reply);
 
     dbus_connection_flush(gpDBusConn);
-
+    /* BD Violation ? */
     apDBusMsg = dbus_message_new_method_call("org.bluez", "/org/bluez", "org.bluez.AgentManager1", "RequestDefaultAgent");
     if (!apDBusMsg) {
         fprintf(stderr, "Can't allocate new method call\n");
@@ -1344,7 +1328,7 @@ BtrCore_BTRegisterAgent (
             fprintf(stderr, "%s\n", err.message);
             dbus_error_free(&err);
         }
-
+        /* BD Violation ? */
         return -1;//this was an error case
     }
 

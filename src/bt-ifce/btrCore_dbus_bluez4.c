@@ -122,7 +122,6 @@ btrCore_BTDBusAgentFilter_cb (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    const char *name, *old, *new;
     int             i32OpRet = -1;
     stBTDeviceInfo  lstBTDeviceInfo;
 
@@ -240,20 +239,6 @@ btrCore_BTDBusAgentFilter_cb (
 
     }
 
-    if (!dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_DBUS, "NameOwnerChanged"))
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-
-    if (!dbus_message_get_args( apDBusMsg, NULL,
-                                DBUS_TYPE_STRING, &name,
-                                DBUS_TYPE_STRING, &old,
-                                DBUS_TYPE_STRING, &new,
-                                DBUS_TYPE_INVALID)) {
-        fprintf(stderr, "Invalid arguments for NameOwnerChanged signal");
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-    }
-
-    if (!strcmp(name, "org.bluez") && *new == '\0') {
-        fprintf(stderr, "Agent has been terminated\n");
     }
 
     if (!i32OpRet)
@@ -1824,11 +1809,12 @@ BtrCore_BTDiscoverDeviceServices (
     const char*                     apcDevPath,
     stBTDeviceSupportedServiceList* pProfileList
 ) {
-    DBusMessage *msg, *reply;
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusError       lDBusErr;
     DBusMessageIter arg_i, element_i;
     DBusMessageIter dict_i;
     int dbus_type;
-    DBusError err;
     const char* value;
     char* ret;
 
@@ -1842,34 +1828,32 @@ BtrCore_BTDiscoverDeviceServices (
 
     int isUUIDFound = 0;
     int isProfileFound = 0;
-    msg = dbus_message_new_method_call( "org.bluez", apcDevPath, "org.bluez.Device", "DiscoverServices");
 
-    if (!msg) {
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apcDevPath,
+                                             "org.bluez.Device",
+                                             "DiscoverServices");
+
+    if (!lpDBusMsg) {
         fprintf(stderr, "Can't allocate new method call\n");
         return -1;
     }
 
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, &pSearchString, DBUS_TYPE_INVALID);
-    dbus_error_init(&err);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pSearchString, DBUS_TYPE_INVALID);
 
-    /* Set the timeout as 2.5 sec */
-    reply = dbus_connection_send_with_reply_and_block(apBtConn, msg, 2500, &err);
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(apBtConn, lpDBusMsg, 2500, &lDBusErr); /* Set the timeout as 2.5 sec */
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_message_unref(msg);
-
-    if (!reply) {
-        fprintf(stderr, "Failure attempting to Discover Services\n");
-
-        if (dbus_error_is_set(&err)) {
-            fprintf(stderr, "Reason for the Failure is %s\n", err.message);
-            dbus_error_free(&err);
-        }
-
+    if (!lpDBusReply) {
+        fprintf(stderr, "Discover Services FAILED\n");
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
         return -1;
     }
 
-    if (!dbus_message_iter_init(reply, &arg_i)) {
-       printf("DiscoverServices reply has no information.");
+    if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
+       printf("DiscoverServices information reply empty");
+       dbus_message_unref(lpDBusReply);
        return -1;
     }
 
@@ -1940,6 +1924,7 @@ BtrCore_BTDiscoverDeviceServices (
 
     }
 
+    dbus_message_unref(lpDBusReply);
     (void)dbus_type;
 
     return 0;
