@@ -67,7 +67,7 @@ static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDB
 
 
 /* Static Global Variables Defs */
-static char *passkey = NULL;
+static char *gpcBTOutPassCode = NULL;
 static int do_reject = 0;
 static char gpcDeviceCurrState[BT_MAX_STR_LEN];
 static DBusConnection*  gpDBusConn = NULL;
@@ -255,12 +255,12 @@ btrCore_BTMediaEndpointHandler_cb (
     DBusMessage*    lpDBusReply = NULL;
     DBusMessage*    r = NULL;
     DBusError       e;
-    const char*     path;
+    const char*     lpcPath;
 
-    path = dbus_message_get_path(apDBusMsg);
+    lpcPath = dbus_message_get_path(apDBusMsg);
     dbus_error_init(&e);
 
-    (void)path;
+    (void)lpcPath;
     (void)r;
 
 
@@ -353,7 +353,7 @@ btrCore_BTGetDefaultAdapterPath (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        fprintf(stderr, "Can't get reply arguments\n");
+        fprintf(stderr, "Can't get lpDBusReply arguments\n");
         btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
         return NULL;
     }
@@ -389,24 +389,24 @@ btrCore_BTAgentRelease (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    DBusMessage *reply;
+    DBusMessage *lpDBusReply;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
         fprintf(stderr, "Invalid arguments for Release method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    reply = dbus_message_new_method_return(apDBusMsg);
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
 
-    if (!reply) {
-        fprintf(stderr, "Unable to create reply message\n");
+    if (!lpDBusReply) {
+        fprintf(stderr, "Unable to create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
     dbus_connection_flush(apDBusConn);
 
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
        //return the result
     return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -418,36 +418,36 @@ btrCore_BTAgentRequestPincode (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    DBusMessage*    reply;
-    const char*     path;
+    DBusMessage*    lpDBusReply;
+    const char*     lpcPath;
 
-    if (!passkey)
+    if (!gpcBTOutPassCode)
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID)) {
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_INVALID)) {
         fprintf(stderr, "Invalid arguments for RequestPinCode method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
     if (do_reject) {
-        reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+        lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
         goto sendmsg;
     }
 
-    reply = dbus_message_new_method_return(apDBusMsg);
-    if (!reply) {
-        fprintf(stderr, "Can't create reply message\n");
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+    if (!lpDBusReply) {
+        fprintf(stderr, "Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    printf("Pincode request for device %s\n", path);
-    dbus_message_append_args(reply, DBUS_TYPE_STRING, &passkey,DBUS_TYPE_INVALID);
+    printf("Pincode request for device %s\n", lpcPath);
+    dbus_message_append_args(lpDBusReply, DBUS_TYPE_STRING, &gpcBTOutPassCode,DBUS_TYPE_INVALID);
 
 sendmsg:
-    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
     dbus_connection_flush(apDBusConn);
 
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
 
     return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -459,31 +459,31 @@ btrCore_BTAgentRequestPasskey (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    DBusMessage*    reply;
-    const char*     path;
-    unsigned int    int_passkey;
+    DBusMessage*    lpDBusReply;
+    const char*     lpcPath;
+    unsigned int    ui32PassCode;
 
-    if (!passkey)
+    if (!gpcBTOutPassCode)
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-    if (!dbus_message_get_args(apDBusMsg, NULL,DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID))  {
-        fprintf(stderr, "Invalid arguments for RequestPasskey method");
+    if (!dbus_message_get_args(apDBusMsg, NULL,DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_INVALID))  {
+        fprintf(stderr, "Incorrect args btrCore_BTAgentRequestPasskey");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    reply = dbus_message_new_method_return(apDBusMsg);
-    if (!reply) {
-        fprintf(stderr, "Can't create reply message\n");
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+    if (!lpDBusReply) {
+        fprintf(stderr, "Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    printf("Passkey request for device %s\n", path);
-    int_passkey = strtoul(passkey, NULL, 10);
-    dbus_message_append_args(reply, DBUS_TYPE_UINT32, &int_passkey, DBUS_TYPE_INVALID);
+    printf("Pass code request for device %s\n", lpcPath);
+    ui32PassCode = strtoul(gpcBTOutPassCode, NULL, 10);
+    dbus_message_append_args(lpDBusReply, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID);
 
-    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
     dbus_connection_flush(apDBusConn);
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
@@ -494,52 +494,52 @@ btrCore_BTAgentRequestConfirmation (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    DBusMessage *reply;
-    const char *path; 
-    unsigned int passKey = 0;;
+    DBusMessage*    lpDBusReply;
+    const char*     lpcPath; 
+    unsigned int    ui32PassCode = 0;;
 
     const char *dev_name; //pass the dev name to the callback for app to use
     int yesNo;
 
-    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_UINT32, &passKey, DBUS_TYPE_INVALID)) {
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID)) {
         fprintf(stderr, "Invalid arguments for Authorize method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
 
-    printf("btrCore_BTAgentRequestConfirmation: PASSKEY for %s is %6d\n", path, passKey);
+    printf("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n", lpcPath, ui32PassCode);
 
     if (gfpcBConnectionIntimation) {
-        printf("calling ConnIntimation cb with %s...\n",path);
+        printf("calling ConnIntimation cb with %s...\n",lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
 
         if (dev_name != NULL) {
-            yesNo = gfpcBConnectionIntimation(dev_name, passKey, gpcBConnIntimUserData);
+            yesNo = gfpcBConnectionIntimation(dev_name, ui32PassCode, gpcBConnIntimUserData);
         }
         else {
             //couldnt get the name, provide the bt address instead
-            yesNo = gfpcBConnectionIntimation(path, passKey, gpcBConnIntimUserData);
+            yesNo = gfpcBConnectionIntimation(lpcPath, ui32PassCode, gpcBConnIntimUserData);
         }
 
         if (yesNo == 0) {
             //printf("sorry dude, you cant connect....\n");
-            reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+            lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
             goto sendReqConfError;
         }
     }
 
-    gpcBConnAuthPassKey = passKey;
+    gpcBConnAuthPassKey = ui32PassCode;
 
-    reply = dbus_message_new_method_return(apDBusMsg);
-    if (!reply) {
-        fprintf(stderr, "Can't create reply message\n");
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+    if (!lpDBusReply) {
+        fprintf(stderr, "Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
 sendReqConfError:
-    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
     dbus_connection_flush(apDBusConn);
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
 
     return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -551,18 +551,18 @@ btrCore_BTAgentAuthorize (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    DBusMessage *reply;
-    const char *path, *uuid;
+    DBusMessage *lpDBusReply;
+    const char *lpcPath, *uuid;
     const char *dev_name; //pass the dev name to the callback for app to use
     int yesNo;
 
-    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
+    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
         fprintf(stderr, "Invalid arguments for Authorize method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
     if (gfpcBConnectionAuthentication) {
-        printf("calling ConnAuth cb with %s...\n",path);
+        printf("calling ConnAuth cb with %s...\n",lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
 
         if (dev_name != NULL) {
@@ -570,30 +570,30 @@ btrCore_BTAgentAuthorize (
         }
         else {
             //couldnt get the name, provide the bt address instead
-            yesNo = gfpcBConnectionAuthentication(path, gpcBConnAuthUserData);
+            yesNo = gfpcBConnectionAuthentication(lpcPath, gpcBConnAuthUserData);
         }
 
         if (yesNo == 0) {
             //printf("sorry dude, you cant connect....\n");
-            reply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+            lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
             goto sendAuthError;
         }
     }
 
     gpcBConnAuthPassKey = 0;
 
-    reply = dbus_message_new_method_return(apDBusMsg);
-    if (!reply) {
-        fprintf(stderr, "Can't create reply message\n");
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+    if (!lpDBusReply) {
+        fprintf(stderr, "Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    printf("Authorizing request for %s\n", path);
+    printf("Authorizing request for %s\n", lpcPath);
 
 sendAuthError:
-    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
     dbus_connection_flush(apDBusConn);
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
 
     return DBUS_HANDLER_RESULT_HANDLED;
 }
@@ -605,24 +605,24 @@ btrCore_BTAgentCancelMessage (
     DBusMessage*    apDBusMsg,
     void*           userdata
 ) {
-    DBusMessage *reply;
+    DBusMessage *lpDBusReply;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
-        fprintf(stderr, "Invalid arguments for passkey confirmation method");
+        fprintf(stderr, "Invalid arguments for confirmation method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
     printf("Request canceled\n");
-    reply = dbus_message_new_method_return(apDBusMsg);
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
 
-    if (!reply) {
-        fprintf(stderr, "Can't create reply message\n");
+    if (!lpDBusReply) {
+        fprintf(stderr, "Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    dbus_connection_send(apDBusConn, reply, NULL);
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
     dbus_connection_flush(apDBusConn);
 
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
     return DBUS_HANDLER_RESULT_HANDLED;
 }
 
@@ -636,7 +636,7 @@ btrCore_BTSendMethodCall (
     const char*     busname = "org.bluez";
 
     DBusPendingCall* pending;
-    DBusMessage*     reply;
+    DBusMessage*     lpDBusReply;
     DBusMessage*     methodcall = dbus_message_new_method_call( busname,
                                                                 objectpath,
                                                                 interfacename,
@@ -648,7 +648,7 @@ btrCore_BTSendMethodCall (
     }
 
     //Now do a sync call
-    if (!dbus_connection_send_with_reply(gpDBusConn, methodcall, &pending, -1)) { //Send and expect reply using pending call object
+    if (!dbus_connection_send_with_reply(gpDBusConn, methodcall, &pending, -1)) { //Send and expect lpDBusReply using pending call object
         printf("failed to send message!\n");
     }
 
@@ -657,16 +657,16 @@ btrCore_BTSendMethodCall (
     methodcall = NULL;
 
     dbus_pending_call_block(pending);               //Now block on the pending call
-    reply = dbus_pending_call_steal_reply(pending); //Get the reply message from the queue
+    lpDBusReply = dbus_pending_call_steal_reply(pending); //Get the lpDBusReply message from the queue
     dbus_pending_call_unref(pending);               //Free pending call handle
 
-    if (dbus_message_get_type(reply) ==  DBUS_MESSAGE_TYPE_ERROR) {
-        printf("Error : %s\n\n", dbus_message_get_error_name(reply));
-        dbus_message_unref(reply);
-        reply = NULL;
+    if (dbus_message_get_type(lpDBusReply) ==  DBUS_MESSAGE_TYPE_ERROR) {
+        printf("Error : %s\n\n", dbus_message_get_error_name(lpDBusReply));
+        dbus_message_unref(lpDBusReply);
+        lpDBusReply = NULL;
     }
 
-    return reply;
+    return lpDBusReply;
 }
 
 
@@ -879,7 +879,7 @@ btrCore_BTParsePropertyChange (
     int dbus_type;
 
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
-       printf("GetProperties reply has no arguments.");
+       printf("GetProperties lpDBusReply has no arguments.");
     }
 
     if (!dbus_message_get_args( apDBusMsg, NULL,
@@ -1197,7 +1197,7 @@ BtrCore_BTRegisterAgent (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    DBusMessage *apDBusMsg, *reply;
+    DBusMessage *apDBusMsg, *lpDBusReply;
     DBusError err;
 
     if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
@@ -1215,10 +1215,10 @@ BtrCore_BTRegisterAgent (
 
     dbus_error_init(&err);
 
-    reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
 
     dbus_message_unref(apDBusMsg);
-    if (!reply) {
+    if (!lpDBusReply) {
         fprintf(stderr, "Unable to register agent\n");
         if (dbus_error_is_set(&err)) {
             fprintf(stderr, "%s\n", err.message);
@@ -1227,7 +1227,7 @@ BtrCore_BTRegisterAgent (
         return -1;
     }
 
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
 
     dbus_connection_flush(gpDBusConn);
 
@@ -1244,7 +1244,7 @@ BtrCore_BTUnregisterAgent (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    DBusMessage *apDBusMsg, *reply;
+    DBusMessage *apDBusMsg, *lpDBusReply;
     DBusError err;
 
     apDBusMsg = dbus_message_new_method_call("org.bluez", apBtAdapter, "org.bluez.Adapter", "UnregisterAgent");
@@ -1257,11 +1257,11 @@ BtrCore_BTUnregisterAgent (
 
     dbus_error_init(&err);
 
-    reply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &err);
 
     dbus_message_unref(apDBusMsg);
 
-    if (!reply) {
+    if (!lpDBusReply) {
         fprintf(stderr, "Can't unregister agent\n");
         if (dbus_error_is_set(&err))  {
             fprintf(stderr, "%s\n", err.message);
@@ -1271,7 +1271,7 @@ BtrCore_BTUnregisterAgent (
         return -1;//this was an error case
     }
 
-    dbus_message_unref(reply);
+    dbus_message_unref(lpDBusReply);
 
     dbus_connection_flush(gpDBusConn);
 
@@ -1299,13 +1299,13 @@ BtrCore_BTGetAdapterList (
         return -1;
     
     dbus_error_init(&err);
-    DBusMessage *reply = btrCore_BTSendMethodCall("/", "org.bluez.Manager", "ListAdapters");
-    if (!reply) {
+    DBusMessage *lpDBusReply = btrCore_BTSendMethodCall("/", "org.bluez.Manager", "ListAdapters");
+    if (!lpDBusReply) {
         printf("%s:%d - org.bluez.Manager.ListAdapters returned an error: '%s'\n", __FUNCTION__, __LINE__, err.message);
         dbus_error_free(&err);
     }
     else {
-        if (dbus_message_get_args(reply, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
+        if (dbus_message_get_args(lpDBusReply, &err, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
             if (apBtNumAdapters && apcArrBtAdapterPath) {
                 *apBtNumAdapters = num;
 
@@ -1323,7 +1323,7 @@ BtrCore_BTGetAdapterList (
             dbus_error_free(&err);
         }
 
-        dbus_message_unref(reply);
+        dbus_message_unref(lpDBusReply);
     }
 
     return rc;
@@ -1373,7 +1373,7 @@ BtrCore_BTGetAdapterPath (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        fprintf(stderr, "Can't get reply arguments\n");
+        fprintf(stderr, "Can't get lpDBusReply arguments\n");
         btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
         return NULL;
     }
@@ -1424,7 +1424,7 @@ BtrCore_BTGetProp (
 ) {
     int             rc = 0;
     int             type;
-    DBusMessage*    reply = NULL;
+    DBusMessage*    lpDBusReply = NULL;
     DBusMessageIter arg_i;
     DBusMessageIter element_i;
     DBusMessageIter variant_i;
@@ -1472,15 +1472,15 @@ BtrCore_BTGetProp (
     }
 
     dbus_error_init(&err);
-    reply = btrCore_BTSendMethodCall(pDevicePath, pInterface, "GetProperties");
-    if (!reply) {
+    lpDBusReply = btrCore_BTSendMethodCall(pDevicePath, pInterface, "GetProperties");
+    if (!lpDBusReply) {
         printf("%s:%d - %s.GetProperties returned an error: '%s'\n", __FUNCTION__, __LINE__, pInterface, err.message);
         rc = -1;
         dbus_error_free(&err);
     }
     else {
-        if (!dbus_message_iter_init(reply, &arg_i)) {
-            printf("GetProperties reply has no arguments.");
+        if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
+            printf("GetProperties lpDBusReply has no arguments.");
             rc = -1;
         }
         else if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
@@ -1536,7 +1536,7 @@ BtrCore_BTGetProp (
             dbus_error_free(&err);
         }
 
-        dbus_message_unref(reply);
+        dbus_message_unref(lpDBusReply);
     }
 
     return rc;
@@ -1725,9 +1725,9 @@ BtrCore_BTGetPairedDeviceInfo (
     memset (pPairedDeviceInfo, 0, sizeof (stBTPairedDeviceInfo));
 
     dbus_error_init(&lDBusErr);
-    DBusMessage* reply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
-    if (reply != NULL) {
-        if (!dbus_message_get_args(reply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
+    DBusMessage* lpDBusReply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
+    if (lpDBusReply != NULL) {
+        if (!dbus_message_get_args(lpDBusReply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
             printf("org.bluez.Adapter.ListDevices returned an error: '%s'\n", lDBusErr.message);
         }
 
@@ -1738,23 +1738,23 @@ BtrCore_BTGetPairedDeviceInfo (
         for ( i = 0; i < num; i++) {
             strcpy(pPairedDeviceInfo->devicePath[i], paths[i]);
         }
-        dbus_message_unref(reply);
+        dbus_message_unref(lpDBusReply);
     }
 
     for ( i = 0; i < num; i++) {
-        reply = btrCore_BTSendMethodCall(pPairedDeviceInfo->devicePath[i], "org.bluez.Device", "GetProperties");
-        if (reply != NULL) {
+        lpDBusReply = btrCore_BTSendMethodCall(pPairedDeviceInfo->devicePath[i], "org.bluez.Device", "GetProperties");
+        if (lpDBusReply != NULL) {
             memset (&apstBTDeviceInfo, 0, sizeof(apstBTDeviceInfo));
-            if (0 != btrCore_BTParseDevice(reply, &apstBTDeviceInfo)) {
+            if (0 != btrCore_BTParseDevice(lpDBusReply, &apstBTDeviceInfo)) {
                 printf ("Parsing the device %s failed..\n", pPairedDeviceInfo->devicePath[i]);
-                dbus_message_unref(reply);
+                dbus_message_unref(lpDBusReply);
                 return -1;
             }
             else {
                 memcpy (&pPairedDeviceInfo->deviceInfo[i], &apstBTDeviceInfo, sizeof(apstBTDeviceInfo));
             }
         }
-        dbus_message_unref(reply);
+        dbus_message_unref(lpDBusReply);
     }
 
     return 0;
@@ -1780,9 +1780,9 @@ BtrCore_BTGetPairedDevices (
     dbus_error_init(&lDBusErr);
     //path  busname interface  method
 
-    DBusMessage* reply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
-    if (reply != NULL) {
-        if (!dbus_message_get_args(reply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
+    DBusMessage* lpDBusReply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
+    if (lpDBusReply != NULL) {
+        if (!dbus_message_get_args(lpDBusReply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
             printf("org.bluez.Adapter.ListDevices returned an error: '%s'\n", lDBusErr.message);
         }
 
@@ -1792,7 +1792,7 @@ BtrCore_BTGetPairedDevices (
         }
 
         *apui32PairedDevCnt = num;
-        dbus_message_unref(reply);
+        dbus_message_unref(lpDBusReply);
 
         rc = 0;
     }
@@ -1850,7 +1850,7 @@ BtrCore_BTDiscoverDeviceServices (
     }
 
     if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
-       printf("DiscoverServices information reply empty");
+       printf("DiscoverServices information lpDBusReply empty");
        dbus_message_unref(lpDBusReply);
        return -1;
     }
@@ -1936,7 +1936,7 @@ BtrCore_BTFindServiceSupported (
     const char*     apcSearchString,
     char*           apcDataString
 ) {
-    DBusMessage *msg, *reply;
+    DBusMessage *msg, *lpDBusReply;
     DBusMessageIter arg_i, element_i;
     DBusMessageIter dict_i;
     int dbus_type;
@@ -1959,11 +1959,11 @@ BtrCore_BTFindServiceSupported (
     match = 0; //assume it does not match
     dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcSearchString, DBUS_TYPE_INVALID);
     dbus_error_init(&err);
-    reply = dbus_connection_send_with_reply_and_block(apBtConn, msg, -1, &err);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(apBtConn, msg, -1, &err);
 
     dbus_message_unref(msg);
 
-    if (!reply) {
+    if (!lpDBusReply) {
         fprintf(stderr, "Failure attempting to Discover Services\n");
 
         if (dbus_error_is_set(&err)) {
@@ -1974,8 +1974,8 @@ BtrCore_BTFindServiceSupported (
         return -1;
     }
 
-    if (!dbus_message_iter_init(reply, &arg_i)) {
-       printf("DiscoverServices reply has no information.");
+    if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
+       printf("DiscoverServices lpDBusReply has no information.");
        return -1;
     }
 
@@ -2038,11 +2038,11 @@ BtrCore_BTPerformDeviceOp (
     const char*     apcDevPath,
     enBTDeviceOp    aenBTDevOp
 ) {
-    DBusMessage*     msg;
-    DBusMessage*     reply;
-    DBusError        err;
-    char             deviceOpString[64] = {'\0'};
-    int              rc = 0;
+    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusReply;
+    DBusError       lDBusErr;
+    char            deviceOpString[64] = {'\0'};
+    int             rc = 0;
 
     /* We can enhance the BTRCore with passcode support later point in time */
 #if 0
@@ -2074,45 +2074,40 @@ BtrCore_BTPerformDeviceOp (
     if (rc == -1)
         return rc;
 
-    msg = dbus_message_new_method_call( "org.bluez",
-                                        apBtAdapter,
-                                        "org.bluez.Adapter",
-                                        deviceOpString);
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apBtAdapter,
+                                             "org.bluez.Adapter",
+                                             deviceOpString);
 
-    if (!msg) {
+    if (!lpDBusMsg) {
         fprintf(stderr, "Can't allocate new method call\n");
         return -1;
     }
 
     if (aenBTDevOp == enBTDevOpFindPairedDev) {
-        dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcDevPath, DBUS_TYPE_INVALID);
+        dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &apcDevPath, DBUS_TYPE_INVALID);
     }
     else if (aenBTDevOp == enBTDevOpRemovePairedDev) {
-        dbus_message_append_args(msg, DBUS_TYPE_OBJECT_PATH, &apcDevPath, DBUS_TYPE_INVALID);
+        dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apcDevPath, DBUS_TYPE_INVALID);
     }
     else if (aenBTDevOp == enBTDevOpCreatePairedDev) {
-        dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcDevPath,
+        dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &apcDevPath,
                               DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,
                               DBUS_TYPE_STRING, &capabilities,
                               DBUS_TYPE_INVALID);
     }
 
-    dbus_error_init(&err);
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
 
-    reply = dbus_connection_send_with_reply_and_block(gpDBusConn, msg, -1, &err);
-
-    dbus_message_unref(msg);
-
-    if (!reply) {
-
+    if (!lpDBusReply) {
         fprintf(stderr, "Pairing failed...\n");
-
-        if (dbus_error_is_set(&err)) {
-            fprintf(stderr, "%s\n", err.message);
-            dbus_error_free(&err);
-        }
+        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
         return -1;
     }
+
+    dbus_message_unref(lpDBusReply);
 
     return 0;
 }
@@ -2494,7 +2489,7 @@ BtrCore_BTAcquireDevDataPath (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        fprintf(stderr, "Can't get reply arguments\n");
+        fprintf(stderr, "Can't get lpDBusReply arguments\n");
         btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
         return -1;
     }
