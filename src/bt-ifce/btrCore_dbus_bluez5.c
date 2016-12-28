@@ -1623,7 +1623,8 @@ BtrCore_BTReleaseAdapterPath (
 int
 BtrCore_BTGetProp (
     void*           apBtConn,
-    const char*     pDevicePath,
+    const char*     apcPath,
+    enBTOpType      aenBTOpType,
     const char*     pKey,
     void*           pValue
 ) {
@@ -1641,15 +1642,35 @@ BtrCore_BTGetProp (
     const char*     pParsedValueString = NULL;
     int             parsedValueNumber = 0;
     unsigned int    parsedValueUnsignedNumber = 0;
+    unsigned short  parsedValueUnsignedShort = 0;
 
-    const char*     pInterface = "org.bluez.Adapter1";
+    const char*     pInterface          = NULL;
+    const char*     pAdapterInterface   = "org.bluez.Adapter1";
+    const char*     pDeviceInterface    = "org.bluez.Device1";
+    const char*     pMediaTransInterface= "org.bluez.MediaTransport1";
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if ((!pDevicePath) || (!pInterface) || (!pKey) || (!pValue)) {
+    if ((!apcPath) || (!pKey) || (!pValue)) {
         printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         return -1;
+    }
+
+    switch (aenBTOpType) {
+    case enBTAdapter:
+        pInterface = pAdapterInterface;
+        break;
+    case enBTDevice:
+        pInterface = pDeviceInterface;
+        break;
+    case enBTMediaTransport:
+        pInterface = pMediaTransInterface;
+        break;
+    case enBTUnknown:
+    default:
+        pInterface = pAdapterInterface;
+        break;
     }
 
     if (!strcmp(pKey, "Name")) {
@@ -1670,12 +1691,18 @@ BtrCore_BTGetProp (
     else if (!strcmp(pKey, "Discoverable")) {
         type = DBUS_TYPE_BOOLEAN;
     }
+    else if (!strcmp(pKey, "Vendor")) {
+        type = DBUS_TYPE_UINT16;
+    }
+    else if (!strcmp(pKey, "Delay")) {
+        type = DBUS_TYPE_UINT16;
+    }
     else {
         type = DBUS_TYPE_INVALID;
         return -1;
     }
 
-    msg = dbus_message_new_method_call("org.bluez", pDevicePath, "org.freedesktop.DBus.Properties", "GetAll");
+    msg = dbus_message_new_method_call("org.bluez", apcPath, "org.freedesktop.DBus.Properties", "GetAll");
 
     dbus_message_iter_init_append(msg, &args);
     dbus_message_append_args(msg, DBUS_TYPE_STRING, &pInterface, DBUS_TYPE_INVALID);
@@ -1724,6 +1751,12 @@ BtrCore_BTGetProp (
                             dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
                             //printf("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
                             strncpy (pValue, pParsedValueString, BD_NAME_LEN);
+                        }
+                        else if (type == DBUS_TYPE_UINT16) {
+                            unsigned short* ptr = (unsigned short*) pValue;
+                            dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedShort);
+                            //printf("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
+                            *ptr = parsedValueUnsignedShort;
                         }
                         else if (type == DBUS_TYPE_UINT32) {
                             unsigned int* ptr = (unsigned int*) pValue;
@@ -2486,12 +2519,12 @@ BtrCore_BTFindServiceSupported (
 
 
 int
-BtrCore_BTPerformDeviceOp (
+BtrCore_BTPerformAdapterOp (
     void*           apBtConn,
     const char*     apBtAdapter,
     const char*     apBtAgentPath,
     const char*     apcDevPath,
-    enBTDeviceOp    aenBTDevOp
+    enBTAdapterOp   aenBTAdpOp
 ) {
     DBusMessage*     msg;
     DBusMessage*     lpDBusReply;
@@ -2508,21 +2541,21 @@ BtrCore_BTPerformDeviceOp (
     int             a = 0;
     int             b = 0;
 
-    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTDevOp == enBTDevOpUnknown))
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTAdpOp == enBTAdpOpUnknown))
         return -1;
 
 
-    switch (aenBTDevOp) {
-        case enBTDevOpFindPairedDev:
+    switch (aenBTAdpOp) {
+        case enBTAdpOpFindPairedDev:
         strcpy(deviceOpString, "FindDevice");
         break;
-        case enBTDevOpCreatePairedDev:
+        case enBTAdpOpCreatePairedDev:
         strcpy(deviceOpString, "Pair");
         break;
-        case enBTDevOpRemovePairedDev:
+        case enBTAdpOpRemovePairedDev:
         strcpy(deviceOpString, "RemoveDevice");
         break;
-        case enBTDevOpUnknown:
+        case enBTAdpOpUnknown:
         default:
         rc = -1;
         break;
@@ -2532,7 +2565,7 @@ BtrCore_BTPerformDeviceOp (
         return rc;
 
 
-    if (aenBTDevOp == enBTDevOpFindPairedDev) {
+    if (aenBTAdpOp == enBTAdpOpFindPairedDev) {
         lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 
         if (dbus_message_iter_init(lpDBusReply, &rootIter) && //point iterator to lpDBusReply message
@@ -2652,7 +2685,7 @@ BtrCore_BTPerformDeviceOp (
         dbus_message_unref(lpDBusReply);
     }
 
-    else if (aenBTDevOp == enBTDevOpRemovePairedDev) {
+    else if (aenBTAdpOp == enBTAdpOpRemovePairedDev) {
         msg = dbus_message_new_method_call("org.bluez",
         apBtAdapter,
         "org.bluez.Adapter1",
@@ -2669,7 +2702,7 @@ BtrCore_BTPerformDeviceOp (
 
 
 
-    else if (aenBTDevOp == enBTDevOpCreatePairedDev) {
+    else if (aenBTAdpOp == enBTAdpOpCreatePairedDev) {
         lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 
         if (dbus_message_iter_init(lpDBusReply, &rootIter) && //point iterator to lpDBusReply message
@@ -2893,7 +2926,8 @@ BtrCore_BTRegisterMedia (
     void*           apBtUUID,
     void*           apBtMediaCodec,
     void*           apBtMediaCapabilities,
-    int             apBtMediaCapabilitiesSize
+    int             apBtMediaCapabilitiesSize,
+    int             abBtMediaDelayReportEnable
 ) {
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterArr;
@@ -2901,6 +2935,7 @@ BtrCore_BTRegisterMedia (
     DBusMessage*    lpDBusReply;
     DBusError       lDBusErr;
     dbus_bool_t     lDBusOp;
+    dbus_bool_t     lBtMediaDelayReport = FALSE;
 
     const char*     lpBtMediaType;
 
@@ -2930,6 +2965,9 @@ BtrCore_BTRegisterMedia (
         dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
         break;
     }
+
+    if (abBtMediaDelayReportEnable)
+        lBtMediaDelayReport = TRUE;
 
     lDBusOp = dbus_connection_register_object_path(gpDBusConn, lpBtMediaType, &gDBusMediaEndpointVTable, NULL);
     if (!lDBusOp) {
@@ -2971,6 +3009,18 @@ BtrCore_BTRegisterMedia (
             dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
             dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
                 dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &apBtMediaCodec);
+            dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
+    }
+    {
+        DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
+        char*   key = "DelayReporting";
+        int     type = DBUS_TYPE_BOOLEAN;
+
+        dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
+            dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
+            dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &lBtMediaDelayReport);
             dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
         dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
     }
@@ -3029,24 +3079,19 @@ BtrCore_BTUnRegisterMedia (
     switch (aenBTDevType) {
     case enBTDevAudioSink:
         lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
-        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
         break;
     case enBTDevAudioSource:
         lpBtMediaType = BT_MEDIA_A2DP_SINK_ENDPOINT;
-        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSource'", NULL);
         break;
     case enBTDevHFPHeadset:
         lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
-        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.Headset'", NULL);
         break;
     case enBTDevHFPHeadsetGateway:
         lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
-        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.HeadsetGateway'", NULL);
         break;
     case enBTDevUnknown:
     default:
         lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
-        dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
         break;
     }
 
@@ -3117,6 +3162,8 @@ BtrCore_BTAcquireDevDataPath (
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apcDevTransportPath)
         return -1;
+
+    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.MediaTransport1',member='PropertyChanged'", NULL);
 
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
                                              apcDevTransportPath,
@@ -3194,6 +3241,8 @@ BtrCore_BTReleaseDevDataPath (
     dbus_message_unref(lpDBusReply);
 
     dbus_connection_flush(gpDBusConn);
+
+    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.MediaTransport1',member='PropertyChanged'", NULL);
 
     return 0;
 }

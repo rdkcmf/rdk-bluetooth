@@ -158,6 +158,7 @@ BTRCore_AVMedia_Init (
     const char*         apBtAdapter
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    int                     lBtAVMediaDelayReport   =  1;
     int                     lBtAVMediaASinkRegRet   = -1;
     int                     lBtAVMediaASrcRegRet    = -1;
     int                     lBtAVMediaNegotiateRet  = -1;
@@ -205,7 +206,8 @@ BTRCore_AVMedia_Init (
                                                     A2DP_SOURCE_UUID,
                                                     A2DP_CODEC_SBC,
                                                     (void*)&lstBtA2dpCapabilities,
-                                                    sizeof(lstBtA2dpCapabilities));
+                                                    sizeof(lstBtA2dpCapabilities),
+                                                    lBtAVMediaDelayReport);
 
 
     lBtAVMediaASrcRegRet = BtrCore_BTRegisterMedia(apBtConn,
@@ -214,7 +216,8 @@ BTRCore_AVMedia_Init (
                                                    A2DP_SINK_UUID,
                                                    A2DP_CODEC_SBC,
                                                    (void*)&lstBtA2dpCapabilities,
-                                                   sizeof(lstBtA2dpCapabilities));
+                                                   sizeof(lstBtA2dpCapabilities),
+                                                   lBtAVMediaDelayReport);
 
     if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet)
        lBtAVMediaNegotiateRet = BtrCore_BTRegisterNegotiateMediacB(apBtConn,
@@ -303,6 +306,7 @@ BTRCore_AVMedia_AcquireDataPath (
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
     int                     lBtAVMediaRet = -1;
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
+    unsigned int            ui16Delay = 0xFFFFu;
 
     if (!hBTRCoreAVM || !apBtConn || !apBtAdapter) {
         return enBTRCoreInvalidArg;
@@ -317,6 +321,11 @@ BTRCore_AVMedia_AcquireDataPath (
 
     if (!(lBtAVMediaRet = BtrCore_BTAcquireDevDataPath (apBtConn, pstlhBTRCoreAVM->pcAVMediaTransportPath, apDataPath, apDataReadMTU, apDataWriteMTU)))
         lenBTRCoreRet = enBTRCoreSuccess;
+
+    if ((lBtAVMediaRet = BtrCore_BTGetProp(apBtConn, pstlhBTRCoreAVM->pcAVMediaTransportPath, enBTMediaTransport, "Delay", &ui16Delay)))
+        lenBTRCoreRet = enBTRCoreFailure;
+
+    fprintf (stderr, "BTRCore_AVMedia_AcquireDataPath: Delay value = %d\n", ui16Delay);
 
     return lenBTRCoreRet;
 }

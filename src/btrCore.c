@@ -660,7 +660,7 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    if (BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, "Address", pstlhBTRCore->curAdapterAddr)) {
+    if (BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, "Address", pstlhBTRCore->curAdapterAddr)) {
         fprintf(stderr, "%s:%d:%s - Failed to get BT Adapter Address - enBTRCoreInitFailure\n", __FILE__, __LINE__, __FUNCTION__);
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
@@ -868,7 +868,7 @@ BTRCore_GetListOfAdapters (
             strncpy(pstListAdapters->adapter_path[i], pstlhBTRCore->adapterPath[i], BD_NAME_LEN - 1);
 
             memset(pstListAdapters->adapterAddr[i], '\0', sizeof(pstListAdapters->adapterAddr[i]));
-            if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->adapterPath[i], "Address", pstlhBTRCore->adapterAddr[i])) {
+            if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->adapterPath[i], enBTAdapter, "Address", pstlhBTRCore->adapterAddr[i])) {
                 strncpy(pstListAdapters->adapterAddr[i], pstlhBTRCore->adapterAddr[i], BD_NAME_LEN - 1);
             }
 
@@ -1201,7 +1201,7 @@ BTRCore_GetAdapterDiscoverableStatus (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, "Discoverable", &discoverable)) {
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Discoverable", &discoverable)) {
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
@@ -1296,7 +1296,7 @@ BTRCore_GetAdapterName (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, "Name", name)) {
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Name", name)) {
         printf("%s:%d - Get value for org.bluez.Adapter.Name = %s\n", __FUNCTION__, __LINE__, name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
@@ -1355,7 +1355,7 @@ BTRCore_GetAdapterPower (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, "Powered", &powerStatus)) {
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Powered", &powerStatus)) {
         printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;
@@ -1525,11 +1525,11 @@ BTRCore_PairDevice (
         return enBTRCoreDeviceNotFound;
     }
 
-    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHdl,
+    if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
-                                    enBTDevOpCreatePairedDev) < 0) {
+                                    enBTAdpOpCreatePairedDev) < 0) {
         printf("%s:%d - Failed to pair a device\n", __FUNCTION__, __LINE__);
         return enBTRCorePairingFailed;
     }
@@ -1589,11 +1589,11 @@ BTRCore_UnPairDevice (
         return enBTRCoreDeviceNotFound;
     }
 
-    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHdl,
+    if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
-                                    enBTDevOpRemovePairedDev) != 0) {
+                                    enBTAdpOpRemovePairedDev) != 0) {
         fprintf(stderr, "%s:%d:%s - Failed to unpair a device\n", __FILE__, __LINE__, __FUNCTION__);
         return enBTRCorePairingFailed;
     }
@@ -1657,11 +1657,11 @@ BTRCore_FindDevice (
     printf(" We will try to find %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
     printf(" address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
-    if (BtrCore_BTPerformDeviceOp ( pstlhBTRCore->connHdl,
+    if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pstScannedDevice->device_address,
-                                    enBTDevOpFindPairedDev) < 0) {
+                                    enBTAdpOpFindPairedDev) < 0) {
        // BTRCore_LOG("device not found\n");
         return enBTRCoreFailure;
     }

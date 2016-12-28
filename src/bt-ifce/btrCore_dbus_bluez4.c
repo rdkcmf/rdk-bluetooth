@@ -239,6 +239,10 @@ btrCore_BTDBusAgentFilter_cb (
 
     }
 
+    if (dbus_message_is_signal(apDBusMsg, "org.bluez.MediaTransport","PropertyChanged")) {
+        printf("MediaTransport PropertyChanged!\n");
+    }
+
     if (!i32OpRet)
         return DBUS_HANDLER_RESULT_HANDLED;
     else
@@ -972,9 +976,13 @@ btrCore_BTMediaEndpointSetConfiguration (
 ) {
     const char* lDevTransportPath = NULL;
     const char* lStoredDevTransportPath = NULL;
-    const char* dev_path = NULL, *uuid = NULL;
+    const char* dev_path = NULL, *uuid = NULL, *routing = NULL;
+    int codec = NULL;
     unsigned char* config = NULL;
     int size = 0;
+    int nrec= 0, inbandRingtone = 0;
+    unsigned short int delay = 0;
+    unsigned short int volume= 0;
 
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterProp;
@@ -1008,12 +1016,21 @@ btrCore_BTMediaEndpointSetConfiguration (
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &uuid);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - UUID %s\n", uuid);
         }
         else if (strcasecmp(key, "Device") == 0) {
             if (ldBusType != DBUS_TYPE_OBJECT_PATH)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &dev_path);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - Device %s\n", dev_path);
+        }
+        else if (strcasecmp(key, "Codec") == 0) {
+            if (ldBusType != DBUS_TYPE_BYTE)
+                return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
+
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &codec);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - Codec %d\n", codec);
         }
         else if (strcasecmp(key, "Configuration") == 0) {
             if (ldBusType != DBUS_TYPE_ARRAY)
@@ -1021,7 +1038,44 @@ btrCore_BTMediaEndpointSetConfiguration (
 
             dbus_message_iter_recurse(&lDBusMsgIterValue, &lDBusMsgIterArr);
             dbus_message_iter_get_fixed_array(&lDBusMsgIterArr, &config, &size);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - Configuration \n");
         }
+        else if (strcasecmp(key, "Delay") == 0) {
+            if (ldBusType != DBUS_TYPE_UINT16)
+                return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
+
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &delay);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - Delay %d\n", delay);
+        }
+        else if (strcasecmp(key, "NREC") == 0) {
+            if (ldBusType != DBUS_TYPE_BOOLEAN)
+                return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
+
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &nrec);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - NREC %d\n", nrec);
+        }
+        else if (strcasecmp(key, "InbandRingtone") == 0) {
+            if (ldBusType != DBUS_TYPE_BOOLEAN)
+                return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
+
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &inbandRingtone);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - InbandRingtone %d\n", inbandRingtone);
+        }
+        else if (strcasecmp(key, "Routing") == 0) {
+            if (ldBusType != DBUS_TYPE_STRING)
+                return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
+
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &routing);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - routing %s\n", routing);
+        }
+        else if (strcasecmp(key, "Volume") == 0) {
+            if (ldBusType != DBUS_TYPE_UINT16)
+                return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
+
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &volume);
+            fprintf(stderr, "btrCore_BTMediaEndpointSetConfiguration - Volume %d\n", volume);
+        }
+
         dbus_message_iter_next(&lDBusMsgIterProp);
     }
 
@@ -1418,7 +1472,8 @@ BtrCore_BTReleaseAdapterPath (
 int
 BtrCore_BTGetProp (
     void*           apBtConn,
-    const char*     pDevicePath,
+    const char*     apcPath,
+    enBTOpType      aenBTOpType,
     const char*     pKey,
     void*           pValue
 ) {
@@ -1435,14 +1490,33 @@ BtrCore_BTGetProp (
     unsigned int    parsedValueUnsignedNumber = 0;
     unsigned short  parsedValueUnsignedShort = 0;
 
-    const char*     pInterface = "org.bluez.Adapter";
+    const char*     pInterface          = NULL;
+    const char*     pAdapterInterface   = "org.bluez.Adapter";
+    const char*     pDeviceInterface    = "org.bluez.Device";
+    const char*     pMediaTransInterface= "org.bluez.MediaTransport";
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if ((!pDevicePath) || (!pInterface) || (!pKey) || (!pValue)) {
+    if ((!apcPath) || (!pKey) || (!pValue)) {
         printf("%s:%d - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __FUNCTION__, __LINE__);
         return -1;
+    }
+
+    switch (aenBTOpType) {
+    case enBTAdapter:
+        pInterface = pAdapterInterface;
+        break;
+    case enBTDevice:
+        pInterface = pDeviceInterface;
+        break;
+    case enBTMediaTransport:
+        pInterface = pMediaTransInterface;
+        break;
+    case enBTUnknown:
+    default:
+        pInterface = pAdapterInterface;
+        break;
     }
 
     if (!strcmp(pKey, "Name")) {
@@ -1466,13 +1540,16 @@ BtrCore_BTGetProp (
     else if (!strcmp(pKey, "Vendor")) {
         type = DBUS_TYPE_UINT16;
     }
+    else if (!strcmp(pKey, "Delay")) {
+        type = DBUS_TYPE_UINT16;
+    }
     else {
         type = DBUS_TYPE_INVALID;
         return -1;
     }
 
     dbus_error_init(&err);
-    lpDBusReply = btrCore_BTSendMethodCall(pDevicePath, pInterface, "GetProperties");
+    lpDBusReply = btrCore_BTSendMethodCall(apcPath, pInterface, "GetProperties");
     if (!lpDBusReply) {
         printf("%s:%d - %s.GetProperties returned an error: '%s'\n", __FUNCTION__, __LINE__, pInterface, err.message);
         rc = -1;
@@ -2031,12 +2108,12 @@ BtrCore_BTFindServiceSupported (
 
 
 int
-BtrCore_BTPerformDeviceOp (
+BtrCore_BTPerformAdapterOp (
     void*           apBtConn,
     const char*     apBtAdapter,
     const char*     apBtAgentPath,
     const char*     apcDevPath,
-    enBTDeviceOp    aenBTDevOp
+    enBTAdapterOp   aenBTAdpOp
 ) {
     DBusMessage*    lpDBusMsg;
     DBusMessage*    lpDBusReply;
@@ -2051,21 +2128,21 @@ BtrCore_BTPerformDeviceOp (
     const char*      capabilities = "DisplayYesNo";
 #endif
 
-    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTDevOp == enBTDevOpUnknown))
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !apBtAgentPath || !apcDevPath || (aenBTAdpOp == enBTAdpOpUnknown))
         return -1;
 
 
-    switch (aenBTDevOp) {
-        case enBTDevOpFindPairedDev:
+    switch (aenBTAdpOp) {
+        case enBTAdpOpFindPairedDev:
             strcpy(deviceOpString, "FindDevice");
             break;
-        case enBTDevOpCreatePairedDev:
+        case enBTAdpOpCreatePairedDev:
             strcpy(deviceOpString, "CreatePairedDevice");
             break;
-        case enBTDevOpRemovePairedDev:
+        case enBTAdpOpRemovePairedDev:
             strcpy(deviceOpString, "RemoveDevice");
             break;
-        case enBTDevOpUnknown:
+        case enBTAdpOpUnknown:
         default:
             rc = -1;
             break;
@@ -2084,13 +2161,13 @@ BtrCore_BTPerformDeviceOp (
         return -1;
     }
 
-    if (aenBTDevOp == enBTDevOpFindPairedDev) {
+    if (aenBTAdpOp == enBTAdpOpFindPairedDev) {
         dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &apcDevPath, DBUS_TYPE_INVALID);
     }
-    else if (aenBTDevOp == enBTDevOpRemovePairedDev) {
+    else if (aenBTAdpOp == enBTAdpOpRemovePairedDev) {
         dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apcDevPath, DBUS_TYPE_INVALID);
     }
-    else if (aenBTDevOp == enBTDevOpCreatePairedDev) {
+    else if (aenBTAdpOp == enBTAdpOpCreatePairedDev) {
         dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &apcDevPath,
                               DBUS_TYPE_OBJECT_PATH, &apBtAgentPath,
                               DBUS_TYPE_STRING, &capabilities,
@@ -2233,7 +2310,8 @@ BtrCore_BTRegisterMedia (
     void*           apBtUUID,
     void*           apBtMediaCodec,
     void*           apBtMediaCapabilities,
-    int             apBtMediaCapabilitiesSize
+    int             apBtMediaCapabilitiesSize,
+    int             abBtMediaDelayReportEnable
 ) {
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterArr;
@@ -2241,6 +2319,7 @@ BtrCore_BTRegisterMedia (
     DBusMessage*    lpDBusReply;
     DBusError       lDBusErr;
     dbus_bool_t     lDBusOp;
+    dbus_bool_t     lBtMediaDelayReport = FALSE;
 
     const char*     lpBtMediaType;
 
@@ -2270,6 +2349,9 @@ BtrCore_BTRegisterMedia (
         dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.AudioSink'", NULL);
         break;
     }
+
+    if (abBtMediaDelayReportEnable)
+        lBtMediaDelayReport = TRUE;
 
     lDBusOp = dbus_connection_register_object_path(gpDBusConn, lpBtMediaType, &gDBusMediaEndpointVTable, NULL);
     if (!lDBusOp) {
@@ -2311,6 +2393,18 @@ BtrCore_BTRegisterMedia (
             dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
             dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
                 dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &apBtMediaCodec);
+            dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
+    }
+    {
+        DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
+        char*   key = "DelayReporting";
+        int     type = DBUS_TYPE_BOOLEAN;
+
+        dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
+            dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
+            dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &lBtMediaDelayReport);
             dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
         dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
     }
@@ -2458,6 +2552,8 @@ BtrCore_BTAcquireDevDataPath (
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apcDevTransportPath)
         return -1;
 
+    dbus_bus_add_match(gpDBusConn, "type='signal',interface='org.bluez.MediaTransport',member='PropertyChanged'", NULL);
+
     lpDBusMsg = dbus_message_new_method_call("org.bluez",
                                              apcDevTransportPath,
                                              "org.bluez.MediaTransport",
@@ -2543,6 +2639,8 @@ BtrCore_BTReleaseDevDataPath (
     dbus_message_unref(lpDBusReply);
 
     dbus_connection_flush(gpDBusConn);
+
+    dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.MediaTransport',member='PropertyChanged'", NULL);
 
     return 0;
 }

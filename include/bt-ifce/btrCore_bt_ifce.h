@@ -38,6 +38,13 @@ typedef enum _enBTDeviceType {
     enBTDevUnknown
 } enBTDeviceType;
 
+typedef enum _enBTOpType {
+    enBTAdapter,
+    enBTDevice,
+    enBTMediaTransport,
+    enBTUnknown
+} enBTOpType;
+
 typedef enum _enBTDeviceState {
     enBTDevStCreated,
     enBTDevStScanInProgress,
@@ -54,12 +61,12 @@ typedef enum _enBTDeviceState {
     enBTDevStUnknown
 } enBTDeviceState;
 
-typedef enum _enBTDeviceOp {
-    enBTDevOpFindPairedDev,
-    enBTDevOpCreatePairedDev,
-    enBTDevOpRemovePairedDev,
-    enBTDevOpUnknown
-} enBTDeviceOp;
+typedef enum _enBTAdapterOp {
+    enBTAdpOpFindPairedDev,
+    enBTAdpOpCreatePairedDev,
+    enBTAdpOpRemovePairedDev,
+    enBTAdpOpUnknown
+} enBTAdapterOp;
 
 typedef enum _enBTAdapterProp {
     enBTAdPropName,
@@ -145,7 +152,7 @@ int   BtrCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const 
 int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, char** apcArrBtAdapterPath);
 char* BtrCore_BTGetAdapterPath (void* apBtConn, const char* apBtAdapter);
 int   BtrCore_BTReleaseAdapterPath (void* apBtConn, const char* apBtAdapter);
-int   BtrCore_BTGetProp (void* apBtConn, const char* pDevicePath, const char* pKey, void* pValue);
+int   BtrCore_BTGetProp (void* apBtConn, const char* apcPath, enBTOpType aenBTOpType, const char* pKey, void* pValue);
 int   BtrCore_BTSetAdapterProp (void* apBtConn, const char* apBtAdapter, enBTAdapterProp aenBTAdapterProp, void* apvVal);
 int   BtrCore_BTStartDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTStopDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
@@ -153,11 +160,11 @@ int   BtrCore_BTGetPairedDevices (void* apBtConn, const char* apBtAdapter, unsig
 int   BtrCore_BTGetPairedDeviceInfo (void* apBtConn, const char* apBtAdapter, stBTPairedDeviceInfo *pPairedDeviceInfo);
 int   BtrCore_BTDiscoverDeviceServices (void* apBtConn, const char* apcDevPath, stBTDeviceSupportedServiceList *pProfileList);
 int   BtrCore_BTFindServiceSupported(void* apBtConn, const char* apcDevPath, const char* apcSearchString, char* apcDataString);
-int   BtrCore_BTPerformDeviceOp (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char* apcDevPath, enBTDeviceOp aenBTDevOp);
+int   BtrCore_BTPerformAdapterOp (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath, const char* apcDevPath, enBTAdapterOp aenBTAdpOp);
 int   BtrCore_BTConnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType);
 int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType);
-int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType,
-                                void* apBtUUID, void* apBtMediaCodec, void* apBtMediaCapabilities, int apBtMediaCapabilitiesSize);
+int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType, void* apBtUUID,
+                                void* apBtMediaCodec, void* apBtMediaCapabilities, int apBtMediaCapabilitiesSize,int abBtMediaDelayReportEnable);
 int   BtrCore_BTUnRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType);
 int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, int* dataPathFd, int* dataReadMTU, int* dataWriteMTU);
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
