@@ -87,9 +87,10 @@
 
 
 typedef struct _stBTRCoreAVMediaHdl {
-    a2dp_sbc_t*  pstBTMediaConfig;
-    int          iBTMediaDefSampFreqPref;
-    char*        pcAVMediaTransportPath;
+    eBTRCoreAVMType eAVMediaType;
+    a2dp_sbc_t*     pstBTMediaConfig;
+    int             iBTMediaDefSampFreqPref;
+    char*           pcAVMediaTransportPath;
 } stBTRCoreAVMediaHdl;
 
 
@@ -196,6 +197,7 @@ BTRCore_AVMedia_Init (
         return enBTRCoreInitFailure;
     }
 
+    pstlhBTRCoreAVM->eAVMediaType = eBTRCoreAVMTypeSBC;
     memcpy(pstlhBTRCoreAVM->pstBTMediaConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
     pstlhBTRCoreAVM->iBTMediaDefSampFreqPref = BTR_SBC_SAMPLING_FREQ_48000;
     pstlhBTRCoreAVM->pcAVMediaTransportPath  = NULL;
@@ -295,10 +297,144 @@ BTRCore_AVMedia_DeInit (
 
 
 enBTRCoreRet
+BTRCore_AVMedia_GetCurMediaInfo (
+    tBTRCoreAVMediaHdl      hBTRCoreAVM,
+    void*                   apBtConn,
+    const char*             apBtDevAddr,
+    stBTRCoreAVMediaInfo*   apstBtrCoreAVMediaInfo
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreFailure;
+
+    if (!hBTRCoreAVM || !apBtConn || !apBtDevAddr || !apstBtrCoreAVMediaInfo) {
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (apstBtrCoreAVMediaInfo->pstBtrCoreAVMCodecInfo) {
+        //TODO: Get this from the Negotiated Media callback by storing in the handle
+        apstBtrCoreAVMediaInfo->eBtrCoreAVMType = eBTRCoreAVMTypeSBC;
+
+        if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypePCM) {
+        }
+        else if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypeSBC) {
+            stBTRCoreAVMediaSbcInfo* pstBtrCoreAVMediaSbcInfo = (stBTRCoreAVMediaSbcInfo*)(apstBtrCoreAVMediaInfo->pstBtrCoreAVMCodecInfo);
+
+            if (pstlhBTRCoreAVM->pstBTMediaConfig->frequency == BTR_SBC_SAMPLING_FREQ_16000) {
+                pstBtrCoreAVMediaSbcInfo->ui32AVMSFreq = 16000;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->frequency == BTR_SBC_SAMPLING_FREQ_32000) {
+                pstBtrCoreAVMediaSbcInfo->ui32AVMSFreq = 32000;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->frequency == BTR_SBC_SAMPLING_FREQ_44100) {
+                pstBtrCoreAVMediaSbcInfo->ui32AVMSFreq = 44100;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->frequency == BTR_SBC_SAMPLING_FREQ_48000) {
+                pstBtrCoreAVMediaSbcInfo->ui32AVMSFreq = 48000;
+            }
+            else {
+                pstBtrCoreAVMediaSbcInfo->ui32AVMSFreq = 0;
+            }
+
+            if (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_MONO) {
+                pstBtrCoreAVMediaSbcInfo->eAVMAChan = eBTRCoreAVMAChanMono;
+                pstBtrCoreAVMediaSbcInfo->ui32AVMAChan = 1;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL) {
+                pstBtrCoreAVMediaSbcInfo->eAVMAChan = eBTRCoreAVMAChanDualChannel;
+                pstBtrCoreAVMediaSbcInfo->ui32AVMAChan = 2;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_STEREO) {
+                pstBtrCoreAVMediaSbcInfo->eAVMAChan = eBTRCoreAVMAChanStereo;
+                pstBtrCoreAVMediaSbcInfo->ui32AVMAChan = 2;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_JOINT_STEREO) {
+                pstBtrCoreAVMediaSbcInfo->eAVMAChan = eBTRCoreAVMAChanJointStereo;
+                pstBtrCoreAVMediaSbcInfo->ui32AVMAChan = 2;
+            }
+            else {
+                pstBtrCoreAVMediaSbcInfo->eAVMAChan = eBTRCoreAVMAChanUnknown;
+            }
+
+            pstBtrCoreAVMediaSbcInfo->ui8AVMSbcAllocMethod  = pstlhBTRCoreAVM->pstBTMediaConfig->allocation_method;
+
+            if (pstlhBTRCoreAVM->pstBTMediaConfig->subbands == BTR_A2DP_SUBBANDS_4) {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands = 4;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->subbands == BTR_A2DP_SUBBANDS_8) {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands = 8;
+            }
+            else {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands = 0;
+            }
+
+            if (pstlhBTRCoreAVM->pstBTMediaConfig->block_length == BTR_A2DP_BLOCK_LENGTH_4) {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength  = 4;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->block_length == BTR_A2DP_BLOCK_LENGTH_8) {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength  = 8;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->block_length == BTR_A2DP_BLOCK_LENGTH_12) {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength  = 12;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->block_length == BTR_A2DP_BLOCK_LENGTH_16) {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength  = 16;
+            }
+            else {
+                pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength  = 0;
+            }
+
+            pstBtrCoreAVMediaSbcInfo->ui8AVMSbcMinBitpool   = pstlhBTRCoreAVM->pstBTMediaConfig->min_bitpool;
+            pstBtrCoreAVMediaSbcInfo->ui8AVMSbcMaxBitpool   = pstlhBTRCoreAVM->pstBTMediaConfig->max_bitpool;      
+
+            if ((pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_MONO) ||
+                (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL)) {
+                pstBtrCoreAVMediaSbcInfo->ui16AVMSbcFrameLen = 4 + ((4 * pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands * pstBtrCoreAVMediaSbcInfo->ui32AVMAChan) / 8) +
+                                                              ((pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength * pstBtrCoreAVMediaSbcInfo->ui32AVMAChan * pstBtrCoreAVMediaSbcInfo->ui8AVMSbcMaxBitpool) / 8);
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_STEREO) {
+                pstBtrCoreAVMediaSbcInfo->ui16AVMSbcFrameLen = 4 + (4 * pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands * pstBtrCoreAVMediaSbcInfo->ui32AVMAChan) / 8 +
+                                                                (pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength * pstBtrCoreAVMediaSbcInfo->ui8AVMSbcMaxBitpool) / 8;
+            }
+            else if (pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode == BTR_A2DP_CHANNEL_MODE_JOINT_STEREO) {
+                pstBtrCoreAVMediaSbcInfo->ui16AVMSbcFrameLen = 4 + ((4 * pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands * pstBtrCoreAVMediaSbcInfo->ui32AVMAChan) / 8) +
+                                                                (pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands + (pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength * pstBtrCoreAVMediaSbcInfo->ui8AVMSbcMaxBitpool)) / 8;
+            }
+            else {
+                pstBtrCoreAVMediaSbcInfo->ui16AVMSbcFrameLen = 0;
+            }
+
+            if ((pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength != 0) && (pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands != 0))
+                pstBtrCoreAVMediaSbcInfo->ui16AVMSbcBitrate  = ((8.0 * pstBtrCoreAVMediaSbcInfo->ui16AVMSbcFrameLen * (float)pstBtrCoreAVMediaSbcInfo->ui32AVMSFreq/1000) / pstBtrCoreAVMediaSbcInfo->ui8AVMSbcSubbands) / pstBtrCoreAVMediaSbcInfo->ui8AVMSbcBlockLength;
+            else
+                pstBtrCoreAVMediaSbcInfo->ui16AVMSbcBitrate  = 0;
+
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui32AVMSFreq          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui32AVMAChan          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcAllocMethod  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcSubbands     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcBlockLength  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMinBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMaxBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcFrameLen    = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen);
+            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcBitrate     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
+        }
+        else if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypeMPEG) {
+        }
+        else if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypeAAC) {
+        }
+    }
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
 BTRCore_AVMedia_AcquireDataPath (
     tBTRCoreAVMediaHdl  hBTRCoreAVM,
     void*               apBtConn,
-    const char*         apBtAdapter,
+    const char*         apBtDevAddr,
     int*                apDataPath,
     int*                apDataReadMTU,
     int*                apDataWriteMTU
@@ -308,7 +444,7 @@ BTRCore_AVMedia_AcquireDataPath (
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
     unsigned int            ui16Delay = 0xFFFFu;
 
-    if (!hBTRCoreAVM || !apBtConn || !apBtAdapter) {
+    if (!hBTRCoreAVM || !apBtConn || !apBtDevAddr) {
         return enBTRCoreInvalidArg;
     }
 
@@ -335,13 +471,13 @@ enBTRCoreRet
 BTRCore_AVMedia_ReleaseDataPath (
     tBTRCoreAVMediaHdl  hBTRCoreAVM,
     void*               apBtConn,
-    const char*         apBtAdapter
+    const char*         apBtDevAddr
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
     int                     lBtAVMediaRet = -1;
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
-    if (!hBTRCoreAVM || !apBtConn || !apBtAdapter) {
+    if (!hBTRCoreAVM || !apBtConn || !apBtDevAddr) {
         return enBTRCoreInvalidArg;
     }
 

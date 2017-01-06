@@ -1938,6 +1938,147 @@ BTRCore_DisconnectDevice (
 
 
 enBTRCoreRet
+BTRCore_GetDeviceMediaInfo (
+    tBTRCoreHandle          hBTRCore,
+    tBTRCoreDevId           aBTRCoreDevId,
+    enBTRCoreDeviceType     aenBTRCoreDevType,
+    stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo
+) {
+    stBTRCoreHdl*           pstlhBTRCore = NULL;
+    const char*             pDeviceAddress = NULL;
+    enBTDeviceType          lenBTDeviceType = enBTDevUnknown;
+
+    stBTRCoreAVMediaInfo        lstBtrCoreMediaInfo;
+    stBTRCoreAVMediaSbcInfo     lstBtrCoreMediaSbcInfo;
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreNotInitialized\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+    else if ((aBTRCoreDevId < 0) || (apstBTRCoreDevMediaInfo == NULL) || (apstBTRCoreDevMediaInfo->pstBtrCoreDevMCodecInfo == NULL)) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (pstlhBTRCore->numOfPairedDevices == 0) {
+        printf("%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
+        /* Keep the list upto date */
+        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
+    }
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        fprintf(stderr, "%s:%d:%s - There is no device paried for this adapter\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreFailure;
+    }
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        stBTRCoreKnownDevice* pstKnownDevice = NULL;
+        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
+        pDeviceAddress = pstKnownDevice->bd_path;
+    }
+    else {
+        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
+    }
+
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
+        fprintf(stderr, "%s:%d:%s - Failed to find device in paired devices list\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreDeviceNotFound;
+    }
+
+    printf(" We will Media Info for %s\n", pDeviceAddress);
+
+    // TODO: Implement a Device State Machine and Check whether the device is Connected before making the call
+    switch (aenBTRCoreDevType) {
+    case enBTRCoreSpeakers:
+    case enBTRCoreHeadSet:
+        lenBTDeviceType = enBTDevAudioSink;
+        break;
+    case enBTRCoreMobileAudioIn:
+    case enBTRCorePCAudioIn:
+        lenBTDeviceType = enBTDevAudioSource;
+        break;
+    case enBTRCoreUnknown:
+    default:
+        lenBTDeviceType = enBTDevUnknown;
+        break;
+    }
+
+    //TODO: Make a Device specific call baced on lenBTDeviceType
+    (void)lenBTDeviceType;
+
+    lstBtrCoreMediaInfo.eBtrCoreAVMType         = eBTRCoreAVMTypeUnknown;
+    lstBtrCoreMediaInfo.pstBtrCoreAVMCodecInfo  = &lstBtrCoreMediaSbcInfo;
+
+
+    if (BTRCore_AVMedia_GetCurMediaInfo (pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, &lstBtrCoreMediaInfo)) {
+        BTRCore_LOG("AVMedia_GetCurMediaInfo ERROR occurred\n");
+        return enBTRCoreFailure;
+    }
+
+    switch (lstBtrCoreMediaInfo.eBtrCoreAVMType) {
+    case eBTRCoreAVMTypePCM:
+        apstBTRCoreDevMediaInfo->eBtrCoreDevMType = eBTRCoreDevMediaTypePCM;
+        break;
+    case eBTRCoreAVMTypeSBC:
+        {
+            stBTRCoreDevMediaSbcInfo* lapstBtrCoreDevMCodecInfo = (stBTRCoreDevMediaSbcInfo*)(apstBTRCoreDevMediaInfo->pstBtrCoreDevMCodecInfo);
+
+            apstBTRCoreDevMediaInfo->eBtrCoreDevMType        = eBTRCoreDevMediaTypeSBC;
+
+            switch (lstBtrCoreMediaSbcInfo.eAVMAChan) {
+            case eBTRCoreAVMAChanMono:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChanMono;
+                break;
+            case eBTRCoreAVMAChanDualChannel:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChanDualChannel;
+                break;
+            case eBTRCoreAVMAChanStereo:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChanStereo;
+                break;
+            case eBTRCoreAVMAChanJointStereo:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChanJointStereo;
+                break;
+            case eBTRCoreAVMAChan5_1:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChan5_1;
+                break;
+            case eBTRCoreAVMAChan7_1:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChan7_1;
+                break;
+            case eBTRCoreAVMAChanUnknown:
+            default:
+                lapstBtrCoreDevMCodecInfo->eDevMAChan = eBTRCoreDevMediaAChanUnknown;
+                break;
+            }
+
+            lapstBtrCoreDevMCodecInfo->ui32DevMSFreq         = lstBtrCoreMediaSbcInfo.ui32AVMSFreq;
+            lapstBtrCoreDevMCodecInfo->ui8DevMSbcAllocMethod = lstBtrCoreMediaSbcInfo.ui8AVMSbcAllocMethod;
+            lapstBtrCoreDevMCodecInfo->ui8DevMSbcSubbands    = lstBtrCoreMediaSbcInfo.ui8AVMSbcSubbands;
+            lapstBtrCoreDevMCodecInfo->ui8DevMSbcBlockLength = lstBtrCoreMediaSbcInfo.ui8AVMSbcBlockLength;
+            lapstBtrCoreDevMCodecInfo->ui8DevMSbcMinBitpool  = lstBtrCoreMediaSbcInfo.ui8AVMSbcMinBitpool;
+            lapstBtrCoreDevMCodecInfo->ui8DevMSbcMaxBitpool  = lstBtrCoreMediaSbcInfo.ui8AVMSbcMaxBitpool;
+            lapstBtrCoreDevMCodecInfo->ui16DevMSbcFrameLen   = lstBtrCoreMediaSbcInfo.ui16AVMSbcFrameLen;
+            lapstBtrCoreDevMCodecInfo->ui16DevMSbcBitrate    = lstBtrCoreMediaSbcInfo.ui16AVMSbcBitrate;
+        }
+        break;
+    case eBTRCoreAVMTypeMPEG:
+        apstBTRCoreDevMediaInfo->eBtrCoreDevMType = eBTRCoreDevMediaTypeMPEG;
+        break;
+    case eBTRCoreAVMTypeAAC:
+        apstBTRCoreDevMediaInfo->eBtrCoreDevMType = eBTRCoreDevMediaTypeAAC;
+        break;
+    case eBTRCoreAVMTypeUnknown:
+    default:
+        apstBTRCoreDevMediaInfo->eBtrCoreDevMType = eBTRCoreDevMediaTypeUnknown;
+        break;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
 BTRCore_AcquireDeviceDataPath (
     tBTRCoreHandle      hBTRCore,
     tBTRCoreDevId       aBTRCoreDevId,

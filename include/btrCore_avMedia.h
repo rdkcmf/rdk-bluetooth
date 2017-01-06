@@ -29,9 +29,67 @@
 
 typedef void* tBTRCoreAVMediaHdl;
 
+
+typedef enum _eBTRCoreAVMType {
+    eBTRCoreAVMTypePCM,
+    eBTRCoreAVMTypeSBC,
+    eBTRCoreAVMTypeMPEG,
+    eBTRCoreAVMTypeAAC,
+    eBTRCoreAVMTypeUnknown
+} eBTRCoreAVMType;
+
+typedef enum _eBTRCoreAVMAChan {
+    eBTRCoreAVMAChanMono,
+    eBTRCoreAVMAChanDualChannel,
+    eBTRCoreAVMAChanStereo,
+    eBTRCoreAVMAChanJointStereo,
+    eBTRCoreAVMAChan5_1,
+    eBTRCoreAVMAChan7_1,
+    eBTRCoreAVMAChanUnknown
+} eBTRCoreAVMAChan;
+
+
+typedef struct _stBTRMgrAVMediaPcmInfo {
+    eBTRCoreAVMAChan    eAVMAChan;
+    unsigned int        ui32AVMAChan;           // num audio Channels
+    unsigned int        ui32AVMSFreq;
+    unsigned int        ui32AVMSFmt;
+} stBTRMgrAVMediaPcmInfo;
+
+typedef struct _stBTRCoreAVMediaSbcInfo {
+    eBTRCoreAVMAChan    eAVMAChan;              // channel_mode
+    unsigned int        ui32AVMAChan;           // num audio Channels
+    unsigned int        ui32AVMSFreq;           // frequency
+    unsigned char       ui8AVMSbcAllocMethod;   // allocation_method
+    unsigned char       ui8AVMSbcSubbands;      // subbands
+    unsigned char       ui8AVMSbcBlockLength;   // block_length
+    unsigned char       ui8AVMSbcMinBitpool;    // min_bitpool
+    unsigned char       ui8AVMSbcMaxBitpool;    // max_bitpool
+    unsigned short      ui16AVMSbcFrameLen;     // frameLength
+    unsigned short      ui16AVMSbcBitrate;      // bitrate
+} stBTRCoreAVMediaSbcInfo;
+
+typedef struct _stBTRCoreAVMediaMpegInfo {
+    eBTRCoreAVMAChan    eAVMAChan;              // channel_mode
+    unsigned int        ui32AVMAChan;           // num audio Channels
+    unsigned int        ui32AVMSFreq;           // frequency
+    unsigned char       ui8AVMMpegCrc;          // crc
+    unsigned char       ui8AVMMpegLayer;        // layer
+    unsigned char       ui8AVMMpegMpf;          // mpf
+    unsigned char       ui8AVMMpegRfa;          // rfa
+    unsigned short      ui16AVMMpegFrameLen;    // frameLength
+    unsigned short      ui16AVMMpegBitrate;     // bitrate
+} stBTRCoreAVMediaMpegInfo;
+
+typedef struct _stBTRCoreAVMediaInfo {
+    eBTRCoreAVMType eBtrCoreAVMType;
+    void*           pstBtrCoreAVMCodecInfo;
+} stBTRCoreAVMediaInfo;
+
 enBTRCoreRet BTRCore_AVMedia_Init (tBTRCoreAVMediaHdl* phBTRCoreAVM, void* apBtConn, const char* apBtAdapter);
 enBTRCoreRet BTRCore_AVMedia_DeInit (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtAdapter);
-enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtAdapter, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
-enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtAdapter);
+enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaInfo* apstBtrCoreAVMediaInfo);
+enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
+enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr);
 
 #endif // __BTR_CORE_AV_MEDIA_H__

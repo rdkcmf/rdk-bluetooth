@@ -68,6 +68,24 @@ typedef enum _enBTRCoreDeviceStatus {
     enBTRCore_DS_Playing
 } enBTRCoreDeviceStatus;
 
+typedef enum _eBTRCoreDevMediaType {
+    eBTRCoreDevMediaTypePCM,
+    eBTRCoreDevMediaTypeSBC,
+    eBTRCoreDevMediaTypeMPEG,
+    eBTRCoreDevMediaTypeAAC,
+    eBTRCoreDevMediaTypeUnknown
+} eBTRCoreDevMediaType;
+
+typedef enum _eBTRCoreDevMediaAChan {
+    eBTRCoreDevMediaAChanMono,
+    eBTRCoreDevMediaAChanDualChannel,
+    eBTRCoreDevMediaAChanStereo,
+    eBTRCoreDevMediaAChanJointStereo,
+    eBTRCoreDevMediaAChan5_1,
+    eBTRCoreDevMediaAChan7_1,
+    eBTRCoreDevMediaAChanUnknown
+} eBTRCoreDevMediaAChan;
+
 typedef enum _enBTRCoreMediaCtrl {
     enBTRCoreMediaPlay,
     enBTRCoreMediaPause,
@@ -193,6 +211,42 @@ typedef struct _stBTRCorePairedDevicesCount {
     stBTRCoreKnownDevice devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCorePairedDevicesCount;
 
+
+typedef struct _stBTRCoreDevMediaPcmInfo {
+    eBTRCoreDevMediaAChan   eDevMAChan;               // channel_mode
+    unsigned int            ui32DevMSFreq;            // frequency
+    unsigned int            ui32DevMSFmt;
+} stBTRCoreDevMediaPcmInfo;
+
+typedef struct _stBTRCoreDevMediaSbcInfo {
+    eBTRCoreDevMediaAChan   eDevMAChan;               // channel_mode
+    unsigned int            ui32DevMSFreq;            // frequency
+    unsigned char           ui8DevMSbcAllocMethod;    // allocation_method
+    unsigned char           ui8DevMSbcSubbands;       // subbands
+    unsigned char           ui8DevMSbcBlockLength;    // block_length
+    unsigned char           ui8DevMSbcMinBitpool;     // min_bitpool
+    unsigned char           ui8DevMSbcMaxBitpool;     // max_bitpool
+    unsigned short          ui16DevMSbcFrameLen;      // frameLength
+    unsigned short          ui16DevMSbcBitrate;       // bitrate
+} stBTRCoreDevMediaSbcInfo;
+
+typedef struct _stBTRCoreDevMediaMpegInfo {
+    eBTRCoreDevMediaAChan   eDevMAChan;               // channel_mode
+    unsigned int            ui32DevMSFreq;            // frequency
+    unsigned char           ui8DevMMpegCrc;           // crc
+    unsigned char           ui8DevMMpegLayer;         // layer
+    unsigned char           ui8DevMMpegMpf;           // mpf
+    unsigned char           ui8DevMMpegRfa;           // rfa
+    unsigned short          ui16DevMMpegFrameLen;     // frameLength
+    unsigned short          ui16DevMMpegBitrate;      // bitrate
+} stBTRCoreDevMediaMpegInfo;
+
+typedef struct _stBTRCoreDevMediaInfo {
+    eBTRCoreDevMediaType eBtrCoreDevMType;
+    void*                pstBtrCoreDevMCodecInfo;
+} stBTRCoreDevMediaInfo;
+
+
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevices astBTRCoreScannedDevice);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStateCBInfo* apstDevStateCbInfo, void* apvUserData);
 typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
@@ -305,6 +359,9 @@ enBTRCoreRet BTRCore_ConnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRC
 
 /* BTRCore_DisconnectDevice */
 enBTRCoreRet BTRCore_DisconnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
+
+/* BTRCore_GetDeviceMediaInfo */
+enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo);
 
 /*BTRCore_AcquireDeviceDataPath*/
 enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
