@@ -85,6 +85,15 @@
 #define BTR_A2DP_BLOCK_LENGTH_16            SBC_BLOCK_LENGTH_16
 #endif
 
+#define BTR_SBC_HIGH_BITRATE_BITPOOL		51
+#define BTR_SBC_MED_BITRATE_BITPOOL			33
+
+//TODO: Make this dynamic
+#if 0
+#define BTR_SBC_DEFAULT_BITRATE_BITPOOL		BTR_SBC_HIGH_BITRATE_BITPOOL
+#else
+#define BTR_SBC_DEFAULT_BITRATE_BITPOOL		BTR_SBC_MED_BITRATE_BITPOOL
+#endif
 
 typedef struct _stBTRCoreAVMediaHdl {
     eBTRCoreAVMType eAVMediaType;
@@ -104,6 +113,7 @@ static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransp
 
 
 /* Static Function Definition */
+#if 0 		// if zerod for reference
 static uint8_t 
 btrCore_AVMedia_GetA2DPDefaultBitpool (
     uint8_t au8SamplingFreq, 
@@ -147,6 +157,51 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
         return 53;
     }
 }
+#else
+static uint8_t 
+btrCore_AVMedia_GetA2DPDefaultBitpool (
+    uint8_t au8SamplingFreq, 
+    uint8_t au8AudioChannelsMode
+) {
+    switch (au8SamplingFreq) {
+    case BTR_SBC_SAMPLING_FREQ_16000:
+    case BTR_SBC_SAMPLING_FREQ_32000:
+        return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
+
+    case BTR_SBC_SAMPLING_FREQ_44100:
+        switch (au8AudioChannelsMode) {
+        case BTR_A2DP_CHANNEL_MODE_MONO:
+        case BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
+            return 31;
+
+        case BTR_A2DP_CHANNEL_MODE_STEREO:
+        case BTR_A2DP_CHANNEL_MODE_JOINT_STEREO:
+            return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
+
+        default:
+            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
+        }
+    case BTR_SBC_SAMPLING_FREQ_48000:
+        switch (au8AudioChannelsMode) {
+        case BTR_A2DP_CHANNEL_MODE_MONO:
+        case BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL:
+            return 29;
+
+        case BTR_A2DP_CHANNEL_MODE_STEREO:
+        case BTR_A2DP_CHANNEL_MODE_JOINT_STEREO:
+            return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
+
+        default:
+            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
+        }
+    default:
+        fprintf (stderr, "Invalid Bluetooth SBC sampling freq %u\n", au8SamplingFreq);
+        return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
+    }
+}
+#endif
 
 
 //////////////////
