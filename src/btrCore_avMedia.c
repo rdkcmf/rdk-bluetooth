@@ -87,13 +87,10 @@
 
 #define BTR_SBC_HIGH_BITRATE_BITPOOL		51
 #define BTR_SBC_MED_BITRATE_BITPOOL			33
+#define BTR_SBC_LOW_BITRATE_BITPOOL			19
 
-//TODO: Make this dynamic
-#if 0
 #define BTR_SBC_DEFAULT_BITRATE_BITPOOL		BTR_SBC_HIGH_BITRATE_BITPOOL
-#else
-#define BTR_SBC_DEFAULT_BITRATE_BITPOOL		BTR_SBC_MED_BITRATE_BITPOOL
-#endif
+
 
 typedef struct _stBTRCoreAVMediaHdl {
     eBTRCoreAVMType eAVMediaType;
@@ -673,8 +670,8 @@ btrCore_AVMedia_TransportPath_cb (
     if (pstlhBTRCoreAVM) { 
         if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
             if(!strncmp(pstlhBTRCoreAVM->pcAVMediaTransportPath, apBtMediaTransportPath, strlen(pstlhBTRCoreAVM->pcAVMediaTransportPath)))
-                fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Freeing 0x%8x:%s\n", 
-                            (unsigned int)pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
+                fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Freeing 0x%p:%s\n", 
+                            pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
 
             free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
             pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;

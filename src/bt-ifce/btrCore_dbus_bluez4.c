@@ -1090,7 +1090,7 @@ btrCore_BTMediaEndpointSetConfiguration (
 
     if (gfpcBTransportPathMedia) {
         if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, config, gpcBTransPathMediaUserData))) {
-            fprintf(stderr, "Stored - Transport Path 0x%8x:%s\n", (unsigned int)lStoredDevTransportPath, lStoredDevTransportPath);
+            fprintf(stderr, "Stored - Transport Path 0x%p:%s\n", lStoredDevTransportPath, lStoredDevTransportPath);
         }
     }
 

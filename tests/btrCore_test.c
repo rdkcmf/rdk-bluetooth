@@ -44,10 +44,11 @@ unsigned int BT_loop = 0;
 
 
 typedef struct appDataStruct{
-    tBTRCoreHandle  hBTRCore;
-    int             iDataPath;
-    int             iDataReadMTU;
-    int             iDataWriteMTU;
+    tBTRCoreHandle          hBTRCore;
+    stBTRCoreDevMediaInfo   stBtrCoreDevMediaInfo;
+    int                     iDataPath;
+    int                     iDataReadMTU;
+    int                     iDataWriteMTU;
 } appDataStruct;
 
 
@@ -230,6 +231,12 @@ static void
 GetTransport (
     appDataStruct* pstAppData
 ) {
+
+	if (!pstAppData)
+		return;
+
+    BTRCore_GetDeviceMediaInfo ( pstAppData->hBTRCore, connectedDeviceIndex, enBTRCoreMobileAudioIn, &pstAppData->stBtrCoreDevMediaInfo);
+
     pstAppData->iDataPath = 0;
     pstAppData->iDataReadMTU = 0;
     pstAppData->iDataWriteMTU = 0;
@@ -244,6 +251,20 @@ GetTransport (
     printf("Device Data Path = %d \n",      pstAppData->iDataPath);
     printf("Device Data Read MTU = %d \n",  pstAppData->iDataReadMTU);
     printf("Device Data Write MTU= %d \n",  pstAppData->iDataWriteMTU);
+
+    if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+		if (pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+            printf("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+            printf("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+            printf("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+            printf("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+            printf("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+            printf("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+            printf("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+            printf("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+            printf("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+		}
+    }
 }
 
 
@@ -464,6 +485,8 @@ main (
     stAppData.hBTRCore = lhBTRCore;
     //register callback for unsolicted events, such as powering off a bluetooth device
     BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
+
+    stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
 
     //display a menu of choices
     printMenu();
@@ -738,6 +761,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
 
+                BTRCore_GetDeviceMediaInfo(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.stBtrCoreDevMediaInfo);
+
                 stAppData.iDataPath = 0;
                 stAppData.iDataReadMTU = 0;
                 stAppData.iDataWriteMTU = 0;
@@ -747,6 +772,20 @@ main (
                 printf("Device Data Path = %d \n", stAppData.iDataPath);
                 printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
                 printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
+
+                if (stAppData.stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
+					if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
+                        printf("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+                        printf("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+                        printf("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+                        printf("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+                        printf("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+                        printf("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+                        printf("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+                        printf("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+                        printf("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+					}
+                }
             }
             break;
         case 22:
@@ -827,6 +866,10 @@ main (
             break;
         }
     } while (1);
+
+
+    if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo)
+        free(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo);
 
     return 0;
 }
