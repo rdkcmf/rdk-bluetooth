@@ -152,6 +152,7 @@ int   BtrCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const 
 int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, char** apcArrBtAdapterPath);
 char* BtrCore_BTGetAdapterPath (void* apBtConn, const char* apBtAdapter);
 int   BtrCore_BTReleaseAdapterPath (void* apBtConn, const char* apBtAdapter);
+int   BtrCore_BTGetIfceNameVersion (void* apBtConn, char* apBtOutIfceName, char* apBtOutVersion);
 int   BtrCore_BTGetProp (void* apBtConn, const char* apcPath, enBTOpType aenBTOpType, const char* pKey, void* pValue);
 int   BtrCore_BTSetAdapterProp (void* apBtConn, const char* apBtAdapter, enBTAdapterProp aenBTAdapterProp, void* apvVal);
 int   BtrCore_BTStartDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);

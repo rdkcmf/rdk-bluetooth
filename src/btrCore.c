@@ -1366,6 +1366,42 @@ BTRCore_GetAdapterPower (
 
 
 enBTRCoreRet
+BTRCore_GetVersionInfo (
+    tBTRCoreHandle  hBTRCore,
+    char*           apcBtVersion
+) {
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    char            lBtIfceName[BTRCORE_STRINGS_MAX_LEN/4];
+    char            lBtVersion[BTRCORE_STRINGS_MAX_LEN/4];
+
+    if (!hBTRCore) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreNotInitialized\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreNotInitialized;
+    }
+    else if (!apcBtVersion) {
+        fprintf(stderr, "%s:%d:%s - enBTRCoreInvalidArg\n", __FILE__, __LINE__, __FUNCTION__);
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    memset(lBtIfceName, '\0', BTRCORE_STRINGS_MAX_LEN/4);
+    memset(lBtVersion,  '\0', BTRCORE_STRINGS_MAX_LEN/4);
+
+    if (!BtrCore_BTGetIfceNameVersion(pstlhBTRCore->connHdl, lBtIfceName, lBtVersion)) {
+        strncpy(apcBtVersion, lBtIfceName, strlen(lBtIfceName));
+        strncat(apcBtVersion, "-", 1);
+        strncat(apcBtVersion, lBtVersion, strlen(lBtVersion));
+        fprintf(stderr, "%s:%d:%s - Ifce: %s Version: %s Out:%s\n", __FILE__, __LINE__, __FUNCTION__, lBtIfceName, lBtVersion, apcBtVersion);
+
+        return enBTRCoreSuccess;
+    }
+
+    return enBTRCoreFailure;
+}
+
+
+enBTRCoreRet
 BTRCore_StartDiscovery (
     tBTRCoreHandle           hBTRCore,
     stBTRCoreStartDiscovery* pstStartDiscovery

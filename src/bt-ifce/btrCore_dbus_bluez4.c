@@ -1181,6 +1181,22 @@ BtrCore_BTDeInitReleaseConnection (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
+
+    if (gpcBTAgentPath) {
+        free(gpcBTAgentPath);
+        gpcBTAgentPath = NULL;
+    }
+
+    if (gpcBTDAdapterPath) {
+        free(gpcBTDAdapterPath);
+        gpcBTDAdapterPath = NULL;
+    }
+
+    if (gpcBTAdapterPath) {
+        free(gpcBTAdapterPath);
+        gpcBTAdapterPath = NULL;
+    }
+
     gfpcBConnectionAuthentication   = NULL;
     gfpcBConnectionIntimation       = NULL;
     gfpcBTransportPathMedia         = NULL;
@@ -1439,7 +1455,7 @@ BtrCore_BTGetAdapterPath (
         gpcBTAdapterPath = NULL;
     }
 
-    gpcBTAdapterPath = strdup(lpReplyPath);
+    gpcBTAdapterPath = strndup(lpReplyPath, strlen(lpReplyPath));
     return gpcBTAdapterPath;
 }
 
@@ -1464,6 +1480,43 @@ BtrCore_BTReleaseAdapterPath (
         free(gpcBTAdapterPath);
         gpcBTAdapterPath = NULL;
     }
+
+    return 0;
+}
+
+
+int
+BtrCore_BTGetIfceNameVersion (
+    void* apBtConn,
+    char* apBtOutIfceName,
+    char* apBtOutVersion
+) {
+    FILE*   lfpVersion = NULL;
+    char    lcpVersion[8] = {'\0'};
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apBtOutIfceName || !apBtOutVersion)
+        return -1;
+
+    lfpVersion = popen("/usr/sbin/bluetoothd --version", "r");
+    if ((lfpVersion == NULL)) { 
+        fprintf(stderr, "%s:%d:%s - Failed to run Version command\n", __FILE__, __LINE__, __FUNCTION__);
+        strncpy(lcpVersion, "4.XXX", strlen("4.XXX"));
+    }   
+    else {
+        if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
+            fprintf(stderr, "%s:%d:%s - Failed to Valid Version\n", __FILE__, __LINE__, __FUNCTION__);
+            strncpy(lcpVersion, "4.XXX", strlen("4.XXX"));
+        }
+        
+        pclose(lfpVersion);
+    }
+
+
+    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez"));
+    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion));
 
     return 0;
 }

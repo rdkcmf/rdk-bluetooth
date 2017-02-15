@@ -324,6 +324,9 @@ enBTRCoreRet BTRCore_GetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapt
 /* BTRCore_ResetAdapter reset specific adapter*/
 enBTRCoreRet BTRCore_ResetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
+/* BTRCore_GetVersionInfo Get BT Version */
+enBTRCoreRet BTRCore_GetVersionInfo(tBTRCoreHandle hBTRCore, char* apcBtVersion);
+
 /* BTRCore_StartDiscovery - start the discovery process*/
 enBTRCoreRet BTRCore_StartDiscovery (tBTRCoreHandle hBTRCore, stBTRCoreStartDiscovery* pstStartDiscovery);
 
