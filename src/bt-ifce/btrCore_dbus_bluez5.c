@@ -1470,7 +1470,7 @@ BtrCore_BTGetAdapterList (
 
                                 ////// getting all bluetooth adapters object paths //////
 
-                                if (strcmp(dbusObject, "org.bluez.Adapter1") == 0 || strcmp(dbusObject, "org.bluez.Device1") == 0)
+                                if (strcmp(dbusObject, "org.bluez.Adapter1") == 0 )
                                 {
                                     strcpy(paths[d], adapter_path);
                                     //strcpy(paths2+d,adapter_path);
