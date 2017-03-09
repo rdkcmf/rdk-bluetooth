@@ -24,6 +24,11 @@
 
 #include "btrCoreTypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #define BTRCore_LOG(...) printf(__VA_ARGS__)
 
 
@@ -386,5 +391,10 @@ enBTRCoreRet BTRCore_RegisterConnectionIntimationCallback (tBTRCoreHandle hBTRCo
 
 /*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
 enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnAuthCb afptrBTRCoreConnAuthCB, void* apUserData);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __BTR_CORE_H__

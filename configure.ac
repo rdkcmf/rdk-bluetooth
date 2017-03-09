@@ -21,7 +21,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([btr-core], [1.0], [Mike.Kahn@arris.com Chandresh_Pitty@cable.comcast.com])
-AC_CONFIG_MACRO_DIR([cfg])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([cfg])
 AM_INIT_AUTOMAKE([subdir-objects -Wall -Werror foreign no-dist-gzip dist-bzip2 1.9])
 
