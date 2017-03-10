@@ -186,7 +186,7 @@ typedef struct _stBTRCoreScannedDevices {
    tBTRCoreDevId deviceId;
    BD_NAME device_name;
    BD_NAME device_address;
-   enBTRCoreDeviceType device_type;
+   enBTRCoreDeviceClass device_type;
    stBTRCoreSupportedServiceList device_profile;
    int RSSI;
    unsigned int vendor_id;
@@ -197,7 +197,7 @@ typedef struct _stBTRCoreKnownDevice {
    tBTRCoreDevId deviceId;
    BD_NAME device_name;
    BD_NAME device_address;
-   enBTRCoreDeviceType device_type;
+   enBTRCoreDeviceClass device_type;
    stBTRCoreSupportedServiceList device_profile;
    BD_NAME bd_path;
    int RSSI;

@@ -355,6 +355,14 @@ btrCore_PopulateListOfPairedDevices (
                                                                                                                        apsthBTRCore->stKnownDevicesArr[i].device_profile.profile[j].profile_name);
             }
             apsthBTRCore->stKnownDevicesArr[i].device_profile.numberOfService = j;
+
+            if (apsthBTRCore->stKnownDevicesArr[i].device_type == enBTRCore_DC_Unknown) {
+                for (j = 0; j < apsthBTRCore->stKnownDevicesArr[i].device_profile.numberOfService; j++) {
+                    if (apsthBTRCore->stKnownDevicesArr[i].device_profile.profile[j].uuid_value == strtol(BTR_CORE_A2SNK, NULL, 16)) {
+                        apsthBTRCore->stKnownDevicesArr[i].device_type = enBTRCore_DC_Loudspeaker;
+                    }
+                }
+            }
         }
 
         return enBTRCoreSuccess;
@@ -2562,6 +2570,16 @@ btrCore_BTDeviceStatusUpdate_cb (
                                                                                                                          lpstlhBTRCore->stFoundDevice.device_profile.profile[j].profile_name);
                     }
                     lpstlhBTRCore->stFoundDevice.device_profile.numberOfService = j;
+
+                                                
+                    if (lpstlhBTRCore->stFoundDevice.device_type == enBTRCore_DC_Unknown) {
+                        for (j = 0; j < lpstlhBTRCore->stFoundDevice.device_profile.numberOfService; j++) {
+                            if (lpstlhBTRCore->stFoundDevice.device_profile.profile[j].uuid_value ==  strtol(BTR_CORE_A2SNK, NULL, 16)) {
+                                lpstlhBTRCore->stFoundDevice.device_type = enBTRCore_DC_Loudspeaker;
+                            }
+                        }
+                    }
+
 
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
                     if (lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB)
