@@ -319,7 +319,7 @@ btrCore_BTAgentMessageHandler_cb (
     if (dbus_message_is_method_call(apDBusMsg, "org.bluez.Agent", "Cancel"))
         return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, userdata);
 
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
 
@@ -977,7 +977,7 @@ btrCore_BTMediaEndpointSetConfiguration (
     const char* lDevTransportPath = NULL;
     const char* lStoredDevTransportPath = NULL;
     const char* dev_path = NULL, *uuid = NULL, *routing = NULL;
-    int codec = NULL;
+    int codec = 0;
     unsigned char* config = NULL;
     int size = 0;
     int nrec= 0, inbandRingtone = 0;
