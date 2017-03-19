@@ -26,6 +26,10 @@
 
 
 /* External Library Headers */
+//TODO: Remove all direct references to bluetooth headers
+#if defined(USE_BLUEZ5)
+#include <bluetooth/bluetooth.h>
+#endif
 #include <bluetooth/uuid.h>
 #include <bluetooth/audio/a2dp-codecs.h>
 #if defined(USE_BLUEZ4)
