@@ -43,7 +43,7 @@
 /* Static Function Prototypes */
 static int btrCore_BTHandleDusError (DBusError* aDBusErr, const char* aErrfunc, int aErrline);
 
-static DBusHandlerResult btrCore_BTDBusAgentFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTDBusConnectionFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 static DBusHandlerResult btrCore_BTMediaEndpointHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 static DBusHandlerResult btrCore_BTAgentMessageHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
 
@@ -117,7 +117,7 @@ int btrCore_BTHandleDusError (
 
 
 static DBusHandlerResult
-btrCore_BTDBusAgentFilter_cb (
+btrCore_BTDBusConnectionFilter_cb (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
     void*           userdata
@@ -1149,7 +1149,7 @@ BtrCore_BTInitGetConnection (
     printf("DBus Debug DBus Connection Name %s\n", dbus_bus_get_unique_name (lpDBusConn));
     gpDBusConn = lpDBusConn;
 
-    if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusAgentFilter_cb, NULL, NULL)) {
+    if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusConnectionFilter_cb, NULL, NULL)) {
         fprintf(stderr, "%s:%d:%s - Can't add signal filter - BtrCore_BTInitGetConnection\n", __FILE__, __LINE__, __FUNCTION__);
         BtrCore_BTDeInitReleaseConnection(lpDBusConn);
         return NULL;
@@ -1212,7 +1212,7 @@ BtrCore_BTDeInitReleaseConnection (
 
     dbus_bus_remove_match(gpDBusConn, "type='signal',interface='org.bluez.Adapter'", NULL);
 
-    dbus_connection_remove_filter(gpDBusConn, btrCore_BTDBusAgentFilter_cb, NULL);
+    dbus_connection_remove_filter(gpDBusConn, btrCore_BTDBusConnectionFilter_cb, NULL);
 
     gpDBusConn = NULL;
 

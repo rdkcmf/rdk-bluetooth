@@ -66,12 +66,13 @@ typedef enum _enBTRCoreDeviceClass {
     enBTRCore_DC_Unknown          = 0x00,
 } enBTRCoreDeviceClass;
 
-typedef enum _enBTRCoreDeviceStatus {
-    enBTRCore_DS_Inited,
-    enBTRCore_DS_Connected,
-    enBTRCore_DS_Disconnected,
-    enBTRCore_DS_Playing
-} enBTRCoreDeviceStatus;
+typedef enum _enBTRCoreDeviceState {
+    enBTRCoreDevStInitialized,
+    enBTRCoreDevStConnecting,
+    enBTRCoreDevStConnected,
+    enBTRCoreDevStDisconnected,
+    enBTRCoreDevStPlaying
+} enBTRCoreDeviceState;
 
 typedef enum _eBTRCoreDevMediaType {
     eBTRCoreDevMediaTypePCM,
@@ -142,8 +143,8 @@ typedef struct _stBTRCoreFilterMode {
 
 typedef struct _stBTRCoreDevStateCBInfo {
     enBTRCoreDeviceType     eDeviceType;
-    enBTRCoreDeviceStatus   eDevicePrevState;
-    enBTRCoreDeviceStatus   eDeviceCurrState;
+    enBTRCoreDeviceState    eDevicePrevState;
+    enBTRCoreDeviceState    eDeviceCurrState;
 } stBTRCoreDevStateCBInfo;
 
 typedef struct _stBTRCoreConnCBInfo {

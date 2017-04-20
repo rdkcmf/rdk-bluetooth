@@ -85,7 +85,7 @@ static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tB
 static const char* btrCore_GetKnownDeviceName (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static void btrCore_ShowSignalStrength (short strength);
 static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut);
-static enBTRCoreDeviceStatus btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
+static enBTRCoreDeviceState btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
 
 /* Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
@@ -142,8 +142,8 @@ btrCore_InitDataSt (
     }
 
     /* Callback Info */
-    apsthBTRCore->stDevStateCbInfo.eDevicePrevState = enBTRCore_DS_Inited;
-    apsthBTRCore->stDevStateCbInfo.eDeviceCurrState = enBTRCore_DS_Inited;
+    apsthBTRCore->stDevStateCbInfo.eDevicePrevState = enBTRCoreDevStInitialized;
+    apsthBTRCore->stDevStateCbInfo.eDeviceCurrState = enBTRCoreDevStInitialized;
 
 
     apsthBTRCore->stConnCbInfo.ui32devPassKey = 0;
@@ -196,67 +196,67 @@ btrCore_MapClassIDtoDeviceType (
         unsigned int lastByte = (classID & 0xFF);
 
         if (lastByte == enBTRCore_DC_WearableHeadset) {
-            printf ("Its a enBTRCore_DC_WearableHeadset \n");
+            fprintf(stderr, "Its a enBTRCore_DC_WearableHeadset \n");
             rc = enBTRCore_DC_WearableHeadset;
         }
         else if (lastByte == enBTRCore_DC_Handsfree) {
-            printf ("Its a enBTRCore_DC_Handsfree \n");
+            fprintf(stderr, "Its a enBTRCore_DC_Handsfree \n");
             rc = enBTRCore_DC_Handsfree;
         }
         else if (lastByte == enBTRCore_DC_Reserved) {
-            printf ("Its a enBTRCore_DC_Reserved \n");
+            fprintf(stderr, "Its a enBTRCore_DC_Reserved \n");
             rc = enBTRCore_DC_Reserved;
         }
         else if (lastByte == enBTRCore_DC_Microphone) {
-            printf ("Its a enBTRCore_DC_Microphone \n");
+            fprintf(stderr, "Its a enBTRCore_DC_Microphone \n");
             rc = enBTRCore_DC_Microphone;
         }
         else if (lastByte == enBTRCore_DC_Loudspeaker) {
-            printf ("Its a enBTRCore_DC_Loudspeaker \n");
+            fprintf(stderr, "Its a enBTRCore_DC_Loudspeaker \n");
             rc = enBTRCore_DC_Loudspeaker;
         }
         else if (lastByte == enBTRCore_DC_Headphones) {
-            printf ("Its a enBTRCore_DC_Headphones \n");
+            fprintf(stderr, "Its a enBTRCore_DC_Headphones \n");
             rc = enBTRCore_DC_Headphones;
         }
         else if (lastByte == enBTRCore_DC_PortableAudio) {
-            printf ("Its a enBTRCore_DC_PortableAudio \n");
+            fprintf(stderr, "Its a enBTRCore_DC_PortableAudio \n");
             rc = enBTRCore_DC_PortableAudio;
         }
         else if (lastByte == enBTRCore_DC_CarAudio) {
-            printf ("Its a enBTRCore_DC_CarAudio \n");
+            fprintf(stderr, "Its a enBTRCore_DC_CarAudio \n");
             rc = enBTRCore_DC_CarAudio;
         }
         else if (lastByte == enBTRCore_DC_STB) {
-            printf ("Its a enBTRCore_DC_STB \n");
+            fprintf(stderr, "Its a enBTRCore_DC_STB \n");
             rc = enBTRCore_DC_STB;
         }
         else if (lastByte == enBTRCore_DC_HIFIAudioDevice) {
-            printf ("Its a enBTRCore_DC_HIFIAudioDevice \n");
+            fprintf(stderr, "Its a enBTRCore_DC_HIFIAudioDevice \n");
             rc = enBTRCore_DC_HIFIAudioDevice;
         }
         else if (lastByte == enBTRCore_DC_VCR) {
-            printf ("Its a enBTRCore_DC_VCR \n");
+            fprintf(stderr, "Its a enBTRCore_DC_VCR \n");
             rc = enBTRCore_DC_VCR;
         }
         else if (lastByte == enBTRCore_DC_VideoCamera) {
-            printf ("Its a enBTRCore_DC_VideoCamera \n");
+            fprintf(stderr, "Its a enBTRCore_DC_VideoCamera \n");
             rc = enBTRCore_DC_VideoCamera;
         }
         else if (lastByte == enBTRCore_DC_Camcoder) {
-            printf ("Its a enBTRCore_DC_Camcoder \n");
+            fprintf(stderr, "Its a enBTRCore_DC_Camcoder \n");
             rc = enBTRCore_DC_Camcoder;
         }
         else if (lastByte == enBTRCore_DC_VideoMonitor) {
-            printf ("Its a enBTRCore_DC_VideoMonitor \n");
+            fprintf(stderr, "Its a enBTRCore_DC_VideoMonitor \n");
             rc = enBTRCore_DC_VideoMonitor;
         }
         else if (lastByte == enBTRCore_DC_TV) {
-            printf ("Its a enBTRCore_DC_TV \n");
+            fprintf(stderr, "Its a enBTRCore_DC_TV \n");
             rc = enBTRCore_DC_TV;
         }
         else if (lastByte == enBTRCore_DC_VideoConference) {
-            printf ("Its a enBTRCore_DC_VideoConference \n");
+            fprintf(stderr, "Its a enBTRCore_DC_VideoConference \n");
             rc = enBTRCore_DC_TV;
         }
     }
@@ -288,7 +288,7 @@ btrCore_SetScannedDeviceInfo (
 
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if (!apsthBTRCore->stScannedDevicesArr[i].found) {
-            //printf("adding %s at location %d\n",apsthBTRCore->stFoundDevice.device_address,i);
+            //fprintf(stderr, "adding %s at location %d\n",apsthBTRCore->stFoundDevice.device_address,i);
             apsthBTRCore->stScannedDevicesArr[i].found = TRUE; //mark the record as found
             strcpy(apsthBTRCore->stScannedDevicesArr[i].device_address, apsthBTRCore->stFoundDevice.device_address);
             strcpy(apsthBTRCore->stScannedDevicesArr[i].device_name, apsthBTRCore->stFoundDevice.device_name);
@@ -320,7 +320,7 @@ btrCore_GetScannedDeviceAddress (
     if (apsthBTRCore->numOfScannedDevices) {
         for (loop = 0; loop < apsthBTRCore->numOfScannedDevices; loop++) {
             if (aBTRCoreDevId == apsthBTRCore->stScannedDevicesArr[loop].deviceId)
-             return apsthBTRCore->stScannedDevicesArr[loop].device_address;
+                return apsthBTRCore->stScannedDevicesArr[loop].device_address;
         }
     }
 
@@ -368,7 +368,7 @@ btrCore_PopulateListOfPairedDevices (
         return enBTRCoreSuccess;
     }
     else {
-        printf ("Failed to populate List Of Paired Devices\n");
+        fprintf(stderr, "Failed to populate List Of Paired Devices\n");
         return enBTRCoreFailure;
     }
 
@@ -425,22 +425,22 @@ btrCore_ShowSignalStrength (
 
     pos_str = 100 + strength;//strength is usually negative with number meaning more strength
 
-    printf(" Signal Strength: %d dbmv  ",strength);
+    fprintf(stderr, " Signal Strength: %d dbmv  ",strength);
 
     if (pos_str > 70) {
-        printf("++++\n");
+        fprintf(stderr, "++++\n");
     }
 
     if ((pos_str > 50) && (pos_str <= 70)) {
-        printf("+++\n");
+        fprintf(stderr, "+++\n");
     }
 
     if ((pos_str > 37) && (pos_str <= 50)) {
-        printf("++\n");
+        fprintf(stderr, "++\n");
     }
 
     if (pos_str <= 37) {
-        printf("+\n");
+        fprintf(stderr, "+\n");
     } 
 }
 
@@ -522,23 +522,26 @@ btrCore_BTParseUUIDValue (
 }
 
 
-static enBTRCoreDeviceStatus
+static enBTRCoreDeviceState
 btrCore_BTParseDeviceConnectionState (
     const char* pcStateValue
 ) {
-    enBTRCoreDeviceStatus rc = enBTRCore_DS_Inited;
+    enBTRCoreDeviceState rc = enBTRCoreDevStInitialized;
 
     if ((pcStateValue) && (pcStateValue[0] != '\0')) {
-        printf ("Current State of this connection is @@%s@@\n", pcStateValue);
+        fprintf(stderr, "Current State of this connection is @@%s@@\n", pcStateValue);
 
         if (strcasecmp ("disconnected", pcStateValue) == 0) {
-            rc = enBTRCore_DS_Disconnected;
+            rc = enBTRCoreDevStDisconnected;
+        }
+        else if (strcasecmp ("connecting", pcStateValue) == 0) {
+            rc = enBTRCoreDevStConnecting;
         }
         else if (strcasecmp ("connected", pcStateValue) == 0) {
-            rc = enBTRCore_DS_Connected;
+            rc = enBTRCoreDevStConnected;
         }
         else if (strcasecmp ("playing", pcStateValue) == 0) {
-            rc = enBTRCore_DS_Playing;
+            rc = enBTRCoreDevStPlaying;
         }
     }
 
@@ -556,7 +559,7 @@ DoDispatch (
     enBTRCoreRet*   penDispThreadExitStatus = malloc(sizeof(enBTRCoreRet));
 
     hBTRCore = (stBTRCoreHdl*) ptr;
-    printf("%s \n", "Dispatch Thread Started");
+    fprintf(stderr, "%s \n", "Dispatch Thread Started");
 
 
     if (!((stBTRCoreHdl*)hBTRCore) || !((stBTRCoreHdl*)hBTRCore)->connHdl) {
@@ -606,7 +609,7 @@ test_func (
         pstlhBTRCore->fptrBTRCoreStatusCB(&pstlhBTRCore->stDevStateCbInfo, NULL);
     }
     else {
-        printf("no callback installed\n");
+        fprintf(stderr, "no callback installed\n");
     }
 
     return;
@@ -674,7 +677,7 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    printf("BTRCore_Init - Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
+    fprintf(stderr, "BTRCore_Init - Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
 
     /* Initialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
     if (enBTRCoreSuccess != BTRCore_AVMedia_Init(&pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
@@ -817,7 +820,7 @@ BTRCore_RegisterAgent (
         strcpy(capabilities,"NoInputNoOutput");
     }
 
-    // printf("Starting agent in mode %s\n",capabilities);
+    // fprintf(stderr, "Starting agent in mode %s\n",capabilities);
     if (BtrCore_BTRegisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities) < 0) {
         BTRCore_LOG("agent registration ERROR occurred\n");
         return enBTRCorePairingFailed;
@@ -981,10 +984,10 @@ BTRCore_SetAdapter (
             pstlhBTRCore->curAdapterPath[pathlen-1]='5';
             break;
         default:
-            printf("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
+            fprintf(stderr, "max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
             pstlhBTRCore->curAdapterPath[pathlen-1]='0';
     }
-    printf("Now current adatper is %s\n", pstlhBTRCore->curAdapterPath);
+    fprintf(stderr, "Now current adatper is %s\n", pstlhBTRCore->curAdapterPath);
 
     return enBTRCoreSuccess;
 }
@@ -1210,7 +1213,7 @@ BTRCore_GetAdapterDiscoverableStatus (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Discoverable", &discoverable)) {
-        printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
+        fprintf(stderr, "%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
     }
@@ -1305,7 +1308,7 @@ BTRCore_GetAdapterName (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Name", name)) {
-        printf("%s:%d - Get value for org.bluez.Adapter.Name = %s\n", __FUNCTION__, __LINE__, name);
+        fprintf(stderr, "%s:%d:%s - Get value for org.bluez.Adapter.Name = %s\n", __FILE__, __LINE__, __FUNCTION__, name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
     }
@@ -1364,7 +1367,7 @@ BTRCore_GetAdapterPower (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Powered", &powerStatus)) {
-        printf("%s:%d - Get value for org.bluez.Adapter.powered = %d\n", __FUNCTION__, __LINE__, powerStatus);
+        fprintf(stderr, "%s:%d:%s - Get value for org.bluez.Adapter.powered = %d\n", __FILE__, __LINE__, __FUNCTION__, powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;
     }
@@ -1515,11 +1518,11 @@ BTRCore_GetListOfScannedDevices (
     fprintf(stderr, "%s:%d:%s - adapter path is %s\n", __FILE__, __LINE__, __FUNCTION__, pstlhBTRCore->curAdapterPath);
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if (pstlhBTRCore->stScannedDevicesArr[i].found) {
-            printf("Device %d. %s\n - %s  %d dbmV ", i, pstlhBTRCore->stScannedDevicesArr[i].device_name,
+            fprintf(stderr, "Device %d. %s\n - %s  %d dbmV ", i, pstlhBTRCore->stScannedDevicesArr[i].device_name,
                                                         pstlhBTRCore->stScannedDevicesArr[i].device_address,
                                                         pstlhBTRCore->stScannedDevicesArr[i].RSSI);
             btrCore_ShowSignalStrength(pstlhBTRCore->stScannedDevicesArr[i].RSSI);
-            printf("\n\n");
+            fprintf(stderr, "\n\n");
         }
     }   
 
@@ -1574,16 +1577,12 @@ BTRCore_PairDevice (
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
                                     enBTAdpOpCreatePairedDev) < 0) {
-        printf("%s:%d - Failed to pair a device\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - Failed to pair a device\n", __FUNCTION__, __LINE__);
         return enBTRCorePairingFailed;
     }
 
-    printf("%s:%d - Pairing Success\n", __FUNCTION__, __LINE__);
+    fprintf(stderr, "%s:%d - Pairing Success\n", __FUNCTION__, __LINE__);
 
-#if 0
-    /* Keep the list upto date */
-    btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-#endif
 
     return enBTRCoreSuccess;
 }
@@ -1644,10 +1643,6 @@ BTRCore_UnPairDevice (
 
     fprintf(stderr, "%s:%d:%s - UnPairing Success\n", __FILE__, __LINE__, __FUNCTION__);
 
-#if 0
-    /* Keep the list upto date */
-    btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-#endif
 
     return enBTRCoreSuccess;
 }
@@ -1674,7 +1669,7 @@ BTRCore_GetListOfPairedDevices (
     if (enBTRCoreSuccess ==  btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath)) {
         pListOfDevices->numberOfDevices = pstlhBTRCore->numOfPairedDevices;
         memcpy (pListOfDevices->devices, pstlhBTRCore->stKnownDevicesArr, sizeof (pstlhBTRCore->stKnownDevicesArr));
-        printf("%s:%d - Copied all the known devices\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - Copied all the known devices\n", __FUNCTION__, __LINE__);
         return enBTRCoreSuccess;
     }
 
@@ -1698,8 +1693,8 @@ BTRCore_FindDevice (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     pstScannedDevice = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
 
-    printf(" We will try to find %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
-    printf(" address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
+    fprintf(stderr, " We will try to find %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
+    fprintf(stderr, " address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
     if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
@@ -1747,7 +1742,7 @@ BTRCore_FindService (
         return enBTRCoreDeviceNotFound;
     }
 
-    printf("Checking for service %s on %s\n", UUID, pDeviceAddress);
+    fprintf(stderr, "Checking for service %s on %s\n", UUID, pDeviceAddress);
     *found = BtrCore_BTFindServiceSupported (pstlhBTRCore->connHdl, pDeviceAddress, UUID, XMLdata);
     if (*found < 0) {
         return enBTRCoreFailure;
@@ -1802,7 +1797,7 @@ BTRCore_GetSupportedServices (
         return enBTRCoreFailure;
     }
 
-    printf ("%s:%d - Successfully received the supported services... \n", __FUNCTION__, __LINE__);
+    fprintf(stderr, "%s:%d - Successfully received the supported services... \n", __FUNCTION__, __LINE__);
 
     pProfileList->numberOfService = profileList.numberOfService;
     for (i = 0; i < profileList.numberOfService; i++) {
@@ -2007,7 +2002,7 @@ BTRCore_GetDeviceMediaInfo (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        printf("%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
@@ -2031,7 +2026,7 @@ BTRCore_GetDeviceMediaInfo (
         return enBTRCoreDeviceNotFound;
     }
 
-    printf(" We will Media Info for %s\n", pDeviceAddress);
+    fprintf(stderr, " We will Media Info for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is Connected before making the call
     switch (aenBTRCoreDevType) {
@@ -2150,7 +2145,7 @@ BTRCore_AcquireDeviceDataPath (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        printf("%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - Possibly the list is not populated; like booted and connecting\n", __FUNCTION__, __LINE__);
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
@@ -2174,7 +2169,7 @@ BTRCore_AcquireDeviceDataPath (
         return enBTRCoreDeviceNotFound;
     }
 
-    printf(" We will Acquire Data Path for %s\n", pDeviceAddress);
+    fprintf(stderr, " We will Acquire Data Path for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
     // before making the call
@@ -2249,7 +2244,7 @@ BTRCore_ReleaseDeviceDataPath (
         return enBTRCoreDeviceNotFound;
     }
 
-    printf(" We will Release Data Path for %s\n", pDeviceAddress);
+    fprintf(stderr, " We will Release Data Path for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
     // before making the call
@@ -2385,10 +2380,10 @@ BTRCore_RegisterDiscoveryCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB) {
         pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB = afptrBTRCoreDeviceDiscoveryCB;
-        printf("%s:%d - Device Discovery Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - Device Discovery Callback Registered Successfully\n", __FUNCTION__, __LINE__);
     }
     else {
-        printf("%s:%d - Device Discovery Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - Device Discovery Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
     }
 
     return enBTRCoreSuccess;
@@ -2413,10 +2408,10 @@ BTRCore_RegisterStatusCallback (
     if (!pstlhBTRCore->fptrBTRCoreStatusCB) {
         pstlhBTRCore->fptrBTRCoreStatusCB = afptrBTRCoreStatusCB;
         pstlhBTRCore->pvCBUserData = apUserData; 
-        printf("%s:%d - BT Status Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - BT Status Callback Registered Successfully\n", __FUNCTION__, __LINE__);
     }
     else {
-        printf("%s:%d - BT Status Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - BT Status Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
     }
 
     return enBTRCoreSuccess;
@@ -2442,10 +2437,10 @@ BTRCore_RegisterConnectionIntimationCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreConnIntimCB) {
         pstlhBTRCore->fptrBTRCoreConnIntimCB = afptrBTRCoreConnIntimCB;
-        printf("%s:%d - BT Conn In Intimation Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - BT Conn In Intimation Callback Registered Successfully\n", __FUNCTION__, __LINE__);
     }
     else {
-        printf("%s:%d - BT Conn In Intimation Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - BT Conn In Intimation Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
     }
 
     return enBTRCoreSuccess;
@@ -2471,10 +2466,10 @@ BTRCore_RegisterConnectionAuthenticationCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreConnAuthCB) {
         pstlhBTRCore->fptrBTRCoreConnAuthCB = afptrBTRCoreConnAuthCB;
-        printf("%s:%d - BT Conn Auth Callback Registered Successfully\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - BT Conn Auth Callback Registered Successfully\n", __FUNCTION__, __LINE__);
     }
     else {
-        printf("%s:%d - BT Conn Auth Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
+        fprintf(stderr, "%s:%d - BT Conn Auth Callback Already Registered - Not Registering current CB\n", __FUNCTION__, __LINE__);
     }
 
     return enBTRCoreSuccess;
@@ -2489,7 +2484,7 @@ btrCore_BTDeviceStatusUpdate_cb (
     stBTDeviceInfo* apstBTDeviceInfo,
     void*           apUserData
 ) {
-    printf("%s:%d - enBTDeviceType = %d enBTDeviceState = %d apstBTDeviceInfo = %p\n", __FUNCTION__, __LINE__, aeBtDeviceType, aeBtDeviceState, apstBTDeviceInfo);
+    fprintf(stderr, "%s:%d - enBTDeviceType = %d enBTDeviceState = %d apstBTDeviceInfo = %p\n", __FUNCTION__, __LINE__, aeBtDeviceType, aeBtDeviceState, apstBTDeviceInfo);
 
     enBTRCoreDeviceType lenBTRCoreDevType = enBTRCoreUnknown;
 
@@ -2525,32 +2520,32 @@ btrCore_BTDeviceStatusUpdate_cb (
                 tBTRCoreDevId   lBTRCoreDevId = 0;
                 stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
-                printf("%s:%d - bPaired = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bPaired);
-                printf("%s:%d - bConnected = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bConnected);
-                printf("%s:%d - bTrusted = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bTrusted);
-                printf("%s:%d - bBlocked = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bBlocked);
-                printf("%s:%d - ui16Vendor = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16Vendor);
-                printf("%s:%d - ui16VendorSource = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16VendorSource);
-                printf("%s:%d - ui16Product = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16Product);
-                printf("%s:%d - ui16Version = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16Version);
-                printf("%s:%d - ui32Class = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui32Class);
-                printf("%s:%d - i32RSSI = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->i32RSSI);
-                printf("%s:%d - pcName = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcName);
-                printf("%s:%d - pcAddress = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcAddress);
-                printf("%s:%d - pcAlias = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcAlias);
-                printf("%s:%d - pcIcon = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcIcon);
+                fprintf(stderr, "%s:%d - bPaired = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bPaired);
+                fprintf(stderr, "%s:%d - bConnected = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bConnected);
+                fprintf(stderr, "%s:%d - bTrusted = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bTrusted);
+                fprintf(stderr, "%s:%d - bBlocked = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->bBlocked);
+                fprintf(stderr, "%s:%d - ui16Vendor = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16Vendor);
+                fprintf(stderr, "%s:%d - ui16VendorSource = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16VendorSource);
+                fprintf(stderr, "%s:%d - ui16Product = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16Product);
+                fprintf(stderr, "%s:%d - ui16Version = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui16Version);
+                fprintf(stderr, "%s:%d - ui32Class = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->ui32Class);
+                fprintf(stderr, "%s:%d - i32RSSI = %d\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->i32RSSI);
+                fprintf(stderr, "%s:%d - pcName = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcName);
+                fprintf(stderr, "%s:%d - pcAddress = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcAddress);
+                fprintf(stderr, "%s:%d - pcAlias = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcAlias);
+                fprintf(stderr, "%s:%d - pcIcon = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->pcIcon);
 
                 for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
                     if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')
                         break;
                     else
-                        printf("%s:%d - aUUIDs = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->aUUIDs[j]);
+                        fprintf(stderr, "%s:%d - aUUIDs = %s\n", __FUNCTION__, __LINE__, apstBTDeviceInfo->aUUIDs[j]);
                 }
 
                 // TODO: Think of a way to move this to taskThread
                 lBTRCoreDevId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
-                if (btrCore_GetScannedDeviceAddress(apUserData, lBTRCoreDevId) != NULL) {
-                    printf ("Already we have a entry in the list; Skip Parsing now \n");
+                if (btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId) != NULL) {
+                    fprintf(stderr, "Already we have a entry in the list; Skip Parsing now \n");
                 }
                 else {
                     lpstlhBTRCore->stFoundDevice.found  = FALSE;
@@ -2617,15 +2612,15 @@ btrCore_BTDeviceStatusUpdate_cb (
         }
         break;
         case enBTDevStPropChanged: {
-            stBTRCoreHdl*       lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
-            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL))
-            {
-                enBTRCoreDeviceStatus status = btrCore_BTParseDeviceConnectionState(apstBTDeviceInfo->pcDeviceCurrState);
-                if (status != enBTRCore_DS_Inited)
-                {
+            stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
+
+            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL)) {
+                enBTRCoreDeviceState leBTDevState = btrCore_BTParseDeviceConnectionState(apstBTDeviceInfo->pcDeviceCurrState);
+
+                if ((leBTDevState != enBTRCoreDevStInitialized) && (leBTDevState != lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState)) {
                     lpstlhBTRCore->stDevStateCbInfo.eDeviceType      = lenBTRCoreDevType;
                     lpstlhBTRCore->stDevStateCbInfo.eDevicePrevState = lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState;
-                    lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState = status;
+                    lpstlhBTRCore->stDevStateCbInfo.eDeviceCurrState = leBTDevState;
                     /* Invoke the callback */
                     lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStateCbInfo, lpstlhBTRCore->pvCBUserData);
                 }
