@@ -448,7 +448,7 @@ btrCore_BTAgentMessageHandler_cb (
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "Cancel"))
         return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, userdata);
 
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
 
 
