@@ -136,7 +136,7 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
             return 53;
 
         default:
-            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            fprintf(stderr, "%d	: %s - Invalid A2DP channels mode %u\n", __LINE__, __FUNCTION__, au8AudioChannelsMode);
             return 53;
         }
     case BTR_SBC_SAMPLING_FREQ_48000:
@@ -150,11 +150,11 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
             return 51;
 
         default:
-            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            fprintf(stderr, "%d	: %s - Invalid A2DP channels mode %u\n", __LINE__, __FUNCTION__, au8AudioChannelsMode);
             return 51;
         }
     default:
-        fprintf (stderr, "Invalid Bluetooth SBC sampling freq %u\n", au8SamplingFreq);
+        fprintf(stderr, "%d	: %s - Invalid Bluetooth SBC sampling freq %u\n", __LINE__, __FUNCTION__, au8SamplingFreq);
         return 53;
     }
 }
@@ -180,7 +180,7 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
             return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
 
         default:
-            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            fprintf(stderr, "%d	: %s - Invalid A2DP channels mode %u\n", __LINE__, __FUNCTION__, au8AudioChannelsMode);
             return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
         }
     case BTR_SBC_SAMPLING_FREQ_48000:
@@ -194,11 +194,11 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
             return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
 
         default:
-            fprintf (stderr, "Invalid A2DP channels mode %u\n", au8AudioChannelsMode);
+            fprintf(stderr, "%d	: %s - Invalid A2DP channels mode %u\n", __LINE__, __FUNCTION__, au8AudioChannelsMode);
             return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
         }
     default:
-        fprintf (stderr, "Invalid Bluetooth SBC sampling freq %u\n", au8SamplingFreq);
+        fprintf(stderr, "%d	: %s - Invalid Bluetooth SBC sampling freq %u\n", __LINE__, __FUNCTION__, au8SamplingFreq);
         return BTR_SBC_DEFAULT_BITRATE_BITPOOL;
     }
 }
@@ -466,15 +466,15 @@ BTRCore_AVMedia_GetCurMediaInfo (
             else
                 pstBtrCoreAVMediaSbcInfo->ui16AVMSbcBitrate  = 0;
 
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui32AVMSFreq          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui32AVMAChan          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcAllocMethod  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcSubbands     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcBlockLength  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMinBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMaxBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcFrameLen    = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen);
-            fprintf (stderr, "BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcBitrate     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui32AVMSFreq          = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui32AVMAChan          = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcAllocMethod  = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcSubbands     = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcBlockLength  = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMinBitpool   = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMaxBitpool   = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcFrameLen    = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen);
+            fprintf(stderr, "%d	: %s - BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcBitrate     = %d\n", __LINE__, __FUNCTION__, pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
         }
         else if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypeMPEG) {
         }
@@ -517,7 +517,7 @@ BTRCore_AVMedia_AcquireDataPath (
     if ((lBtAVMediaRet = BtrCore_BTGetProp(apBtConn, pstlhBTRCoreAVM->pcAVMediaTransportPath, enBTMediaTransport, "Delay", &ui16Delay)))
         lenBTRCoreRet = enBTRCoreFailure;
 
-    fprintf (stderr, "BTRCore_AVMedia_AcquireDataPath: Delay value = %d\n", ui16Delay);
+    fprintf(stderr, "%d	: %s - BTRCore_AVMedia_AcquireDataPath: Delay value = %d\n", __LINE__, __FUNCTION__, ui16Delay);
 
     return lenBTRCoreRet;
 }
@@ -560,7 +560,7 @@ btrCore_AVMedia_NegotiateMedia_cb (
     a2dp_sbc_t              lstBTMediaSBCConfig;
 
     if (!apBtMediaCaps) {
-        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: Invalid input MT Media Capabilities\n");
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: Invalid input MT Media Capabilities\n", __LINE__, __FUNCTION__);
         return NULL;
     } 
 
@@ -584,7 +584,7 @@ btrCore_AVMedia_NegotiateMedia_cb (
         lstBTMediaSBCConfig.channel_mode = BTR_A2DP_CHANNEL_MODE_MONO;
     } 
     else {
-        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported channel modes\n");
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: No supported channel modes\n", __LINE__, __FUNCTION__);
         return NULL;
     }
 
@@ -601,7 +601,7 @@ btrCore_AVMedia_NegotiateMedia_cb (
         lstBTMediaSBCConfig.block_length = BTR_A2DP_BLOCK_LENGTH_4;
     }
     else {
-        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported block lengths\n");
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: No supported block lengths\n", __LINE__, __FUNCTION__);
         return NULL;
     }
 
@@ -612,7 +612,7 @@ btrCore_AVMedia_NegotiateMedia_cb (
         lstBTMediaSBCConfig.subbands = BTR_A2DP_SUBBANDS_4;
     }
     else {
-        fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: No supported subbands\n");
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: No supported subbands\n", __LINE__, __FUNCTION__);
         return NULL;
     }
 
@@ -628,14 +628,14 @@ btrCore_AVMedia_NegotiateMedia_cb (
                                                                                           lstBTMediaSBCConfig.channel_mode),
                                                     apBtMediaSBCCaps->max_bitpool);
 
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: Negotiated Configuration\n");
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
-    fprintf (stderr, "btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: Negotiated Configuration\n", __LINE__, __FUNCTION__);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: channel_mode       = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.channel_mode);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: frequency          = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.frequency);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: allocation_method  = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.allocation_method);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: subbands           = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.subbands);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: block_length       = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.block_length);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.min_bitpool);
+    fprintf(stderr, "%d	: %s - btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.max_bitpool);
 
     if (pstlhBTRCoreAVM) {
         if (pstlhBTRCoreAVM->pstBTMediaConfig) {
@@ -665,7 +665,7 @@ btrCore_AVMedia_TransportPath_cb (
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
 
     if (!apBtMediaTransportPath) {
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Invalid transport path\n");
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: Invalid transport path\n", __LINE__, __FUNCTION__);
         return NULL;
     }
 
@@ -674,7 +674,7 @@ btrCore_AVMedia_TransportPath_cb (
     if (pstlhBTRCoreAVM) { 
         if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
             if(!strncmp(pstlhBTRCoreAVM->pcAVMediaTransportPath, apBtMediaTransportPath, strlen(pstlhBTRCoreAVM->pcAVMediaTransportPath)))
-                fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Freeing 0x%p:%s\n", 
+                fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: Freeing 0x%p:%s\n", __LINE__, __FUNCTION__, 
                             pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
 
             free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
@@ -699,14 +699,14 @@ btrCore_AVMedia_TransportPath_cb (
         lstBTMediaSBCConfig.min_bitpool         =   apBtMediaSBCCaps->min_bitpool;
         lstBTMediaSBCConfig.max_bitpool         =   apBtMediaSBCCaps->max_bitpool;
 
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: Set Configuration\n");
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
-        fprintf (stderr, "btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: Set Configuration\n", __LINE__, __FUNCTION__);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: channel_mode       = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.channel_mode);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: frequency          = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.frequency);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: allocation_method  = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.allocation_method);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: subbands           = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.subbands);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: block_length       = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.block_length);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.min_bitpool);
+        fprintf(stderr, "%d	: %s - btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", __LINE__, __FUNCTION__, lstBTMediaSBCConfig.max_bitpool);
 
         if (pstlhBTRCoreAVM) {
             if (pstlhBTRCoreAVM->pstBTMediaConfig) {

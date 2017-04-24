@@ -69,9 +69,9 @@ DoSBCwrite (
 
     /* create the FIFO (named pipe) */
     mkfifo(myfifo, 0666);
-    printf("Thread starting: %s \n", message);
+    fprintf(stderr, "%d\t: %s - Thread starting: %s \n", __LINE__, __FUNCTION__, message);
     fd = open(myfifo, O_WRONLY );//not sure if I need nonblock or not the first time I tried it it failed. then I tried nonblock, no audio
-    printf("BT data flowing...\n");
+    fprintf(stderr, "%d\t: %s - BT data flowing...\n", __LINE__, __FUNCTION__);
 
     do { 
         sleep (1);
@@ -118,7 +118,7 @@ DoSBCwrite (
                 y++;
 
                 if (x == 0x9C) {
-                    printf("first sbc frame detected\n");
+                    fprintf(stderr, "%d\t: %s - first sbc frame detected\n", __LINE__, __FUNCTION__);
                     //get another byte
                     x = buffy[y];
                     y++;
@@ -134,10 +134,10 @@ DoSBCwrite (
                     y++;
                     bitpool = x;
                     //get the length
-                    printf("channel mode 0x%x\n",bit_channel_mode);
-                    printf("nrof_subbands 0x%x\n",sub_bands);
-                    printf("nrof_blocks 0x%x\n",blocks);
-                    printf("bitpool 0x%x\n",bitpool );
+                    fprintf(stderr, "%d\t: %s - channel mode 0x%x\n", __LINE__, __FUNCTION__, bit_channel_mode);
+                    fprintf(stderr, "%d\t: %s - nrof_subbands 0x%x\n", __LINE__, __FUNCTION__, sub_bands);
+                    fprintf(stderr, "%d\t: %s - nrof_blocks 0x%x\n", __LINE__, __FUNCTION__, blocks);
+                    fprintf(stderr, "%d\t: %s - bitpool 0x%x\n", __LINE__, __FUNCTION__, bitpool );
 
                     switch (bit_channel_mode) {
                         case 0x00:
@@ -159,9 +159,9 @@ DoSBCwrite (
 
                     computed_len = sub_bands + ((tmp + 7) / 8);
                     frame_length = computed_len + 4;
-                    //printf("tmp = %d\n",tmp);
-                    //printf("computed length is %d\n",computed_len);
-                    printf("frame length is %d\n",frame_length);
+                    //fprintf(stderr, "%d\t: %s - tmp = %d\n", __LINE__, __FUNCTION__tmp);
+                    //fprintf(stderr, "%d\t: %s - computed length is %d\n", __LINE__, __FUNCTION__computed_len);
+                    fprintf(stderr, "%d\t: %s - frame length is %d\n", __LINE__, __FUNCTION__, frame_length);
                     first_time_thru = 0;
                     //we now know how long the frames are. and what the two signature bytes after the sync are
                     //lets not bother with this frame, instead start searching now, based on what we know.
@@ -171,7 +171,7 @@ DoSBCwrite (
             //////END FIRST TIME CODE now that we know the details, lets parse
             if (read_return > 0) {
                 if ( (k % 1000) == 0) {
-                    printf("reading %d - %d - %d\n",read_return,k,BT_loop);
+                    fprintf(stderr, "%d\t: %s - reading %d - %d - %d\n", __LINE__, __FUNCTION__, read_return,k,BT_loop);
                 }
 
                 k++;
@@ -248,21 +248,21 @@ GetTransport (
                                     &pstAppData->iDataReadMTU,
                                     &pstAppData->iDataWriteMTU);
 
-    printf("Device Data Path = %d \n",      pstAppData->iDataPath);
-    printf("Device Data Read MTU = %d \n",  pstAppData->iDataReadMTU);
-    printf("Device Data Write MTU= %d \n",  pstAppData->iDataWriteMTU);
+    fprintf(stderr, "%d\t: %s - Device Data Path = %d \n", __LINE__, __FUNCTION__,      pstAppData->iDataPath);
+    fprintf(stderr, "%d\t: %s - Device Data Read MTU = %d \n", __LINE__, __FUNCTION__,  pstAppData->iDataReadMTU);
+    fprintf(stderr, "%d\t: %s - Device Data Write MTU= %d \n", __LINE__, __FUNCTION__,  pstAppData->iDataWriteMTU);
 
     if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
 		if (pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
-            printf("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
-            printf("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
-            printf("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
-            printf("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
-            printf("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
-            printf("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
-            printf("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
-            printf("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
-            printf("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+            fprintf(stderr, "%d\t: %s - Device Media Info SFreq         = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+            fprintf(stderr, "%d\t: %s - Device Media Info AChan         = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcAllocMethod= %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcSubbands   = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcBlockLength= %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcMinBitpool = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcMaxBitpool = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcFrameLen   = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+            fprintf(stderr, "%d\t: %s - Device Media Info SbcBitrate    = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
 		}
     }
 }
@@ -273,7 +273,7 @@ getChoice (
     void
 ) {
     int mychoice;
-    printf("Enter a choice...\n");
+    fprintf(stderr, "Enter a choice...\n");
     scanf("%d", &mychoice);
         getchar();//suck up a newline?
     return mychoice;
@@ -284,7 +284,7 @@ getEncodedSBCFile (
     void
 ) {
     char sbcEncodedFile[1024];
-    printf("Enter SBC File location...\n");
+    fprintf(stderr, "%d\t: %s - Enter SBC File location...\n", __LINE__, __FUNCTION__);
     scanf("%s", sbcEncodedFile);
         getchar();//suck up a newline?
     return strdup(sbcEncodedFile);
@@ -308,13 +308,13 @@ sendSBCFileOverBT (
     if (!sbcFilePtr)
         return;
 
-    printf("fileLocation %s", fileLocation);
+    fprintf(stderr, "%d\t: %s - fileLocation %s", __LINE__, __FUNCTION__, fileLocation);
 
     fseek(sbcFilePtr, 0, SEEK_END);
     bytesLeft = ftell(sbcFilePtr);
     fseek(sbcFilePtr, 0, SEEK_SET);
 
-    printf("File size: %d bytes\n", (int)bytesLeft);
+    fprintf(stderr, "%d\t: %s - File size: %d bytes\n", __LINE__, __FUNCTION__, (int)bytesLeft);
 
     encoded_buf = malloc (mtuSize);
 
@@ -328,7 +328,7 @@ sendSBCFileOverBT (
         if (timeout == 0)
             continue;
         if (timeout < 0)
-            fprintf (stderr, "Bluetooth Write Error : %d\n", errno);
+            fprintf (stderr, "%d\t: %s - Bluetooth Write Error : %d\n", __LINE__, __FUNCTION__, errno);
 
         // write bluetooth
         if (timeout > 0) {
@@ -350,26 +350,26 @@ cb_connection_authentication (
     stBTRCoreConnCBInfo* apstConnCbInfo
 ) {
 #if 0
-    printf("\n\nConnection attempt by: %s\n",path);
+    fprintf(stderr, "%d\t: %s - \n\nConnection attempt by: %s\n", __LINE__, __FUNCTION__path);
 #endif
-    printf("Choose 35 to accept the connection/verify pin-passcode or 36 to deny the connection/discard pin-passcode\n\n");
+    fprintf(stderr, "%d\t: %s - Choose 35 to accept the connection/verify pin-passcode or 36 to deny the connection/discard pin-passcode\n\n", __LINE__, __FUNCTION__);
 
     if (apstConnCbInfo->ui32devPassKey) {
-        printf("Incoming Connection passkey = %6d\n", apstConnCbInfo->ui32devPassKey);
+        fprintf(stderr, "%d\t: %s - Incoming Connection passkey = %6d\n", __LINE__, __FUNCTION__, apstConnCbInfo->ui32devPassKey);
     }    
 
     do {
         usleep(20000);
     } while (acceptConnection == 0);
 
-    printf("you picked %d\n", acceptConnection);
+    fprintf(stderr, "%d\t: %s - you picked %d\n", __LINE__, __FUNCTION__, acceptConnection);
     if (acceptConnection == 1) {
-        printf("connection accepted\n");
+        fprintf(stderr, "%d\t: %s - connection accepted\n", __LINE__, __FUNCTION__);
         acceptConnection = 0;//reset variabhle for the next connection
         return 1;
     }
     else {
-        printf("connection denied\n");
+        fprintf(stderr, "%d\t: %s - connection denied\n", __LINE__, __FUNCTION__);
         acceptConnection = 0;//reset variabhle for the next connection
         return 0;
     }
@@ -381,11 +381,11 @@ cb_unsolicited_bluetooth_status (
     stBTRCoreDevStateCBInfo* p_StatusCB,
     void*                    apvUserData
 ) {
-    //printf("device status change: %d\n",p_StatusCB->eDeviceType);
-    printf("app level cb device status change: new state is %d\n",p_StatusCB->eDeviceCurrState);
+    //fprintf(stderr, "%d\t: %s - device status change: %d\n", __LINE__, __FUNCTION__p_StatusCB->eDeviceType);
+    fprintf(stderr, "%d\t: %s - app level cb device status change: new state is %d\n", __LINE__, __FUNCTION__, p_StatusCB->eDeviceCurrState);
     if ((p_StatusCB->eDevicePrevState == enBTRCoreDevStConnected) && (p_StatusCB->eDeviceCurrState == enBTRCoreDevStPlaying)) {
         if (p_StatusCB->eDeviceType == enBTRCoreMobileAudioIn) {
-            printf("transition to playing, get the transport info...\n");
+            fprintf(stderr, "%d\t: %s - transition to playing, get the transport info...\n", __LINE__, __FUNCTION__);
             GetTransport((appDataStruct*)apvUserData);
         }
     }
@@ -397,41 +397,41 @@ static void
 printMenu (
     void
 ) {
-    printf("Bluetooth Test Menu\n\n");
-    printf("1. Get Current Adapter\n");
-    printf("2. Scan\n");
-    printf("3. Show found devices\n");
-    printf("4. Pair\n");
-    printf("5. UnPair/Forget a device\n");
-    printf("6. Show known devices\n");
-    printf("7. Connect to Headset/Speakers\n");
-    printf("8. Disconnect to Headset/Speakers\n");
-    printf("9. Connect as Headset/Speakerst\n");
-    printf("10. Disconnect as Headset/Speakerst\n");
-    printf("11. Show all Bluetooth Adapters\n");
-    printf("12. Enable Bluetooth Adapter\n");
-    printf("13. Disable Bluetooth Adapter\n");
-    printf("14. Set Discoverable Timeout\n");
-    printf("15. Set Discoverable \n");
-    printf("16. Set friendly name \n");
-    printf("17. Check for audio sink capability\n");
-    printf("18. Check for existance of a service\n");
-    printf("19. Find service details\n");
-    printf("20. Check if Device Paired\n");
-    printf("21. Get Connected Dev Data path\n");
-    printf("22. Release Connected Dev Data path\n");
-    printf("23. Send SBC data to BT Headset/Speakers\n");
-    printf("29. BT audio input test\n");
-    printf("30. install agent for accepting connections NoInputNoOutput\n");
-    printf("31. install agent for accepting connections DisplayYesNo\n");
-    printf("32. Uninstall agent - allows device-initiated pairing\n");
-    printf("33. Register connection-in intimation callback.\n");
-    printf("34. Register connection authentication callback to allow accepting or rejection of connections.\n");
-    printf("35. Accept a connection request\n");
-    printf("36. Deny a connection request\n");
+    fprintf( stderr, "Bluetooth Test Menu\n\n");
+    fprintf( stderr, "1. Get Current Adapter\n");
+    fprintf( stderr, "2. Scan\n");
+    fprintf( stderr, "3. Show found devices\n");
+    fprintf( stderr, "4. Pair\n");
+    fprintf( stderr, "5. UnPair/Forget a device\n");
+    fprintf( stderr, "6. Show known devices\n");
+    fprintf( stderr, "7. Connect to Headset/Speakers\n");
+    fprintf( stderr, "8. Disconnect to Headset/Speakers\n");
+    fprintf( stderr, "9. Connect as Headset/Speakerst\n");
+    fprintf( stderr, "10. Disconnect as Headset/Speakerst\n");
+    fprintf( stderr, "11. Show all Bluetooth Adapters\n");
+    fprintf( stderr, "12. Enable Bluetooth Adapter\n");
+    fprintf( stderr, "13. Disable Bluetooth Adapter\n");
+    fprintf( stderr, "14. Set Discoverable Timeout\n");
+    fprintf( stderr, "15. Set Discoverable \n");
+    fprintf( stderr, "16. Set friendly name \n");
+    fprintf( stderr, "17. Check for audio sink capability\n");
+    fprintf( stderr, "18. Check for existance of a service\n");
+    fprintf( stderr, "19. Find service details\n");
+    fprintf( stderr, "20. Check if Device Paired\n");
+    fprintf( stderr, "21. Get Connected Dev Data path\n");
+    fprintf( stderr, "22. Release Connected Dev Data path\n");
+    fprintf( stderr, "23. Send SBC data to BT Headset/Speakers\n");
+    fprintf( stderr, "29. BT audio input test\n");
+    fprintf( stderr, "30. install agent for accepting connections NoInputNoOutput\n");
+    fprintf( stderr, "31. install agent for accepting connections DisplayYesNo\n");
+    fprintf( stderr, "32. Uninstall agent - allows device-initiated pairing\n");
+    fprintf( stderr, "33. Register connection-in intimation callback.\n");
+    fprintf( stderr, "34. Register connection authentication callback to allow accepting or rejection of connections.\n");
+    fprintf( stderr, "35. Accept a connection request\n");
+    fprintf( stderr, "36. Deny a connection request\n");
 
-    printf("88. debug test\n");
-    printf("99. Exit\n");
+    fprintf( stderr, "88. debug test\n");
+    fprintf( stderr, "99. Exit\n");
 }
 
 
@@ -475,10 +475,10 @@ main (
     lstBTRCoreAdapter.bFirstAvailable = TRUE;
     if (enBTRCoreSuccess ==	BTRCore_GetAdapter(lhBTRCore, &lstBTRCoreAdapter)) {
         default_adapter = lstBTRCoreAdapter.adapter_number;
-        BTRCore_LOG("GetAdapter Returns Adapter number %d\n",default_adapter);
+        fprintf(stderr, "%d\t: %s - GetAdapter Returns Adapter number %d\n", __LINE__, __FUNCTION__, default_adapter);
     }
     else {
-        BTRCore_LOG("No bluetooth adapter found!\n");
+        fprintf(stderr, "%d\t: %s - No bluetooth adapter found!\n", __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -493,37 +493,37 @@ main (
     //start Bluetooth input data writing thread - supports BT in audio test
     iret1 = pthread_create( &fileWriteThread, NULL, DoSBCwrite, (void*) &stAppData);
     do {
-        printf("Enter a choice...\n");
+        fprintf(stderr, "Enter a choice...\n");
         scanf("%d", &choice);
         getchar();//suck up a newline?
         switch (choice) {
         case 1: 
-            printf("Adapter is %s\n", lstBTRCoreAdapter.pcAdapterPath);
+            fprintf(stderr, "%d\t: %s - Adapter is %s\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.pcAdapterPath);
             break;
         case 2: 
             if (default_adapter != NO_ADAPTER) {
                 StartDiscovery.adapter_number = default_adapter;
-                BTRCore_LOG("Looking for devices on BT adapter %d\n",StartDiscovery.adapter_number);
+                fprintf(stderr, "%d\t: %s - Looking for devices on BT adapter %d\n", __LINE__, __FUNCTION__, StartDiscovery.adapter_number);
                 StartDiscovery.duration = 13;
-                BTRCore_LOG("duration %d\n",StartDiscovery.duration);
+                fprintf(stderr, "%d\t: %s - duration %d\n", __LINE__, __FUNCTION__, StartDiscovery.duration);
                 StartDiscovery.max_devices = 10;
-                BTRCore_LOG("max_devices %d\n",StartDiscovery.max_devices);
+                fprintf(stderr, "%d\t: %s - max_devices %d\n", __LINE__, __FUNCTION__, StartDiscovery.max_devices);
                 StartDiscovery.lookup_names = TRUE;
-                BTRCore_LOG("lookup_names %d\n",StartDiscovery.lookup_names);
+                fprintf(stderr, "%d\t: %s - lookup_names %d\n", __LINE__, __FUNCTION__, StartDiscovery.lookup_names);
                 StartDiscovery.flags = 0;
-                BTRCore_LOG("flags %d\n",StartDiscovery.flags);
-                printf("Performing device scan. Please wait...\n");
+                fprintf(stderr, "%d\t: %s - flags %d\n", __LINE__, __FUNCTION__, StartDiscovery.flags);
+                fprintf(stderr, "%d\t: %s - Performing device scan. Please wait...\n", __LINE__, __FUNCTION__);
                 BTRCore_StartDiscovery(lhBTRCore, &StartDiscovery);
-                printf("scan complete\n");
+                fprintf(stderr, "%d\t: %s - scan complete\n", __LINE__, __FUNCTION__);
             }
             else {
-                BTRCore_LOG("Error, no default_adapter set\n");
+                fprintf(stderr, "%d\t: %s - Error, no default_adapter set\n", __LINE__, __FUNCTION__);
             }
             break;
         case 3:
             {
                 stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
-                printf("Show Found Devices\n");
+                fprintf(stderr, "%d\t: %s - Show Found Devices\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
             }
@@ -531,24 +531,24 @@ main (
         case 4:
             {
                 stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
-                printf("Pick a Device to Pair...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Pair...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
                 devnum = getChoice();
 
-                printf(" adapter_path %s\n", lstBTRCoreAdapter.pcAdapterPath);
-                printf(" agent_path %s\n",agent_path);
+                fprintf(stderr, "%d\t: %s -  adapter_path %s\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.pcAdapterPath);
+                fprintf(stderr, "%d\t: %s -  agent_path %s\n", __LINE__, __FUNCTION__, agent_path);
                 if ( BTRCore_PairDevice(lhBTRCore, devnum) == enBTRCoreSuccess)
-                    printf("device pairing successful.\n");
+                    fprintf(stderr, "%d\t: %s - device pairing successful.\n", __LINE__, __FUNCTION__);
                 else
-                  printf("device pairing FAILED.\n");
+                  fprintf(stderr, "%d\t: %s - device pairing FAILED.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 5:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("UnPair/Forget a device\n");
-                printf("Pick a Device to Remove...\n");
+                fprintf(stderr, "%d\t: %s - UnPair/Forget a device\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "%d\t: %s - Pick a Device to Remove...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
@@ -558,7 +558,7 @@ main (
         case 6:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Show Known Devices...using BTRCore_GetListOfPairedDevices\n");
+                fprintf(stderr, "%d\t: %s - Show Known Devices...using BTRCore_GetListOfPairedDevices\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList); //TODO pass in a different structure for each adapter
             }
@@ -566,57 +566,57 @@ main (
         case 7:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to Connect...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Connect...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
                 connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
-                printf("device connect process completed.\n");
+                fprintf(stderr, "%d\t: %s - device connect process completed.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 8:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to Disconnect...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Disconnect...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreSpeakers);
-                printf("device disconnect process completed.\n");
+                fprintf(stderr, "%d\t: %s - device disconnect process completed.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 9:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to Connect...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Connect...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
                 connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
-                printf("device connect process completed.\n");
+                fprintf(stderr, "%d\t: %s - device connect process completed.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 10:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to Disonnect...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Disonnect...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreMobileAudioIn);
-                printf("device disconnect process completed.\n");
+                fprintf(stderr, "%d\t: %s - device disconnect process completed.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 11:
-            printf("Getting all available adapters\n");
+            fprintf(stderr, "%d\t: %s - Getting all available adapters\n", __LINE__, __FUNCTION__);
             //START - adapter selection: if there is more than one adapter, offer choice of which adapter to use for pairing
             BTRCore_GetAdapters(lhBTRCore, &GetAdapters);
             if ( GetAdapters.number_of_adapters > 1) {
-                printf("There are %d Bluetooth adapters\n",GetAdapters.number_of_adapters);
-                printf("current adatper is %s\n", lstBTRCoreAdapter.pcAdapterPath);
-                printf("Which adapter would you like to use (0 = default)?\n");
+                fprintf(stderr, "%d\t: %s - There are %d Bluetooth adapters\n", __LINE__, __FUNCTION__, GetAdapters.number_of_adapters);
+                fprintf(stderr, "%d\t: %s - current adatper is %s\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.pcAdapterPath);
+                fprintf(stderr, "%d\t: %s - Which adapter would you like to use (0 = default)?\n", __LINE__, __FUNCTION__);
                 myadapter = getChoice();
 
                 BTRCore_SetAdapter(lhBTRCore, myadapter);
@@ -625,65 +625,65 @@ main (
             break;
         case 12:
             lstBTRCoreAdapter.adapter_number = myadapter;
-            printf("Enabling adapter %d\n",lstBTRCoreAdapter.adapter_number);
+            fprintf(stderr, "%d\t: %s - Enabling adapter %d\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.adapter_number);
             BTRCore_EnableAdapter(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 13:
             lstBTRCoreAdapter.adapter_number = myadapter;
-            printf("Disabling adapter %d\n",lstBTRCoreAdapter.adapter_number);
+            fprintf(stderr, "%d\t: %s - Disabling adapter %d\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.adapter_number);
             BTRCore_DisableAdapter(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 14:
-            printf("Enter discoverable timeout in seconds.  Zero seconds = FOREVER \n");
+            fprintf(stderr, "%d\t: %s - Enter discoverable timeout in seconds.  Zero seconds = FOREVER \n", __LINE__, __FUNCTION__);
             lstBTRCoreAdapter.DiscoverableTimeout = getChoice();
-            printf("setting DiscoverableTimeout to %d\n",lstBTRCoreAdapter.DiscoverableTimeout);
+            fprintf(stderr, "%d\t: %s - setting DiscoverableTimeout to %d\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.DiscoverableTimeout);
             BTRCore_SetDiscoverableTimeout(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 15:
-            printf("Set discoverable.  Zero = Not Discoverable, One = Discoverable \n");
+            fprintf(stderr, "%d\t: %s - Set discoverable.  Zero = Not Discoverable, One = Discoverable \n", __LINE__, __FUNCTION__);
             lstBTRCoreAdapter.discoverable = getChoice();
-            printf("setting discoverable to %d\n",lstBTRCoreAdapter.discoverable);
+            fprintf(stderr, "%d\t: %s - setting discoverable to %d\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.discoverable);
             BTRCore_SetDiscoverable(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 16:
             {
                 char lcAdapterName[64] = {'\0'};
-                printf("Set friendly name (up to 64 characters): \n");
+                fprintf(stderr, "%d\t: %s - Set friendly name (up to 64 characters): \n", __LINE__, __FUNCTION__);
                 fgets(lcAdapterName, 63 , stdin);
-                printf("setting name to %s\n", lcAdapterName);
+                fprintf(stderr, "%d\t: %s - setting name to %s\n", __LINE__, __FUNCTION__, lcAdapterName);
                 BTRCore_SetAdapterDeviceName(lhBTRCore, &lstBTRCoreAdapter, lcAdapterName);
             }
             break;
         case 17:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Check for Audio Sink capability\n");
-                printf("Pick a Device to Check for Audio Sink...\n");
+                fprintf(stderr, "%d\t: %s - Check for Audio Sink capability\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "%d\t: %s - Pick a Device to Check for Audio Sink...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 if (BTRCore_FindService(lhBTRCore, devnum, BTR_CORE_A2SNK,NULL,&bfound) == enBTRCoreSuccess) {
                     if (bfound) {
-                        printf("Service UUID BTRCore_A2SNK is found\n");
+                        fprintf(stderr, "%d\t: %s - Service UUID BTRCore_A2SNK is found\n", __LINE__, __FUNCTION__);
                     }
                     else {
-                        printf("Service UUID BTRCore_A2SNK is NOT found\n");
+                        fprintf(stderr, "%d\t: %s - Service UUID BTRCore_A2SNK is NOT found\n", __LINE__, __FUNCTION__);
                     }
                 }
                 else {
-                    printf("Error on BTRCore_FindService\n");
+                    fprintf(stderr, "%d\t: %s - Error on BTRCore_FindService\n", __LINE__, __FUNCTION__);
                 }
             }
             break;
         case 18:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Find a Service\n");
-                printf("Pick a Device to Check for Services...\n");
+                fprintf(stderr, "%d\t: %s - Find a Service\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "%d\t: %s - Pick a Device to Check for Services...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
+                fprintf(stderr, "%d\t: %s - enter UUID of desired service... e.g. 0x110b for Audio Sink\n", __LINE__, __FUNCTION__);
                 fgets(myService,sizeof(myService),stdin);
                 for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                       {
@@ -693,26 +693,26 @@ main (
                 bfound=0;//assume not found
                 if (BTRCore_FindService(lhBTRCore, devnum, myService,NULL,&bfound) == enBTRCoreSuccess) {
                     if (bfound) {
-                        printf("Service UUID %s is found\n",myService);
+                        fprintf(stderr, "%d\t: %s - Service UUID %s is found\n", __LINE__, __FUNCTION__, myService);
                     }
                     else {
-                        printf("Service UUID %s is NOT found\n",myService);
+                        fprintf(stderr, "%d\t: %s - Service UUID %s is NOT found\n", __LINE__, __FUNCTION__, myService);
                     }
                 }
                 else {
-                    printf("Error on BTRCore_FindService\n");
+                    fprintf(stderr, "%d\t: %s - Error on BTRCore_FindService\n", __LINE__, __FUNCTION__);
                 }
             }
             break;
         case 19:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Find a Service and get details\n");
-                printf("Pick a Device to Check for Services...\n");
+                fprintf(stderr, "%d\t: %s - Find a Service and get details\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "%d\t: %s - Pick a Device to Check for Services...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
-                printf("enter UUID of desired service... e.g. 0x110b for Audio Sink\n");
+                fprintf(stderr, "%d\t: %s - enter UUID of desired service... e.g. 0x110b for Audio Sink\n", __LINE__, __FUNCTION__);
                 fgets(myService,sizeof(myService),stdin);
                 for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                       {
@@ -728,35 +728,35 @@ main (
                 the simplified option where the data pointer is NULL, and no data is copied*/
                 if (BTRCore_FindService(lhBTRCore, devnum,myService,myData,&bfound)  == enBTRCoreSuccess) {
                     if (bfound) {
-                        printf("Service UUID %s is found\n",myService);
-                        printf("Data is:\n %s \n",myData);
+                        fprintf(stderr, "%d\t: %s - Service UUID %s is found\n", __LINE__, __FUNCTION__, myService);
+                        fprintf(stderr, "%d\t: %s - Data is:\n %s \n", __LINE__, __FUNCTION__, myData);
                     }
                     else {
-                        printf("Service UUID %s is NOT found\n",myService);
+                        fprintf(stderr, "%d\t: %s - Service UUID %s is NOT found\n", __LINE__, __FUNCTION__, myService);
                     }
                 }
                 else {
-                    printf("Error on BTRCore_FindService\n");
+                    fprintf(stderr, "%d\t: %s - Error on BTRCore_FindService\n", __LINE__, __FUNCTION__);
                 }
             }
             break;
          case 20:
             {
                 stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
-                printf("Pick a Device to Find (see if it is already paired)...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Find (see if it is already paired)...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
                 devnum = getChoice();
                 if ( BTRCore_FindDevice(lhBTRCore, devnum) == enBTRCoreSuccess)
-                    printf("device FOUND successful.\n");
+                    fprintf(stderr, "%d\t: %s - device FOUND successful.\n", __LINE__, __FUNCTION__);
                 else
-                  printf("device was NOT found.\n");
+                  fprintf(stderr, "%d\t: %s - device was NOT found.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 21:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to Get Data tranport parameters...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to Get Data tranport parameters...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
@@ -769,21 +769,21 @@ main (
 
                 BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
 
-                printf("Device Data Path = %d \n", stAppData.iDataPath);
-                printf("Device Data Read MTU = %d \n", stAppData.iDataReadMTU);
-                printf("Device Data Write MTU= %d \n", stAppData.iDataWriteMTU);
+                fprintf(stderr, "%d\t: %s - Device Data Path = %d \n", __LINE__, __FUNCTION__, stAppData.iDataPath);
+                fprintf(stderr, "%d\t: %s - Device Data Read MTU = %d \n", __LINE__, __FUNCTION__, stAppData.iDataReadMTU);
+                fprintf(stderr, "%d\t: %s - Device Data Write MTU= %d \n", __LINE__, __FUNCTION__, stAppData.iDataWriteMTU);
 
                 if (stAppData.stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
 					if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
-                        printf("Device Media Info SFreq         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
-                        printf("Device Media Info AChan         = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
-                        printf("Device Media Info SbcAllocMethod= %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
-                        printf("Device Media Info SbcSubbands   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
-                        printf("Device Media Info SbcBlockLength= %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
-                        printf("Device Media Info SbcMinBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
-                        printf("Device Media Info SbcMaxBitpool = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
-                        printf("Device Media Info SbcFrameLen   = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
-                        printf("Device Media Info SbcBitrate    = %d\n", ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SFreq         = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui32DevMSFreq);
+                        fprintf(stderr, "%d\t: %s - Device Media Info AChan         = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->eDevMAChan);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcAllocMethod= %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcAllocMethod);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcSubbands   = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcSubbands);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcBlockLength= %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcBlockLength);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcMinBitpool = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMinBitpool);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcMaxBitpool = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui8DevMSbcMaxBitpool);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcFrameLen   = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcFrameLen);
+                        fprintf(stderr, "%d\t: %s - Device Media Info SbcBitrate    = %d\n", __LINE__, __FUNCTION__, ((stBTRCoreDevMediaSbcInfo*)(stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo))->ui16DevMSbcBitrate);
 					}
                 }
             }
@@ -791,7 +791,7 @@ main (
         case 22:
             {
                 stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
-                printf("Pick a Device to ReleaseData tranport...\n");
+                fprintf(stderr, "%d\t: %s - Pick a Device to ReleaseData tranport...\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
@@ -803,21 +803,21 @@ main (
             }
             break;
         case 23:
-            printf("Enter Encoded SBC file location to send to BT Headset/Speakers...\n");
+            fprintf(stderr, "%d\t: %s - Enter Encoded SBC file location to send to BT Headset/Speakers...\n", __LINE__, __FUNCTION__);
             sbcEncodedFileName = getEncodedSBCFile();
             if (sbcEncodedFileName) {
-                printf(" We will send %s to BT FD %d \n", sbcEncodedFileName, stAppData.iDataPath);
+                fprintf(stderr, "%d\t: %s -  We will send %s to BT FD %d \n", __LINE__, __FUNCTION__, sbcEncodedFileName, stAppData.iDataPath);
                 sendSBCFileOverBT(sbcEncodedFileName, stAppData.iDataPath, stAppData.iDataWriteMTU);
                 free(sbcEncodedFileName);
                 sbcEncodedFileName = NULL;
             }
             else {
-                printf(" Invalid file location\n");
+                fprintf(stderr, "%d\t: %s -  Invalid file location\n", __LINE__, __FUNCTION__);
             }
             break;
         case 29:
-            printf("rtp deplayload and play some music over BT\n");
-            printf("about how many minutes to play?\n");
+            fprintf(stderr, "%d\t: %s - rtp deplayload and play some music over BT\n", __LINE__, __FUNCTION__);
+            fprintf(stderr, "%d\t: %s - about how many minutes to play?\n", __LINE__, __FUNCTION__);
             choice = getChoice();
             BT_loop = 6000 * choice;//6000 equates to roughly one minute
             writeSBC = 1;
@@ -825,43 +825,43 @@ main (
             system("gst-launch-1.0 filesrc location=/tmp/myfifo   ! sbcparse ! sbcdec ! brcmpcmsink");
             break;
         case 30:
-            printf("install agent - NoInputNoOutput\n");
+            fprintf(stderr, "%d\t: %s - install agent - NoInputNoOutput\n", __LINE__, __FUNCTION__);
             BTRCore_RegisterAgent(lhBTRCore, 0);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
             break;
         case 31:
-            printf("install agent - DisplayYesNo\n");
+            fprintf(stderr, "%d\t: %s - install agent - DisplayYesNo\n", __LINE__, __FUNCTION__);
             BTRCore_RegisterAgent(lhBTRCore, 1);// 2nd arg controls the mode, 0 = NoInputNoOutput, 1 = DisplayYesNo
             break;
         case 32:
-            printf("uninstall agent - DisplayYesNo\n");
+            fprintf(stderr, "%d\t: %s - uninstall agent - DisplayYesNo\n", __LINE__, __FUNCTION__);
             BTRCore_UnregisterAgent(lhBTRCore);
             break;
         case 33:
-            printf("register connection-in Intimation CB\n");
+            fprintf(stderr, "%d\t: %s - register connection-in Intimation CB\n", __LINE__, __FUNCTION__);
             BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_authentication, NULL);
             break;
         case 34:
-            printf("register authentication CB\n");
+            fprintf(stderr, "%d\t: %s - register authentication CB\n", __LINE__, __FUNCTION__);
             BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
             break;
         case 35:
-            printf("accept the connection\n");
+            fprintf(stderr, "%d\t: %s - accept the connection\n", __LINE__, __FUNCTION__);
             acceptConnection = 1;
             break;
         case 36:
-            printf("deny the connection\n");
+            fprintf(stderr, "%d\t: %s - deny the connection\n", __LINE__, __FUNCTION__);
             acceptConnection = 2;//anything but 1 means do not connect
             break;
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 99: 
-            printf("Quitting program!\n");
+            fprintf(stderr, "%d\t: %s - Quitting program!\n", __LINE__, __FUNCTION__);
             BTRCore_DeInit(lhBTRCore);
             exit(0);
             break;
         default: 
-            printf("Available options are:\n");
+            fprintf(stderr, "%d\t: %s - Available options are:\n", __LINE__, __FUNCTION__);
             printMenu();
             break;
         }

@@ -55,7 +55,7 @@
 
 
 /* Static Function Prototypes */
-static int btrCore_BTHandleDusError (DBusError* aDBusErr, const char* aErrfunc, int aErrline);
+static int btrCore_BTHandleDusError (DBusError* aDBusErr, int aErrline, const char* aErrfunc);
 static const char* btrCore_DBusType2Name (int ai32DBusMessageType);
     
 
@@ -121,14 +121,14 @@ static fPtr_BtrCore_BTConnAuth_cB           gfpcBConnectionAuthentication = NULL
 
 
 /* Static Function Defs */
-static inline
-int btrCore_BTHandleDusError (
+static inline int 
+btrCore_BTHandleDusError (
     DBusError*  apDBusErr,
-    const char* apErrfunc,
-    int         aErrline
+    int         aErrline, 
+    const char* apErrfunc
 ) {
     if (dbus_error_is_set(apDBusErr)) {
-        fprintf(stderr, "DBus Error is %s at %u: %s\n", apErrfunc, aErrline, apDBusErr->message);
+        fprintf(stderr, "%d\t: %s - DBus Error is %s\n", aErrline, apErrfunc, apDBusErr->message);
         dbus_error_free(apDBusErr);
         return 1;
     }
@@ -1124,7 +1124,7 @@ btrCore_BTMediaEndpointSelectConfiguration (
     dbus_error_init(&lDBusErr);
 
     if (!dbus_message_get_args(apDBusMsg, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &lpInputMediaCaps, &lDBusArgsSize, DBUS_TYPE_INVALID)) {
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint1.Error.InvalidArguments", "Unable to select configuration");
     }
 
@@ -1264,7 +1264,7 @@ BtrCore_BTInitGetConnection (
     lpDBusConn = dbus_bus_get(DBUS_BUS_SYSTEM, &lDBusErr);
 
     if (lpDBusConn == NULL) {
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return NULL;
     }
 
@@ -1429,7 +1429,7 @@ BtrCore_BTRegisterAgent (
     dbus_message_unref(apDBusMsg);
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - Unable to register agent\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -1456,7 +1456,7 @@ BtrCore_BTRegisterAgent (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - Can't unregister agent\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;//this was an error case
     }
 
@@ -1499,7 +1499,7 @@ BtrCore_BTUnregisterAgent (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - Can't unregister agent\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;//this was an error case
     }
 
@@ -1943,7 +1943,7 @@ BtrCore_BTGetProp (
             }
         }
 
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
 
         dbus_message_unref(lpDBusReply);
     }
@@ -2037,7 +2037,7 @@ BtrCore_BTSetAdapterProp (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - lpDBusReply Null\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -2644,7 +2644,7 @@ BtrCore_BTFindServiceSupported (
     const char* value;
     char* ret;
 
-   //BTRCore_LOG("apcDevPath is %s\n and service UUID is %s", apcDevPath, apcSearchString);
+   //fprintf(stderr, "%d\t: %s - apcDevPath is %s\n and service UUID is %s", __LINE__, __FUNCTION__, apcDevPath, apcSearchString);
     msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
                                         apcDevPath,
                                         BT_DBUS_BLUEZ_DEVICE_PATH,
@@ -2664,7 +2664,7 @@ BtrCore_BTFindServiceSupported (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - Failure attempting to Discover Services\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -3021,7 +3021,7 @@ BtrCore_BTPerformAdapterOp (
 
         if (!lpDBusReply) {
             fprintf(stderr, "%d\t: %s - Pairing failed...\n", __LINE__, __FUNCTION__);
-            btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+            btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
             return -1;
         }
     }
@@ -3233,7 +3233,7 @@ BtrCore_BTRegisterMedia (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - lpDBusReply Null\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -3344,7 +3344,7 @@ BtrCore_BTAcquireDevDataPath (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - lpDBusReply Null\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -3357,7 +3357,7 @@ BtrCore_BTAcquireDevDataPath (
 
     if (!lDBusOp) {
         fprintf(stderr, "%d\t: %s - Can't get lpDBusReply arguments\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -3397,7 +3397,7 @@ BtrCore_BTReleaseDevDataPath (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - lpDBusReply Null\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
@@ -3763,7 +3763,7 @@ BtrCoreSetMediaProperty (
 
     if (!lpDBusReply) {
         fprintf(stderr, "%d\t: %s - lpDBusReply Null\n", __LINE__, __FUNCTION__);
-        btrCore_BTHandleDusError(&lDBusErr, __FUNCTION__, __LINE__);
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 

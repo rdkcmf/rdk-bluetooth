@@ -29,9 +29,6 @@ extern "C" {
 #endif
 
 
-#define BTRCore_LOG(...) printf(__VA_ARGS__)
-
-
 #define BTRCORE_MAX_NUM_BT_ADAPTERS 4   // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
 #define BTRCORE_STRINGS_MAX_LEN     32
