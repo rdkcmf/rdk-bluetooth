@@ -31,7 +31,7 @@ endif
 
 BTRCORE_IFCE_INC = -I${top_srcdir}/include/bt-ifce
 
-AM_CPPFLAGS = -Wall -Werror -Wno-error=maybe-uninitialized -I${top_srcdir}/include $(BTRCORE_IFCE_INC)
+AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include $(BTRCORE_IFCE_INC)
 lib_LTLIBRARIES = libbtrCore.la
 libbtrCore_la_SOURCES = btrCore.c btrCore_avMedia.c $(BTRCORE_IFCE_SRCS)
 libbtrCore_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
