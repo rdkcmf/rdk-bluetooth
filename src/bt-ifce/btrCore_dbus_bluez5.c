@@ -2565,7 +2565,7 @@ BtrCore_BTDiscoverDeviceServices (
     const char*                     apcDevPath,
     stBTDeviceSupportedServiceList* pProfileList
 ) {
-    const char*     apcSearchString;
+    const char*     apcSearchString = NULL;
     DBusMessage*    msg;
     DBusMessage*    lpDBusReply;
     DBusError         lDBusErr;
