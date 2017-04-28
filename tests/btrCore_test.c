@@ -378,8 +378,8 @@ cb_connection_authentication (
 
 void
 cb_unsolicited_bluetooth_status (
-    stBTRCoreDevStateCBInfo* p_StatusCB,
-    void*                    apvUserData
+    stBTRCoreDevStatusCBInfo*   p_StatusCB,
+    void*                       apvUserData
 ) {
     //fprintf(stderr, "%d\t: %s - device status change: %d\n", __LINE__, __FUNCTION__p_StatusCB->eDeviceType);
     fprintf(stderr, "%d\t: %s - app level cb device status change: new state is %d\n", __LINE__, __FUNCTION__, p_StatusCB->eDeviceCurrState);

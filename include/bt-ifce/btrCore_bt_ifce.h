@@ -24,10 +24,11 @@
 #ifndef __BTR_CORE_DBUS_BT_H__
 #define __BTR_CORE_DBUS_BT_H__
 
-#define BT_MAX_STR_LEN          256
+#define BT_MAX_STR_LEN           256
 #define BT_MAX_UUID_STR_LEN      64
 #define BT_MAX_NUM_DEVICE        32
 #define BT_MAX_DEVICE_PROFILE    32
+
 
 /* Enum Types */
 typedef enum _enBTDeviceType {
@@ -88,6 +89,7 @@ typedef enum _enBTMediaControl {
 	enBTMediaVolumeDown
 } enBTMediaControl;
 
+
 /* Structure Types */
 typedef struct _stBTDeviceInfo {
     int             bPaired;
@@ -105,29 +107,26 @@ typedef struct _stBTDeviceInfo {
     char            pcAlias[BT_MAX_STR_LEN];
     char            pcIcon[BT_MAX_STR_LEN];
     char            aUUIDs[BT_MAX_DEVICE_PROFILE][BT_MAX_UUID_STR_LEN];
-    char pcDevicePrevState[BT_MAX_STR_LEN];
-    char pcDeviceCurrState[BT_MAX_STR_LEN];
-    // TODO: Array of strings UUIDs;
+    char            pcDevicePrevState[BT_MAX_STR_LEN];
+    char            pcDeviceCurrState[BT_MAX_STR_LEN];
     // TODO: Array of objects Services;
     // TODO: Array of objects Nodes;
 } stBTDeviceInfo;
 
 typedef struct _stBTPairedDeviceInfo {
-    unsigned short numberOfDevices;
-    char devicePath[BT_MAX_NUM_DEVICE][BT_MAX_STR_LEN];
-    stBTDeviceInfo deviceInfo[BT_MAX_NUM_DEVICE];
+    unsigned short  numberOfDevices;
+    char            devicePath[BT_MAX_NUM_DEVICE][BT_MAX_STR_LEN];
+    stBTDeviceInfo  deviceInfo[BT_MAX_NUM_DEVICE];
 } stBTPairedDeviceInfo;
 
-typedef struct _stBTDeviceSupportedService
-{
-    unsigned int uuid_value;
-    char profile_name[BT_MAX_STR_LEN];
+typedef struct _stBTDeviceSupportedService {
+    unsigned int    uuid_value;
+    char            profile_name[BT_MAX_STR_LEN];
 } stBTDeviceSupportedService;
 
-typedef struct _stBTDeviceSupportedServiceList
-{
-    int numberOfService;
-    stBTDeviceSupportedService profile[BT_MAX_DEVICE_PROFILE];
+typedef struct _stBTDeviceSupportedServiceList {
+    int                         numberOfService;
+    stBTDeviceSupportedService  profile[BT_MAX_DEVICE_PROFILE];
 } stBTDeviceSupportedServiceList;
 
 
@@ -184,7 +183,7 @@ char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath);
 char* BtrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
 int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
 int   BtrCoreGetTrackInformation (void* apBtConn, const char* apBtAdapterPath);
-int   BtrCoreCheckPlayerBrowsable(void* apBtConn, const char* apBtAdapterPath);
+int   BtrCoreCheckPlayerBrowsable (void* apBtConn, const char* apBtAdapterPath);
 
 
 #endif // __BTR_CORE_DBUS_BT_H__

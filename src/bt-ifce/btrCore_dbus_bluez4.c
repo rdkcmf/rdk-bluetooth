@@ -882,6 +882,21 @@ btrCore_BTParsePropertyChange (
     const char* bd_addr;
     int dbus_type;
 
+    const char* lpcDBusMsgObjPath= dbus_message_get_path(apDBusMsg);
+    char*       lpcinBtDevAddr   = strstr(lpcDBusMsgObjPath, "/dev_") + strlen("/dev_");
+    char*       lpcstBtDevAddr   = apstBTDeviceInfo->pcAddress;
+    int         i32BtDevAddrLen  = strlen(lpcinBtDevAddr);
+    int         i32LoopIdx       = 0;
+
+    for (i32LoopIdx = 0; i32LoopIdx < i32BtDevAddrLen; i32LoopIdx++) {
+        if (lpcinBtDevAddr[i32LoopIdx] == '_')
+            lpcstBtDevAddr[i32LoopIdx] = ':';
+        else
+            lpcstBtDevAddr[i32LoopIdx] = lpcinBtDevAddr[i32LoopIdx];
+    }
+
+    fprintf(stderr, "%d\t:%s - Path = %s Address = %s\n", __LINE__, __FUNCTION__, lpcDBusMsgObjPath, lpcstBtDevAddr);
+
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
        fprintf(stderr, "%d\t:%s - GetProperties lpDBusReply has no arguments.", __LINE__, __FUNCTION__);
     }
@@ -893,7 +908,7 @@ btrCore_BTParsePropertyChange (
         return -1;
     }
 
-    fprintf(stderr, "%d\t:%s -  Name: %s\n", __LINE__, __FUNCTION__, bd_addr);//"State" then the variant is a string
+    fprintf(stderr, "%d\t:%s - Name: %s\n", __LINE__, __FUNCTION__, bd_addr);//"State" then the variant is a string
     if (strcmp(bd_addr,"State") == 0) {
         dbus_type = dbus_message_iter_get_arg_type(&arg_i);
         //fprintf(stderr, "%d\t:%s - type is %d\n", __LINE__, __FUNCTION__, dbus_type);
