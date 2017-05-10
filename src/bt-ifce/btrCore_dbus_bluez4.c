@@ -896,7 +896,7 @@ btrCore_BTParsePropertyChange (
             lpcstBtDevAddr[i32LoopIdx] = lpcinBtDevAddr[i32LoopIdx];
     }
 
-    BTRCORELOG_INFO(stderr, "%d\t:%s - Path = %s Address = %s\n", __LINE__, __FUNCTION__, lpcDBusMsgObjPath, lpcstBtDevAddr);
+    BTRCORELOG_INFO("%d\t:%s - Path = %s Address = %s\n", __LINE__, __FUNCTION__, lpcDBusMsgObjPath, lpcstBtDevAddr);
 
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
        BTRCORELOG_ERROR ("%d\t:%s - GetProperties lpDBusReply has no arguments.", __LINE__, __FUNCTION__);
