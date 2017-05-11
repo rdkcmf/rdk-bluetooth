@@ -60,19 +60,19 @@ static int btrCore_BTHandleDusError (DBusError* aDBusErr, int aErrline, const ch
 static const char* btrCore_DBusType2Name (int ai32DBusMessageType);
     
 
-static DBusHandlerResult btrCore_BTDBusConnectionFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTMediaEndpointHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTAgentMessageHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTDBusConnectionFilter_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTMediaEndpointHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentMessageHandler_cb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 
 static char* btrCore_BTGetDefaultAdapterPath (void);
 static int btrCore_BTReleaseDefaultAdapterPath (void);
 
-static DBusHandlerResult btrCore_BTAgentRelease (DBusConnection* apDBusConn, DBusMessage*    apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTAgentRequestPincode (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTAgentRequestPasskey (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTAgentRequestConfirmation(DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTAgentAuthorize (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
-static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* userdata);
+static DBusHandlerResult btrCore_BTAgentRelease (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentRequestPincode (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentRequestPasskey (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentRequestConfirmation(DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentAuthorize (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
 
@@ -136,6 +136,7 @@ btrCore_BTHandleDusError (
     return 0;
 }
 
+
 static const char*
 btrCore_DBusType2Name (
     int ai32MessageType
@@ -159,7 +160,7 @@ static DBusHandlerResult
 btrCore_BTDBusConnectionFilter_cb (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
     int             i32OpRet = -1;
     stBTDeviceInfo  lstBTDeviceInfo;
@@ -381,19 +382,14 @@ static DBusHandlerResult
 btrCore_BTMediaEndpointHandler_cb (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
     DBusMessage*    lpDBusReply = NULL;
-    DBusMessage*    r = NULL;
-    DBusError       e;
     const char*     lpcPath;
 
     lpcPath = dbus_message_get_path(apDBusMsg);
-    dbus_error_init(&e);
 
     (void)lpcPath;
-    (void)r;
-
 
     BTRCORELOG_INFO ("%d\t: %s - endpoint_handler: MediaEndpoint1\n", __LINE__, __FUNCTION__);
 
@@ -426,28 +422,28 @@ static DBusHandlerResult
 btrCore_BTAgentMessageHandler_cb (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
 
     BTRCORELOG_INFO ("%d\t: %s - btrCore_BTAgentMessageHandler_cb\n", __LINE__, __FUNCTION__);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "Release"))
-        return btrCore_BTAgentRelease (apDBusConn, apDBusMsg, userdata);
+        return btrCore_BTAgentRelease (apDBusConn, apDBusMsg, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "RequestPinCode"))
-        return btrCore_BTAgentRequestPincode(apDBusConn, apDBusMsg, userdata);
+        return btrCore_BTAgentRequestPincode(apDBusConn, apDBusMsg, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "RequestPasskey"))
-        return btrCore_BTAgentRequestPasskey(apDBusConn, apDBusMsg, userdata);
+        return btrCore_BTAgentRequestPasskey(apDBusConn, apDBusMsg, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "RequestConfirmation"))
-        return btrCore_BTAgentRequestConfirmation(apDBusConn, apDBusMsg, userdata);
+        return btrCore_BTAgentRequestConfirmation(apDBusConn, apDBusMsg, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "AuthorizeService"))
-        return btrCore_BTAgentAuthorize(apDBusConn, apDBusMsg, userdata);
+        return btrCore_BTAgentAuthorize(apDBusConn, apDBusMsg, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "Cancel"))
-        return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, userdata);
+        return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, apvUserData);
 
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
@@ -457,19 +453,20 @@ static char*
 btrCore_BTGetDefaultAdapterPath (
     void
 ) {
-    int a = 0;
-    int b = 0;
-    DBusMessage* lpDBusReply;
+    DBusMessage*    lpDBusReply = NULL;
     DBusMessageIter rootIter;
-    bool adapterFound = FALSE;
-    char* adapter_path;
-    char  objectPath[256] = {'\0'};
-    char  objectData[256] = {'\0'};
+    int             a = 0;
+    int             b = 0;
+    bool            adapterFound = FALSE;
+    char*           adapter_path;
+    char            objectPath[256] = {'\0'};
+    char            objectData[256] = {'\0'};
 
 
     lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 
-    if (dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
+    if (lpDBusReply && 
+        dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
         DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&rootIter)) {  //get the type of message that iter points to
 
         DBusMessageIter arrayElementIter;
@@ -573,9 +570,13 @@ btrCore_BTGetDefaultAdapterPath (
                 }
             } //while loop end --used to traverse arra
         }
+
+        dbus_message_unref(lpDBusReply);
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - \n\nDefault Adpater Path is: %s\n", __LINE__, __FUNCTION__, gpcBTDAdapterPath);
+    if (gpcBTDAdapterPath)
+        BTRCORELOG_INFO ("%d\t: %s - \n\nDefault Adpater Path is: %s\n", __LINE__, __FUNCTION__, gpcBTDAdapterPath);
+
     return gpcBTDAdapterPath;
 }
 
@@ -597,9 +598,9 @@ static DBusHandlerResult
 btrCore_BTAgentRelease (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
-    DBusMessage *lpDBusReply;
+    DBusMessage*    lpDBusReply = NULL;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("%d\t: %s - Invalid arguments for Release method", __LINE__, __FUNCTION__);
@@ -626,10 +627,10 @@ static DBusHandlerResult
 btrCore_BTAgentRequestPincode (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
-    DBusMessage*    lpDBusReply;
-    const char*     lpcPath;
+    DBusMessage*    lpDBusReply = NULL;
+    const char*     lpcPath     = NULL;
 
     if (!gpcBTOutPassCode)
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -667,11 +668,11 @@ static DBusHandlerResult
 btrCore_BTAgentRequestPasskey (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
-    DBusMessage*    lpDBusReply;
-    const char*     lpcPath;
-    unsigned int    ui32PassCode;
+    DBusMessage*    lpDBusReply = NULL;
+    const char*     lpcPath     = NULL;
+    unsigned int    ui32PassCode= 0;
 
     if (!gpcBTOutPassCode)
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -703,11 +704,11 @@ static DBusHandlerResult
 btrCore_BTAgentRequestConfirmation (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
-    DBusMessage *lpDBusReply;
-    const char *lpcPath;
-    unsigned int ui32PassCode = 0;;
+    DBusMessage*    lpDBusReply = NULL;
+    const char*     lpcPath     = NULL;
+    unsigned int    ui32PassCode= 0;;
 
     const char *dev_name; //pass the dev name to the callback for app to use
     int yesNo;
@@ -760,12 +761,13 @@ static DBusHandlerResult
 btrCore_BTAgentAuthorize (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
-    DBusMessage *lpDBusReply;
-    const char *lpcPath, *uuid;
-    const char *dev_name; //pass the dev name to the callback for app to use
-    int yesNo;
+    DBusMessage*    lpDBusReply = NULL;
+    const char*     lpcPath     = NULL;
+    const char*     uuid        = NULL;
+    const char*     dev_name    = NULL; //pass the dev name to the callback for app to use
+    int             yesNo;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("%d\t: %s - Invalid arguments for Authorize method", __LINE__, __FUNCTION__);
@@ -814,9 +816,9 @@ static DBusHandlerResult
 btrCore_BTAgentCancelMessage (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
-    void*           userdata
+    void*           apvUserData
 ) {
-    DBusMessage *lpDBusReply;
+    DBusMessage*    lpDBusReply = NULL;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("%d\t: %s - Invalid arguments for confirmation method", __LINE__, __FUNCTION__);
@@ -846,30 +848,33 @@ btrCore_BTSendMethodCall (
 ) {
     const char*     busname = BT_DBUS_BLUEZ_PATH;
 
-    DBusPendingCall* pending;
-    DBusMessage*     lpDBusReply;
-    DBusMessage*     methodcall = dbus_message_new_method_call( busname,
-                                                                objectpath,
-                                                                interfacename,
-                                                                methodname);
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
 
-    if (methodcall == NULL) {
+
+    lpDBusMsg = dbus_message_new_method_call(busname,
+                                             objectpath,
+                                             interfacename,
+                                             methodname);
+
+    if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("%d\t: %s - Cannot allocate DBus message!\n", __LINE__, __FUNCTION__);
         return NULL;
     }
 
     //Now do a sync call
-    if (!dbus_connection_send_with_reply(gpDBusConn, methodcall, &pending, -1)) { //Send and expect lpDBusReply using pending call object
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) { //Send and expect lpDBusReply using pending call object
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message!\n", __LINE__, __FUNCTION__);
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(methodcall);
-    methodcall = NULL;
+    dbus_message_unref(lpDBusMsg);
+    lpDBusMsg = NULL;
 
-    dbus_pending_call_block(pending);                       //Now block on the pending call
-    lpDBusReply = dbus_pending_call_steal_reply(pending);   //Get the lpDBusReply message from the queue
-    dbus_pending_call_unref(pending);                       //Free pending call handle
+    dbus_pending_call_block(lpDBusPendC);                       //Now block on the pending call
+    lpDBusReply = dbus_pending_call_steal_reply(lpDBusPendC);   //Get the lpDBusReply message from the queue
+    dbus_pending_call_unref(lpDBusPendC);                       //Free pending call handle
 
     if (dbus_message_get_type(lpDBusReply) ==  DBUS_MESSAGE_TYPE_ERROR) {
         BTRCORELOG_ERROR ("%d\t: %s - Error : %s\n\n", __LINE__, __FUNCTION__, dbus_message_get_error_name(lpDBusReply));
@@ -1116,11 +1121,12 @@ static DBusMessage*
 btrCore_BTMediaEndpointSelectConfiguration (
     DBusMessage*    apDBusMsg
 ) {
-    int             lDBusArgsSize;
-    void*           lpInputMediaCaps;
-    void*           lpOutputMediaCaps;
-    DBusMessage*    lpDBusReply;
+    DBusMessage*    lpDBusReply      = NULL;
     DBusError       lDBusErr;
+    void*           lpInputMediaCaps = NULL;
+    void*           lpOutputMediaCaps= NULL;
+    int             lDBusArgsSize;
+
 
     dbus_error_init(&lDBusErr);
 
@@ -1135,9 +1141,9 @@ btrCore_BTMediaEndpointSelectConfiguration (
         }
     }
 
-
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
     dbus_message_append_args (lpDBusReply, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &lpOutputMediaCaps, lDBusArgsSize, DBUS_TYPE_INVALID);
+
     return lpDBusReply;
 }
 
@@ -1146,11 +1152,12 @@ static DBusMessage*
 btrCore_BTMediaEndpointSetConfiguration (
     DBusMessage*    apDBusMsg
 ) {
-    const char* lDevTransportPath = NULL;
-    const char* lStoredDevTransportPath = NULL;
-    const char* dev_path = NULL, *uuid = NULL;
-    unsigned char* config = NULL;
-    int size = 0;
+    const char*     lDevTransportPath = NULL;
+    const char*     lStoredDevTransportPath = NULL;
+    const char*     dev_path = NULL;
+    const char*     uuid = NULL;
+    unsigned char*  config = NULL;
+    int             size = 0;
 
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterProp;
@@ -1248,6 +1255,7 @@ btrCore_BTMediaEndpointClearConfiguration (
     }
 
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+
     return lpDBusReply;
 }
 
@@ -1404,30 +1412,31 @@ BtrCore_BTRegisterAgent (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    DBusMessage *apDBusMsg, *lpDBusReply;
-    DBusError lDBusErr;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
 
     if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
         BTRCORELOG_ERROR ("%d\t: %s - Error registering object path for agent\n", __LINE__, __FUNCTION__);
         return -1;
     }
 
-    apDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH, 
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              "/org/bluez",
                                              BT_DBUS_BLUEZ_AGENT_MGR_PATH,
                                              "RegisterAgent");
-    if (!apDBusMsg) {
+    if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("%d\t: %s - Error allocating new method call\n", __LINE__, __FUNCTION__);
         return -1;
     }
 
-    dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_STRING, &capabilities, DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_STRING, &capabilities, DBUS_TYPE_INVALID);
+
 
     dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
 
-    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &lDBusErr);
-
-    dbus_message_unref(apDBusMsg);
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - Unable to register agent\n", __LINE__, __FUNCTION__);
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
@@ -1438,22 +1447,21 @@ BtrCore_BTRegisterAgent (
 
     dbus_connection_flush(gpDBusConn);
 
-    apDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              "/org/bluez",
                                              BT_DBUS_BLUEZ_AGENT_MGR_PATH,
                                              "RequestDefaultAgent");
-    if (!apDBusMsg) {
+    if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
         return -1;
     }
 
-    dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
+
 
     dbus_error_init(&lDBusErr);
-
-    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &lDBusErr);
-
-    dbus_message_unref(apDBusMsg);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - Can't unregister agent\n", __LINE__, __FUNCTION__);
@@ -1478,25 +1486,25 @@ BtrCore_BTUnregisterAgent (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    DBusMessage *apDBusMsg, *lpDBusReply;
-    DBusError lDBusErr;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
 
-    apDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              "/org/bluez",
                                              BT_DBUS_BLUEZ_AGENT_MGR_PATH,
                                              "UnregisterAgent");
-    if (!apDBusMsg) {
+    if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
         return -1;
     }
 
-    dbus_message_append_args(apDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apBtAgentPath, DBUS_TYPE_INVALID);
+
 
     dbus_error_init(&lDBusErr);
-
-    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, apDBusMsg, -1, &lDBusErr);
-
-    dbus_message_unref(apDBusMsg);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - Can't unregister agent\n", __LINE__, __FUNCTION__);
@@ -1523,7 +1531,6 @@ BtrCore_BTGetAdapterList (
     unsigned int*   apBtNumAdapters,
     char**          apcArrBtAdapterPath
 ) {
-    DBusError   lDBusErr;
     int         c;
     int         rc = -1;
     int         a = 0;
@@ -1533,22 +1540,21 @@ BtrCore_BTGetAdapterList (
     char        paths[10][248];
     //char      **paths2 = NULL;
 
-    DBusMessage*     lpDBusReply;
+    DBusMessage*    lpDBusReply = NULL;
     DBusMessageIter rootIter;
-    bool             adapterFound = FALSE;
-    char*             adapter_path;
-    char*             dbusObject2;
-    char              objectPath[256] = {'\0'};
-    char              objectData[256] = {'\0'};
+    bool            adapterFound = FALSE;
+    char*           adapter_path;
+    char*           dbusObject2;
+    char            objectPath[256] = {'\0'};
+    char            objectData[256] = {'\0'};
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    dbus_error_init(&lDBusErr);
     lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t: %s - org.bluez.Manager.ListAdapters returned an error: '%s'\n", __LINE__, __FUNCTION__, lDBusErr.message);
-        dbus_error_free(&lDBusErr);
+        BTRCORELOG_ERROR ("%d\t: %s - org.bluez.Manager.ListAdapters returned an error\n", __LINE__, __FUNCTION__);
+        return rc;
     }
 
     if (dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
@@ -1789,16 +1795,17 @@ BtrCore_BTGetProp (
     const char*     pKey,
     void*           pValue
 ) {
-    int             rc = 0;
-    int             type;
-    DBusMessage*    msg = NULL;
-    DBusMessage*    lpDBusReply = NULL;
-    DBusMessageIter args;
-    DBusMessageIter arg_i;
-    DBusMessageIter element_i;
-    DBusMessageIter variant_i;
-    DBusError       lDBusErr;
-    DBusPendingCall* pending;
+    int                 rc = 0;
+    int                 type;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
+    DBusMessageIter     args;
+    DBusMessageIter     arg_i;
+    DBusMessageIter     element_i;
+    DBusMessageIter     variant_i;
+    DBusError           lDBusErr;
+
     const char*     pParsedKey = NULL;
     const char*     pParsedValueString = NULL;
     int             parsedValueNumber = 0;
@@ -1863,27 +1870,27 @@ BtrCore_BTGetProp (
         return -1;
     }
 
-    msg = dbus_message_new_method_call (BT_DBUS_BLUEZ_PATH,
-                                        apcPath,
-                                        "org.freedesktop.DBus.Properties",
-                                        "GetAll");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apcPath,
+                                             "org.freedesktop.DBus.Properties",
+                                             "GetAll");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, &pInterface, DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1))
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1))
     {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
     }
 
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
 
     if (!lpDBusReply) {
@@ -1961,8 +1968,8 @@ BtrCore_BTSetAdapterProp (
     void*           apvVal
 ) {
 
-    DBusMessage*    lpDBusMsg;
-    DBusMessage*    lpDBusReply;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterValue;
     DBusError       lDBusErr;
@@ -1974,16 +1981,6 @@ BtrCore_BTSetAdapterProp (
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apvVal)
         return -1;
-
-    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apBtAdapter,
-                                            "org.freedesktop.DBus.Properties",
-                                            "Set");
-
-    if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
-        return -1;
-    }
 
     switch (aenBTAdapterProp) {
     case enBTAdPropName:
@@ -2023,6 +2020,15 @@ BtrCore_BTSetAdapterProp (
         return -1;
     }
 
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             "org.freedesktop.DBus.Properties",
+                                             "Set");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        return -1;
+    }
+  
     dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
     dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &defaultAdapterInterface);
     dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &lDBusKey);
@@ -2056,8 +2062,8 @@ BtrCore_BTStartDiscovery (
     const char* apBtAdapter,
     const char* apBtAgentPath
 ) {
+    DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
-    DBusMessage*    lpDBusMsg;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -2066,7 +2072,6 @@ BtrCore_BTStartDiscovery (
                                              apBtAdapter,
                                              BT_DBUS_BLUEZ_ADAPTER_PATH,
                                              "StartDiscovery");
-
     if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
         return -1;
@@ -2092,8 +2097,8 @@ BtrCore_BTStopDiscovery (
     const char* apBtAdapter,
     const char* apBtAgentPath
 ) {
+    DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
-    DBusMessage*    lpDBusMsg;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -2127,12 +2132,13 @@ static int
 btrCore_BTGetDeviceInfo (
     stBTDeviceInfo* apstBTScannedDeviceInfo
 ) {
-    DBusMessage*        msg;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
     DBusMessageIter     rootIter;
     DBusMessageIter     args;
     DBusError           lDBusErr;
-    DBusPendingCall*    pending;
-    bool    adapterFound = FALSE;
+    bool                adapterFound = FALSE;
 
 
     char*   pdeviceInterface = BT_DBUS_BLUEZ_DEVICE_PATH;
@@ -2152,7 +2158,7 @@ btrCore_BTGetDeviceInfo (
         return -1;
 
     dbus_error_init(&lDBusErr);
-    DBusMessage* lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - org.bluez.Manager.ListAdapters returned an error: '%s'\n", __LINE__, __FUNCTION__, lDBusErr.message);
         dbus_error_free(&lDBusErr);
@@ -2261,28 +2267,28 @@ btrCore_BTGetDeviceInfo (
 
     for (i = 0; i < num; i++) {
         BTRCORELOG_ERROR ("%d\t: %s - Getting properties for the device %s\n", __LINE__, __FUNCTION__, paths[i]);
-        msg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                           paths[i],
-                                           "org.freedesktop.DBus.Properties",
-                                           "GetAll");
+        lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                                 paths[i],
+                                                 "org.freedesktop.DBus.Properties",
+                                                 "GetAll");
 
-        dbus_message_iter_init_append(msg, &args);
-        dbus_message_append_args(msg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
+        dbus_message_iter_init_append(lpDBusMsg, &args);
+        dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
 
         dbus_error_init(&lDBusErr);
 
-        if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+        if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
             BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
             return -1;
         }
 
         dbus_connection_flush(gpDBusConn);
-        dbus_message_unref(msg);
-        msg = NULL;
+        dbus_message_unref(lpDBusMsg);
+        lpDBusMsg = NULL;
 
-        dbus_pending_call_block(pending);
-        lpDBusReply =  dbus_pending_call_steal_reply(pending);
-        dbus_pending_call_unref(pending);
+        dbus_pending_call_block(lpDBusPendC);
+        lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+        dbus_pending_call_unref(lpDBusPendC);
 
         if (lpDBusReply != NULL) {
             if (0 != btrCore_BTParseDevice(lpDBusReply, apstBTScannedDeviceInfo)) {
@@ -2308,11 +2314,12 @@ btrCore_BTGetDeviceInfo (
     const char*     apcIface
 ) {
     char*               pdeviceInterface = BT_DBUS_BLUEZ_DEVICE_PATH;
-    DBusMessage*        msg;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
     DBusMessageIter     args;
     DBusError           lDBusErr;
-    DBusPendingCall*    pending;
-    DBusMessage*        lpDBusReply;
+    DBusPendingCall*    lpDBusPendC;
+
 
 
     if (!apcIface)
@@ -2320,27 +2327,27 @@ btrCore_BTGetDeviceInfo (
 
     BTRCORELOG_INFO ("%d\t: %s - Getting properties for the device %s\n", __LINE__, __FUNCTION__, apcIface);
 
-    msg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                       apcIface,
-                                       "org.freedesktop.DBus.Properties",
-                                       "GetAll");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apcIface,
+                                             "org.freedesktop.DBus.Properties",
+                                             "GetAll");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
         return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
-    msg = NULL;
+    dbus_message_unref(lpDBusMsg);
+    lpDBusMsg = NULL;
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
     if (lpDBusReply != NULL) {
         if (0 != btrCore_BTParseDevice(lpDBusReply, apstBTDeviceInfo)) {
@@ -2366,11 +2373,12 @@ BtrCore_BTGetPairedDeviceInfo (
     const char*             apBtAdapter,
     stBTPairedDeviceInfo*   pPairedDeviceInfo
 ) {
-    DBusMessage*        msg;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
     DBusMessageIter     rootIter;
     DBusMessageIter     args;
     DBusError           lDBusErr;
-    DBusPendingCall*    pending;
+    DBusPendingCall*    lpDBusPendC;
     bool                adapterFound = FALSE;
 
 
@@ -2398,7 +2406,7 @@ BtrCore_BTGetPairedDeviceInfo (
     memset (pPairedDeviceInfo, 0, sizeof (stBTPairedDeviceInfo));
 
     dbus_error_init(&lDBusErr);
-    DBusMessage* lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - org.bluez.Manager.ListAdapters returned an error: '%s'\n", __LINE__, __FUNCTION__, lDBusErr.message);
         dbus_error_free(&lDBusErr);
@@ -2520,24 +2528,27 @@ BtrCore_BTGetPairedDeviceInfo (
 
 
     for ( i = 0; i < num; i++) {
-        msg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH, pPairedDeviceInfo->devicePath[i], "org.freedesktop.DBus.Properties", "GetAll");
-        dbus_message_iter_init_append(msg, &args);
-        dbus_message_append_args(msg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
+        lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                                 pPairedDeviceInfo->devicePath[i],
+                                                 "org.freedesktop.DBus.Properties",
+                                                 "GetAll");
+        dbus_message_iter_init_append(lpDBusMsg, &args);
+        dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
 
         dbus_error_init(&lDBusErr);
 
-        if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+        if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
             BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
             return -1;
         }
 
         dbus_connection_flush(gpDBusConn);
-        dbus_message_unref(msg);
-        msg = NULL;
+        dbus_message_unref(lpDBusMsg);
+        lpDBusMsg = NULL;
 
-        dbus_pending_call_block(pending);
-        lpDBusReply =  dbus_pending_call_steal_reply(pending);
-        dbus_pending_call_unref(pending);
+        dbus_pending_call_block(lpDBusPendC);
+        lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+        dbus_pending_call_unref(lpDBusPendC);
 
         if (lpDBusReply != NULL) {
             memset (&apstBTDeviceInfo, 0, sizeof(apstBTDeviceInfo));
@@ -2566,35 +2577,38 @@ BtrCore_BTDiscoverDeviceServices (
     const char*                     apcDevPath,
     stBTDeviceSupportedServiceList* pProfileList
 ) {
-    const char*     apcSearchString = NULL;
-    DBusMessage*    msg;
-    DBusMessage*    lpDBusReply;
-    DBusError         lDBusErr;
-    DBusMessageIter args;
-    DBusMessageIter MsgIter;
-    DBusPendingCall* pending;
-    int             match = 0;
+    const char*         apcSearchString = NULL;
+    DBusMessage*        lpDBusMsg       = NULL;
+    DBusMessage*        lpDBusReply     = NULL;
+    DBusError           lDBusErr;
+    DBusMessageIter     args;
+    DBusMessageIter     MsgIter;
+    DBusPendingCall*    lpDBusPendC;
+    int                 match = 0;
 
 
-    msg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH, apcDevPath, "org.freedesktop.DBus.Properties", "Get");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apcDevPath,
+                                             "org.freedesktop.DBus.Properties",
+                                             "Get");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_DEVICE_PATH, DBUS_TYPE_STRING, "UUIDs", DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_DEVICE_PATH, DBUS_TYPE_STRING, "UUIDs", DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
 
-    dbus_message_iter_init(lpDBusReply, &MsgIter); //msg is pointer to dbus message received
+    dbus_message_iter_init(lpDBusReply, &MsgIter); //lpDBusMsg is pointer to dbus message received
     //dbus_message_iter_recurse(&MsgIter,&element); //pointer to first element of the dbus messge received
     /*if (!dbus_message_iter_init(lpDBusReply, &MsgIter))
     {
@@ -2636,32 +2650,37 @@ BtrCore_BTFindServiceSupported (
     const char*     apcSearchString,
     char*           apcDataString
 ) {
-    DBusMessage *msg, *lpDBusReply;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
     DBusMessageIter arg_i, element_i;
     DBusMessageIter dict_i;
     int dbus_type;
-    DBusError lDBusErr;
+
     int match;
     const char* value;
     char* ret;
 
-   //BTRCORELOG_ERROR ("%d\t: %s - apcDevPath is %s\n and service UUID is %s", __LINE__, __FUNCTION__, apcDevPath, apcSearchString);
-    msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
-                                        apcDevPath,
-                                        BT_DBUS_BLUEZ_DEVICE_PATH,
-                                        "DiscoverServices");
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apcDevPath)
+        return -1;
 
-    if (!msg) {
+   //BTRCORELOG_ERROR ("%d\t: %s - apcDevPath is %s\n and service UUID is %s", __LINE__, __FUNCTION__, apcDevPath, apcSearchString);
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apcDevPath,
+                                             BT_DBUS_BLUEZ_DEVICE_PATH,
+                                             "DiscoverServices");
+
+    if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
         return -1;
     }
 
     match = 0; //assume it does not match
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, &apcSearchString, DBUS_TYPE_INVALID);
-    dbus_error_init(&lDBusErr);
-    lpDBusReply = dbus_connection_send_with_reply_and_block(apBtConn, msg, -1, &lDBusErr);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &apcSearchString, DBUS_TYPE_INVALID);
 
-    dbus_message_unref(msg);
+    dbus_error_init(&lDBusErr);
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - Failure attempting to Discover Services\n", __LINE__, __FUNCTION__);
@@ -2733,17 +2752,16 @@ BtrCore_BTPerformAdapterOp (
     const char*     apcDevPath,
     enBTAdapterOp   aenBTAdpOp
 ) {
-    DBusMessage*     msg;
-    DBusMessage*     lpDBusReply;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
     DBusMessageIter rootIter;
-    DBusError         lDBusErr;
-    bool             adapterFound = FALSE;
-
-    char*             adapter_path = NULL;
+    bool            adapterFound = FALSE;
+    char*           adapter_path = NULL;
     char            deviceObjectPath[256] = {'\0'};
-    char             deviceOpString[64] = {'\0'};
-    char              objectPath[256] = {'\0'};
-    char              objectData[256] = {'\0'};
+    char            deviceOpString[64] = {'\0'};
+    char            objectPath[256] = {'\0'};
+    char            objectData[256] = {'\0'};
     int             rc = 0;
     int             a = 0;
     int             b = 0;
@@ -2775,13 +2793,14 @@ BtrCore_BTPerformAdapterOp (
     if (aenBTAdpOp == enBTAdpOpFindPairedDev) {
         lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 
-        if (dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
+        if (lpDBusReply && 
+            dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
             DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&rootIter)) { //get the type of message that iter points to
 
             DBusMessageIter arrayElementIter;
             dbus_message_iter_recurse(&rootIter, &arrayElementIter); //assign new iterator to first element of array
 
-            while(!adapterFound){
+            while(!adapterFound) {
                 if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&arrayElementIter)) {
 
                     DBusMessageIter dictEntryIter;
@@ -2839,7 +2858,7 @@ BtrCore_BTPerformAdapterOp (
                                                 if (strcmp(apcDevPath, objectData) == 0) {
                                                     ++b;
                                                     adapterFound = TRUE;
-                                                    return 0;
+                                                    break;
                                                 }
                                             }
                                             else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
@@ -2875,35 +2894,41 @@ BtrCore_BTPerformAdapterOp (
                     }
                 } //while loop end --used to traverse arra
             }
-        }
 
-        dbus_error_init(&lDBusErr);
-        dbus_message_unref(lpDBusReply);
+            dbus_message_unref(lpDBusReply);
+        }
     }
 
     else if (aenBTAdpOp == enBTAdpOpRemovePairedDev) {
-        msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
-                                            apBtAdapter,
-                                            BT_DBUS_BLUEZ_ADAPTER_PATH,
-                                            deviceOpString);
-
-        if (!msg) {
+        lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                                 apBtAdapter,
+                                                 BT_DBUS_BLUEZ_ADAPTER_PATH,
+                                                 deviceOpString);
+        if (!lpDBusMsg) {
             BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
             return -1;
         }
 
-        dbus_message_append_args(msg, DBUS_TYPE_OBJECT_PATH, &apcDevPath, DBUS_TYPE_INVALID);
-        lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, msg, -1, &lDBusErr);
+        dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &apcDevPath, DBUS_TYPE_INVALID);
+
         dbus_error_init(&lDBusErr);
-        dbus_message_unref(msg);
+        lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+        dbus_message_unref(lpDBusMsg);
+
+        if (!lpDBusReply) {
+            BTRCORELOG_ERROR ("%d\t: %s - UnPairing failed...\n", __LINE__, __FUNCTION__);
+            btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+            return -1;
+        }
+
+        dbus_message_unref(lpDBusReply);
     }
-
-
 
     else if (aenBTAdpOp == enBTAdpOpCreatePairedDev) {
         lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
 
-        if (dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
+        if (lpDBusReply &&
+            dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
             DBUS_TYPE_ARRAY == dbus_message_iter_get_arg_type(&rootIter)) { //get the type of message that iter points to
 
             DBusMessageIter arrayElementIter;
@@ -2966,6 +2991,7 @@ BtrCore_BTPerformAdapterOp (
                                                     ++b;
                                                     strcpy(deviceObjectPath,adapter_path);
                                                     adapterFound = TRUE;
+                                                    break;
                                                 }
                                             }
                                             else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
@@ -3001,30 +3027,32 @@ BtrCore_BTPerformAdapterOp (
                     }
                 }   //while loop end --used to traverse arra
             }
+
+            dbus_message_unref(lpDBusReply);
         }
 
-        dbus_error_init(&lDBusErr);
-        dbus_message_unref(lpDBusReply);
 
-        msg = dbus_message_new_method_call (BT_DBUS_BLUEZ_PATH,
-                                            deviceObjectPath,
-                                            BT_DBUS_BLUEZ_DEVICE_PATH,
-                                            deviceOpString);
 
-        if (!msg) {
+        lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                                 deviceObjectPath,
+                                                 BT_DBUS_BLUEZ_DEVICE_PATH,
+                                                 deviceOpString);
+        if (!lpDBusMsg) {
             BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
             return -1;
         }
 
-        lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, msg, -1, &lDBusErr);
         dbus_error_init(&lDBusErr);
-        dbus_message_unref(msg);
+        lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+        dbus_message_unref(lpDBusMsg);
 
         if (!lpDBusReply) {
             BTRCORELOG_ERROR ("%d\t: %s - Pairing failed...\n", __LINE__, __FUNCTION__);
             btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
             return -1;
         }
+
+        dbus_message_unref(lpDBusReply);
     }
 
     return 0;
@@ -3037,9 +3065,9 @@ BtrCore_BTConnectDevice (
     const char*     apDevPath,
     enBTDeviceType  aenBTDeviceType
 ) {
-    dbus_bool_t  lDBusOp;
-    DBusMessage* lpDBusMsg;
-    //char         larDBusIfce[32] = {'\0'};
+    DBusMessage*    lpDBusMsg  = NULL;
+    dbus_bool_t     lDBusOp;
+
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
         return -1;
@@ -3076,9 +3104,9 @@ BtrCore_BTDisconnectDevice (
     const char*     apDevPath,
     enBTDeviceType  aenBTDeviceType
 ) {
-    dbus_bool_t  lDBusOp;
-    DBusMessage* lpDBusMsg;
-    //char         larDBusIfce[32] = {'\0'};
+    DBusMessage*    lpDBusMsg   = NULL;
+    dbus_bool_t     lDBusOp;
+
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
         return -1;
@@ -3118,11 +3146,11 @@ BtrCore_BTRegisterMedia (
     int             apBtMediaCapabilitiesSize,
     int             abBtMediaDelayReportEnable
 ) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterArr;
-    DBusMessage*    lpDBusMsg;
-    DBusMessage*    lpDBusReply;
-    DBusError       lDBusErr;
     dbus_bool_t     lDBusOp;
     dbus_bool_t     lBtMediaDelayReport = FALSE;
 
@@ -3252,7 +3280,7 @@ BtrCore_BTUnRegisterMedia (
     const char*     apBtAdapter,
     enBTDeviceType  aenBTDevType
 ) {
-    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
 
     const char*      lpBtMediaType;
@@ -3321,8 +3349,8 @@ BtrCore_BTAcquireDevDataPath (
     int*    dataReadMTU,
     int*    dataWriteMTU
 ) {
-    DBusMessage*    lpDBusMsg;
-    DBusMessage*    lpDBusReply;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
     DBusError       lDBusErr;
     dbus_bool_t     lDBusOp;
 
@@ -3373,8 +3401,8 @@ BtrCore_BTReleaseDevDataPath (
     void*   apBtConn,
     char*   apcDevTransportPath
 ) {
-    DBusMessage*    lpDBusMsg;
-    DBusMessage*    lpDBusReply;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
     DBusError       lDBusErr;
 
 
@@ -3529,37 +3557,37 @@ BtrCore_GetPlayerObjectPath (
     void*       apBtConn,
     const char* apBtAdapterPath
 ) {
-    DBusMessage*     msg;
-    DBusMessage*     lpDBusReply;
-    DBusPendingCall* pending;
-    DBusError         lDBusErr;
-    DBusMessageIter  args;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
+    DBusError           lDBusErr;
+    DBusMessageIter     args;
 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
         return NULL;
     }
 
-    msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
-                                        apBtAdapterPath,
-                                        "org.freedesktop.DBus.Properties",
-                                        "Get");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapterPath,
+                                             "org.freedesktop.DBus.Properties",
+                                             "Get");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH, DBUS_TYPE_STRING, "Player", DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH, DBUS_TYPE_STRING, "Player", DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
         return NULL;
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%d\t: %s - GetPlayerObject returned an error: '%s'\n", __LINE__, __FUNCTION__, lDBusErr.message);
@@ -3591,7 +3619,7 @@ BtrCore_BTDevMediaPlayControl (
     enBTDeviceType   aenBTDevType,
     enBTMediaControl aenBTMediaOper
 ) {
-    DBusMessage*    lpDBusMsg;
+    DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
     char            mediaOper[16] = {'\0'};
 
@@ -3660,48 +3688,48 @@ BtrCoreGetMediaProperty (
     const char* apBtAdapterPath,
     char*       mediaProperty
 ) {
-    DBusMessage*     msg;
-    DBusMessage*     lpDBusReply;
-    DBusPendingCall* pending;
-    DBusError         lDBusErr;
-    DBusMessageIter  args;
-    DBusMessageIter  element;
-    char*              mediaPlayerObjectPath = NULL;
-    char*              mediaPropertyValue = NULL;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
+    DBusError           lDBusErr;
+    DBusMessageIter     args;
+    DBusMessageIter     element;
+    char*               mediaPlayerObjectPath = NULL;
+    char*               mediaPropertyValue = NULL;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
         return NULL;
     }
 
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtAdapterPath);
+    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
 
     if (mediaPlayerObjectPath == NULL) {
         return NULL;
     }
 
-    msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
-                                        mediaPlayerObjectPath,
-                                        "org.freedesktop.DBus.Properties",
-                                        "Get");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             mediaPlayerObjectPath,
+                                             "org.freedesktop.DBus.Properties",
+                                             "Get");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, mediaProperty, DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, mediaProperty, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
         return NULL;
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
     DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter);  //msg is pointer to dbus message received
+    dbus_message_iter_init(lpDBusReply, &MsgIter);  //lpDBusMsg is pointer to dbus message received
     dbus_message_iter_recurse(&MsgIter,&element);   //pointer to first element of the dbus messge receive
 
     if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&element)) {
@@ -3723,18 +3751,18 @@ BtrCoreSetMediaProperty (
     char*       mediaProperty,
     char*       pValue
 ) {
-    DBusMessage*    lpDBusMsg;
-    DBusMessage*    lpDBusReply;
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterValue;
-    DBusError       lDBusErr;
     char*           mediaPlayerObjectPath = NULL;
     const char*     lDBusTypeAsString = DBUS_TYPE_STRING_AS_STRING;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !pValue)
         return -1;
 
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtAdapterPath);
+    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
 
     if (mediaPlayerObjectPath == NULL) {
         return -1;
@@ -3781,9 +3809,9 @@ BtrCoreGetTrackInformation (
     void*           apBtConn,
     const char*     apBtAdapterPath
 ) {
-    DBusMessage*        msg;
-    DBusMessage*        lpDBusReply;
-    DBusPendingCall*    pending;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
     DBusError           lDBusErr;
     DBusMessageIter     args;
     DBusMessageIter     element;
@@ -3798,35 +3826,35 @@ BtrCoreGetTrackInformation (
         return -1;
     }
 
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtAdapterPath);
+    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
 
     if (mediaPlayerObjectPath == NULL) {
         return -1;
     }
 
-    msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
-                                        mediaPlayerObjectPath,
-                                        "org.freedesktop.DBus.Properties",
-                                        "Get");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             mediaPlayerObjectPath,
+                                             "org.freedesktop.DBus.Properties",
+                                             "Get");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, "Track", DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, "Track", DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
         return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
     DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter);//msg is pointer to dbus message received
+    dbus_message_iter_init(lpDBusReply, &MsgIter);//lpDBusMsg is pointer to dbus message received
     //dbus_message_iter_recurse(&MsgIter,&element); //pointer to first element of the dbus messge receive
     while (dbus_message_iter_has_next(&MsgIter)) {
 
@@ -3867,9 +3895,9 @@ BtrCoreCheckPlayerBrowsable (
     void*           apBtConn, 
     const char*     apBtAdapterPath
 ) {
-    DBusMessage*        msg;
-    DBusMessage*        lpDBusReply;
-    DBusPendingCall*    pending;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
     DBusError           lDBusErr;
     DBusMessageIter     args;
     DBusMessageIter     element;
@@ -3880,34 +3908,34 @@ BtrCoreCheckPlayerBrowsable (
         return -1;
     }
 
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtAdapterPath);
+    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
     if (mediaPlayerObjectPath == NULL) {
         return -1;
     }
 
-    msg = dbus_message_new_method_call( BT_DBUS_BLUEZ_PATH,
-                                        mediaPlayerObjectPath,
-                                        "org.freedesktop.DBus.Properties",
-                                        "Get");
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             mediaPlayerObjectPath,
+                                             "org.freedesktop.DBus.Properties",
+                                             "Get");
 
-    dbus_message_iter_init_append(msg, &args);
-    dbus_message_append_args(msg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, "Browsable", DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, "Browsable", DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, msg, &pending, -1)) {
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("%d\t: %s - failed to send message", __LINE__, __FUNCTION__);
         return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(msg);
+    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(pending);
-    lpDBusReply =  dbus_pending_call_steal_reply(pending);
-    dbus_pending_call_unref(pending);
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
 
     DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter);  //msg is pointer to dbus message received
+    dbus_message_iter_init(lpDBusReply, &MsgIter);  //lpDBusMsg is pointer to dbus message received
     dbus_message_iter_recurse(&MsgIter,&element);   //pointer to first element of the dbus messge receive
 
     if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&element)) {
