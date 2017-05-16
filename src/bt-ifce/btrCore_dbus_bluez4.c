@@ -129,9 +129,9 @@ btrCore_BTDBusConnectionFilter_cb (
     memset (&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
     lstBTDeviceInfo.i32RSSI = INT_MIN;
 
-    //BTRCORELOG_ERROR ("%d\t:%s - agent filter activated....\n", __LINE__, __FUNCTION__);
+    //BTRCORELOG_ERROR ("agent filter activated....\n");
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter", "DeviceCreated")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Created!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Created!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStPaired, NULL, NULL)) {
             }
@@ -139,7 +139,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter", "DeviceFound")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Found!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Found!\n");
 
         i32OpRet = btrCore_BTParseDevice(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate && !i32OpRet) {
@@ -149,7 +149,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter","DeviceDisappeared")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device DeviceDisappeared!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device DeviceDisappeared!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStLost, NULL, NULL)) {
             }
@@ -157,7 +157,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Adapter","DeviceRemoved")) {
-        BTRCORELOG_ERROR ("%d\t:%s - Device Removed!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Device Removed!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevUnknown, enBTDevStUnPaired, NULL, NULL)) {
             }
@@ -165,7 +165,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","Connected")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Connected - AudioSink!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Connected - AudioSink!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStConnected, NULL, NULL)) {
             }
@@ -173,7 +173,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","Disconnected")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Disconnected - AudioSink!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Disconnected - AudioSink!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStDisconnected, NULL, NULL)) {
             }
@@ -181,7 +181,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","PropertyChanged")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device PropertyChanged!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device PropertyChanged!\n");
         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
@@ -190,7 +190,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","Connected")) {
-        BTRCORELOG_ERROR ("%d\t:%s - Device Connected - AudioSource!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Device Connected - AudioSource!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStConnected, NULL, NULL)) {
             }
@@ -198,7 +198,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","Disconnected")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Disconnected - AudioSource!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Disconnected - AudioSource!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStDisconnected, NULL, NULL)) {
             }
@@ -206,7 +206,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSource","PropertyChanged")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device PropertyChanged!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device PropertyChanged!\n");
         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevAudioSource, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
@@ -215,7 +215,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","Connected")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Connected - Headset!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Connected - Headset!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevHFPHeadset,enBTDevStConnected, NULL, NULL)) {
             }
@@ -223,7 +223,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","Disconnected")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device Disconnected - Headset!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Disconnected - Headset!\n");
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStDisconnected, NULL, NULL)) {
             }
@@ -231,7 +231,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.Headset","PropertyChanged")) {
-        BTRCORELOG_INFO ("%d\t:%s - Device PropertyChanged!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device PropertyChanged!\n");
         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
             if(gfpcBDevStatusUpdate(enBTDevHFPHeadset, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
@@ -241,7 +241,7 @@ btrCore_BTDBusConnectionFilter_cb (
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.MediaTransport","PropertyChanged")) {
-        BTRCORELOG_INFO ("%d\t:%s - MediaTransport PropertyChanged!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("MediaTransport PropertyChanged!\n");
     }
 
     if (!i32OpRet)
@@ -264,18 +264,18 @@ btrCore_BTMediaEndpointHandler_cb (
 
     (void)lpcPath;
 
-    BTRCORELOG_INFO ("%d\t:%s - endpoint_handler: MediaEndpoint\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint\n");
 
     if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "SelectConfiguration")) {
-        BTRCORELOG_INFO ("%d\t:%s - endpoint_handler: MediaEndpoint-SelectConfiguration\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint-SelectConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointSelectConfiguration(apDBusMsg);
     }
     else if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "SetConfiguration"))  {
-        BTRCORELOG_INFO ("%d\t:%s - endpoint_handler: MediaEndpoint-SetConfiguration\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint-SetConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointSetConfiguration(apDBusMsg);
     }
     else if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "ClearConfiguration")) {
-        BTRCORELOG_INFO ("%d\t:%s - endpoint_handler: MediaEndpoint-ClearConfiguration\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint-ClearConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointClearConfiguration(apDBusMsg);
     }
     else {
@@ -335,7 +335,7 @@ btrCore_BTGetDefaultAdapterPath (
                                              "org.bluez.Manager",
                                              "DefaultAdapter");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return NULL;
     }
 
@@ -344,7 +344,7 @@ btrCore_BTGetDefaultAdapterPath (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't find Default adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't find Default adapter\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return NULL;
     }
@@ -353,7 +353,7 @@ btrCore_BTGetDefaultAdapterPath (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't get lpDBusReply arguments\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't get lpDBusReply arguments\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return NULL;
     }
@@ -392,14 +392,14 @@ btrCore_BTAgentRelease (
     DBusMessage *lpDBusReply;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid arguments for Release method", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid arguments for Release method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Unable to create lpDBusReply message\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Unable to create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
@@ -425,7 +425,7 @@ btrCore_BTAgentRequestPincode (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid arguments for RequestPinCode method", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid arguments for RequestPinCode method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
@@ -436,11 +436,11 @@ btrCore_BTAgentRequestPincode (
 
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't create lpDBusReply message\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    BTRCORELOG_INFO ("%d\t:%s - Pincode request for device %s\n", __LINE__, __FUNCTION__, lpcPath);
+    BTRCORELOG_INFO ("Pincode request for device %s\n", lpcPath);
     dbus_message_append_args(lpDBusReply, DBUS_TYPE_STRING, &gpcBTOutPassCode,DBUS_TYPE_INVALID);
 
 sendmsg:
@@ -467,17 +467,17 @@ btrCore_BTAgentRequestPasskey (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_INVALID))  {
-        BTRCORELOG_ERROR ("%d\t:%s - Incorrect args btrCore_BTAgentRequestPasskey", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Incorrect args btrCore_BTAgentRequestPasskey");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't create lpDBusReply message\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    BTRCORELOG_INFO ("%d\t:%s - Pass code request for device %s\n", __LINE__, __FUNCTION__, lpcPath);
+    BTRCORELOG_INFO ("Pass code request for device %s\n", lpcPath);
     ui32PassCode = strtoul(gpcBTOutPassCode, NULL, 10);
     dbus_message_append_args(lpDBusReply, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID);
 
@@ -502,15 +502,15 @@ btrCore_BTAgentRequestConfirmation (
     int yesNo;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid arguments for Authorize method", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
 
-    BTRCORELOG_INFO ("%d\t:%s - btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n", __LINE__, __FUNCTION__ ,lpcPath, ui32PassCode);
+    BTRCORELOG_INFO ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n",lpcPath, ui32PassCode);
 
     if (gfpcBConnectionIntimation) {
-        BTRCORELOG_ERROR ("%d\t:%s - calling ConnIntimation cb with %s...\n", __LINE__, __FUNCTION__, lpcPath);
+        BTRCORELOG_ERROR ("calling ConnIntimation cb with %s...\n", lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
 
         if (dev_name != NULL) {
@@ -522,7 +522,7 @@ btrCore_BTAgentRequestConfirmation (
         }
 
         if (yesNo == 0) {
-            //BTRCORELOG_ERROR ("%d\t:%s - sorry dude, you cant connect....\n", __LINE__, __FUNCTION__);
+            //BTRCORELOG_ERROR ("sorry dude, you cant connect....\n");
             lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
             goto sendReqConfError;
         }
@@ -532,7 +532,7 @@ btrCore_BTAgentRequestConfirmation (
 
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't create lpDBusReply message\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
@@ -557,12 +557,12 @@ btrCore_BTAgentAuthorize (
     int yesNo;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid arguments for Authorize method", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
     if (gfpcBConnectionAuthentication) {
-        BTRCORELOG_INFO ("%d\t:%s - calling ConnAuth cb with %s...\n", __LINE__, __FUNCTION__, lpcPath);
+        BTRCORELOG_INFO ("calling ConnAuth cb with %s...\n", lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
 
         if (dev_name != NULL) {
@@ -574,7 +574,7 @@ btrCore_BTAgentAuthorize (
         }
 
         if (yesNo == 0) {
-            //BTRCORELOG_ERROR ("%d\t:%s - sorry dude, you cant connect....\n", __LINE__, __FUNCTION__);
+            //BTRCORELOG_ERROR ("sorry dude, you cant connect....\n");
             lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
             goto sendAuthError;
         }
@@ -584,11 +584,11 @@ btrCore_BTAgentAuthorize (
 
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't create lpDBusReply message\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    BTRCORELOG_INFO ("%d\t:%s - Authorizing request for %s\n", __LINE__, __FUNCTION__, lpcPath);
+    BTRCORELOG_INFO ("Authorizing request for %s\n", lpcPath);
 
 sendAuthError:
     dbus_connection_send(apDBusConn, lpDBusReply, NULL);
@@ -608,14 +608,14 @@ btrCore_BTAgentCancelMessage (
     DBusMessage *lpDBusReply;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid arguments for confirmation method", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid arguments for confirmation method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
-    BTRCORELOG_INFO ("%d\t:%s - Request canceled\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_INFO ("Request canceled\n");
     lpDBusReply = dbus_message_new_method_return(apDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't create lpDBusReply message\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
@@ -645,13 +645,13 @@ btrCore_BTSendMethodCall (
                                              interfacename,
                                              methodname);
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Cannot allocate DBus message!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Cannot allocate DBus message!\n");
         return NULL;
     }
 
     //Now do a sync call
     if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {    //Send and expect lpDBusReply using pending call object
-        BTRCORELOG_ERROR ("%d\t:%s - failed to send message!\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("failed to send message!\n");
     }
 
     dbus_connection_flush(gpDBusConn);
@@ -663,7 +663,7 @@ btrCore_BTSendMethodCall (
     dbus_pending_call_unref(lpDBusPendC);                       //Free pending call handle
 
     if (dbus_message_get_type(lpDBusReply) ==  DBUS_MESSAGE_TYPE_ERROR) {
-        BTRCORELOG_ERROR ("%d\t:%s - Error : %s\n\n", __LINE__, __FUNCTION__, dbus_message_get_error_name(lpDBusReply));
+        BTRCORELOG_ERROR ("Error : %s\n\n", dbus_message_get_error_name(lpDBusReply));
         dbus_message_unref(lpDBusReply);
         lpDBusReply = NULL;
     }
@@ -699,14 +699,14 @@ btrCore_BTParseDevice (
     const char*     pcIcon = NULL;
 
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
-        BTRCORELOG_ERROR ("%d\t: %s - dbus_message_iter_init Failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("dbus_message_iter_init Failed\n");
         return -1;
     }
 
     if (!dbus_message_get_args( apDBusMsg, NULL,
                                 DBUS_TYPE_STRING, &pcBTDevAddr,
                                 DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t: %s - dbus_message_get_args Failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("dbus_message_get_args Failed\n");
         //return -1; Users of btrCore_BTParseDevice should not call it if the message contains no valid args
     }
 
@@ -716,7 +716,7 @@ btrCore_BTParseDevice (
         dbus_type = dbus_message_iter_get_arg_type(&arg_i);
 
         if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
-            BTRCORELOG_ERROR ("%d\t: %s - Unknown Prop structure from Bluez\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("Unknown Prop structure from Bluez\n");
             return -1;
         }
     }
@@ -734,14 +734,14 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAddress);
                 strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->pcAddress : %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcAddress);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->pcAddress : %s\n", apstBTDeviceInfo->pcAddress);
             }
             else if (strcmp (pcKey, "Name") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcName);
                 strncpy(apstBTDeviceInfo->pcName, pcName, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->pcName: %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcName);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->pcName: %s\n", apstBTDeviceInfo->pcName);
 
             }
             else if (strcmp (pcKey, "Vendor") == 0) {
@@ -749,84 +749,84 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Vendor);
                 apstBTDeviceInfo->ui16Vendor = ui16Vendor;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->ui16Vendor = %d\n", __LINE__, __FUNCTION__ , apstBTDeviceInfo->ui16Vendor);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
             }
             else if (strcmp (pcKey, "VendorSource") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16VendorSource);
                 apstBTDeviceInfo->ui16VendorSource = ui16VendorSource;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->ui16VendorSource = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16VendorSource);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16VendorSource = %d\n", apstBTDeviceInfo->ui16VendorSource);
             }
             else if (strcmp (pcKey, "Product") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Product);
                 apstBTDeviceInfo->ui16Product = ui16Product;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->ui16Product = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16Product);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Product = %d\n", apstBTDeviceInfo->ui16Product);
             }
             else if (strcmp (pcKey, "Version") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Version);
                 apstBTDeviceInfo->ui16Version = ui16Version;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->ui16Version = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16Version);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Version = %d\n", apstBTDeviceInfo->ui16Version);
             }
             else if (strcmp (pcKey, "Icon") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcIcon);
                 strncpy(apstBTDeviceInfo->pcIcon, pcIcon, BT_MAX_STR_LEN);
-                BTRCORELOG_ERROR ("%d\t:%s - apstBTDeviceInfo->pcIcon: %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcIcon);
+                BTRCORELOG_ERROR ("apstBTDeviceInfo->pcIcon: %s\n", apstBTDeviceInfo->pcIcon);
             }
             else if (strcmp (pcKey, "Class") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui32Class);
                 apstBTDeviceInfo->ui32Class = ui32Class;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->ui32Class: %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui32Class);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->ui32Class: %d\n", apstBTDeviceInfo->ui32Class);
             }
             else if (strcmp (pcKey, "Paired") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bPaired);
                 apstBTDeviceInfo->bPaired = bPaired;
-                BTRCORELOG_ERROR ("%d\t:%s - apstBTDeviceInfo->bPaired = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bPaired);
+                BTRCORELOG_ERROR ("apstBTDeviceInfo->bPaired = %d\n", apstBTDeviceInfo->bPaired);
             }
             else if (strcmp (pcKey, "Connected") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bConnected);
                 apstBTDeviceInfo->bConnected = bConnected;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->bConnected = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bConnected);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->bConnected = %d\n", apstBTDeviceInfo->bConnected);
             }
             else if (strcmp (pcKey, "Trusted") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bTrusted);
                 apstBTDeviceInfo->bTrusted = bTrusted;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->bTrusted = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bTrusted);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->bTrusted = %d\n", apstBTDeviceInfo->bTrusted);
             }
             else if (strcmp (pcKey, "Blocked") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bBlocked);
                 apstBTDeviceInfo->bBlocked = bBlocked;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->bBlocked = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bBlocked);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->bBlocked = %d\n", apstBTDeviceInfo->bBlocked);
             }
             else if (strcmp (pcKey, "Alias") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAlias);
                 strncpy(apstBTDeviceInfo->pcAlias, pcAlias, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->pcAlias: %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcAlias);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->pcAlias: %s\n", apstBTDeviceInfo->pcAlias);
             }
             else if (strcmp (pcKey, "RSSI") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &i16RSSI);
                 apstBTDeviceInfo->i32RSSI = i16RSSI;
-                BTRCORELOG_INFO ("%d\t:%s - apstBTDeviceInfo->i32RSSI = %d i16RSSI = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->i32RSSI, i16RSSI);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->i32RSSI = %d i16RSSI = %d\n", apstBTDeviceInfo->i32RSSI, i16RSSI);
             }
             else if (strcmp (pcKey, "UUIDs") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -844,7 +844,7 @@ btrCore_BTParseDevice (
                         {
                             char *pVal = NULL;
                             dbus_message_iter_get_basic (&variant_j, &pVal);
-                            BTRCORELOG_INFO ("%d\t:%s - UUID value is %s\n", __LINE__, __FUNCTION__, pVal);
+                            BTRCORELOG_INFO ("UUID value is %s\n", pVal);
                             strncpy(apstBTDeviceInfo->aUUIDs[count], pVal, (BT_MAX_UUID_STR_LEN - 1));
                             count++;
                         }
@@ -853,7 +853,7 @@ btrCore_BTParseDevice (
                 }
                 else
                 {
-                    BTRCORELOG_ERROR ("%d\t:%s - apstBTDeviceInfo->Services; Not an Array\n", __LINE__, __FUNCTION__);
+                    BTRCORELOG_ERROR ("apstBTDeviceInfo->Services; Not an Array\n");
                 }
             }
         }
@@ -893,29 +893,29 @@ btrCore_BTParsePropertyChange (
             lpcstBtDevAddr[i32LoopIdx] = lpcinBtDevAddr[i32LoopIdx];
     }
 
-    BTRCORELOG_INFO("%d\t:%s - Path = %s Address = %s\n", __LINE__, __FUNCTION__, lpcDBusMsgObjPath, lpcstBtDevAddr);
+    BTRCORELOG_INFO("Path = %s Address = %s\n", lpcDBusMsgObjPath, lpcstBtDevAddr);
 
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
-       BTRCORELOG_ERROR ("%d\t:%s - GetProperties lpDBusReply has no arguments.", __LINE__, __FUNCTION__);
+       BTRCORELOG_ERROR ("GetProperties lpDBusReply has no arguments.");
     }
 
     if (!dbus_message_get_args( apDBusMsg, NULL,
                                 DBUS_TYPE_STRING, &bd_addr,
                                 DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid arguments for NameOwnerChanged signal", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid arguments for NameOwnerChanged signal");
         return -1;
     }
 
-    BTRCORELOG_INFO ("%d\t:%s -  Name: %s\n", __LINE__, __FUNCTION__, bd_addr);//"State" then the variant is a string
+    BTRCORELOG_INFO (" Name: %s\n", bd_addr);//"State" then the variant is a string
     if (strcmp(bd_addr,"State") == 0) {
         dbus_type = dbus_message_iter_get_arg_type(&arg_i);
-        //BTRCORELOG_ERROR ("%d\t:%s - type is %d\n", __LINE__, __FUNCTION__, dbus_type);
+        //BTRCORELOG_ERROR ("type is %d\n", dbus_type);
 
         if (dbus_type == DBUS_TYPE_STRING) {
             dbus_message_iter_next(&arg_i);
             dbus_message_iter_recurse(&arg_i, &variant_i);
             dbus_message_iter_get_basic(&variant_i, &value);
-             // BTRCORELOG_ERROR ("%d\t:%s -     the new state is: %s\n", __LINE__, __FUNCTION__, value);
+             // BTRCORELOG_ERROR ("    the new state is: %s\n", value);
 
             if (strcmp(gpcDeviceCurrState, value) != 0) {
                 strncpy(apstBTDeviceInfo->pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
@@ -1029,21 +1029,21 @@ btrCore_BTMediaEndpointSetConfiguration (
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &uuid);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - UUID %s\n", __LINE__, __FUNCTION__, uuid);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - UUID %s\n", uuid);
         }
         else if (strcasecmp(key, "Device") == 0) {
             if (ldBusType != DBUS_TYPE_OBJECT_PATH)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &dev_path);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - Device %s\n", __LINE__, __FUNCTION__, dev_path);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - Device %s\n", dev_path);
         }
         else if (strcasecmp(key, "Codec") == 0) {
             if (ldBusType != DBUS_TYPE_BYTE)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &codec);
-            BTRCORELOG_ERROR ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - Codec %d\n", __LINE__, __FUNCTION__, codec);
+            BTRCORELOG_ERROR ("btrCore_BTMediaEndpointSetConfiguration - Codec %d\n", codec);
         }
         else if (strcasecmp(key, "Configuration") == 0) {
             if (ldBusType != DBUS_TYPE_ARRAY)
@@ -1051,48 +1051,48 @@ btrCore_BTMediaEndpointSetConfiguration (
 
             dbus_message_iter_recurse(&lDBusMsgIterValue, &lDBusMsgIterArr);
             dbus_message_iter_get_fixed_array(&lDBusMsgIterArr, &config, &size);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - Configuration \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - Configuration \n");
         }
         else if (strcasecmp(key, "Delay") == 0) {
             if (ldBusType != DBUS_TYPE_UINT16)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &delay);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - Delay %d\n", __LINE__, __FUNCTION__, delay);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - Delay %d\n", delay);
         }
         else if (strcasecmp(key, "NREC") == 0) {
             if (ldBusType != DBUS_TYPE_BOOLEAN)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &nrec);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - NREC %d\n", __LINE__, __FUNCTION__, nrec);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - NREC %d\n", nrec);
         }
         else if (strcasecmp(key, "InbandRingtone") == 0) {
             if (ldBusType != DBUS_TYPE_BOOLEAN)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &inbandRingtone);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - InbandRingtone %d\n", __LINE__, __FUNCTION__, inbandRingtone);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - InbandRingtone %d\n", inbandRingtone);
         }
         else if (strcasecmp(key, "Routing") == 0) {
             if (ldBusType != DBUS_TYPE_STRING)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &routing);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - routing %s\n", __LINE__, __FUNCTION__, routing);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - routing %s\n", routing);
         }
         else if (strcasecmp(key, "Volume") == 0) {
             if (ldBusType != DBUS_TYPE_UINT16)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_get_basic(&lDBusMsgIterValue, &volume);
-            BTRCORELOG_INFO ("%d\t:%s - btrCore_BTMediaEndpointSetConfiguration - Volume %d\n", __LINE__, __FUNCTION__, volume);
+            BTRCORELOG_INFO ("btrCore_BTMediaEndpointSetConfiguration - Volume %d\n", volume);
         }
 
         dbus_message_iter_next(&lDBusMsgIterProp);
     }
 
-    BTRCORELOG_INFO ("%d\t:%s - Set configuration - Transport Path %s\n", __LINE__, __FUNCTION__, lDevTransportPath);
+    BTRCORELOG_INFO ("Set configuration - Transport Path %s\n", lDevTransportPath);
 
     if (gpcDevTransportPath) {
         free(gpcDevTransportPath);
@@ -1103,7 +1103,7 @@ btrCore_BTMediaEndpointSetConfiguration (
 
     if (gfpcBTransportPathMedia) {
         if((lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, config, gpcBTransPathMediaUserData))) {
-            BTRCORELOG_INFO ("%d\t:%s - Stored - Transport Path 0x%p:%s\n", __LINE__, __FUNCTION__, lStoredDevTransportPath, lStoredDevTransportPath);
+            BTRCORELOG_INFO ("Stored - Transport Path 0x%p:%s\n", lStoredDevTransportPath, lStoredDevTransportPath);
         }
     }
 
@@ -1122,7 +1122,7 @@ btrCore_BTMediaEndpointClearConfiguration (
 
     dbus_message_iter_init(apDBusMsg, &lDBusMsgIter);
     dbus_message_iter_get_basic(&lDBusMsgIter, &lDevTransportPath);
-    BTRCORELOG_INFO ("%d\t:%s - Clear configuration - Transport Path %s\n", __LINE__, __FUNCTION__, lDevTransportPath);
+    BTRCORELOG_INFO ("Clear configuration - Transport Path %s\n", lDevTransportPath);
 
     if (gpcDevTransportPath) {
         free(gpcDevTransportPath);
@@ -1131,7 +1131,7 @@ btrCore_BTMediaEndpointClearConfiguration (
 
     if (gfpcBTransportPathMedia) {
         if(!(lStoredDevTransportPath = gfpcBTransportPathMedia(lDevTransportPath, NULL, gpcBTransPathMediaUserData))) {
-            BTRCORELOG_INFO ("%d\t:%s - Cleared - Transport Path %s\n", __LINE__, __FUNCTION__, lDevTransportPath);
+            BTRCORELOG_INFO ("Cleared - Transport Path %s\n", lDevTransportPath);
         }
     }
 
@@ -1156,11 +1156,11 @@ BtrCore_BTInitGetConnection (
         return NULL;
     }
 
-    BTRCORELOG_INFO ("%d\t:%s - DBus Debug DBus Connection Name %s\n", __LINE__, __FUNCTION__, dbus_bus_get_unique_name (lpDBusConn));
+    BTRCORELOG_INFO ("DBus Debug DBus Connection Name %s\n", dbus_bus_get_unique_name (lpDBusConn));
     gpDBusConn = lpDBusConn;
 
     if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusConnectionFilter_cb, NULL, NULL)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Can't add signal filter - BtrCore_BTInitGetConnection\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't add signal filter - BtrCore_BTInitGetConnection\n");
         BtrCore_BTDeInitReleaseConnection(lpDBusConn);
         return NULL;
     }
@@ -1283,7 +1283,7 @@ BtrCore_BTRegisterAgent (
 
 
     if (!dbus_connection_register_object_path(gpDBusConn, apBtAgentPath, &gDBusAgentVTable, NULL))  {
-        BTRCORELOG_ERROR ("%d\t:%s - Error registering object path for agent\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Error registering object path for agent\n");
         return -1;
     }
 
@@ -1292,7 +1292,7 @@ BtrCore_BTRegisterAgent (
                                              "org.bluez.Adapter",
                                              "RegisterAgent");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Error allocating new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Error allocating new method call\n");
         return -1;
     }
 
@@ -1304,7 +1304,7 @@ BtrCore_BTRegisterAgent (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Unable to register agent\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Unable to register agent\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -1336,7 +1336,7 @@ BtrCore_BTUnregisterAgent (
                                              "org.bluez.Adapter",
                                              "UnregisterAgent");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -1348,7 +1348,7 @@ BtrCore_BTUnregisterAgent (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't unregister agent\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't unregister agent\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -1358,7 +1358,7 @@ BtrCore_BTUnregisterAgent (
     dbus_connection_flush(gpDBusConn);
 
     if (!dbus_connection_unregister_object_path(gpDBusConn, apBtAgentPath)) {
-        BTRCORELOG_ERROR ("%d\t:%s - Error unregistering object path for agent\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Error unregistering object path for agent\n");
         return -1;
     }
 
@@ -1386,7 +1386,7 @@ BtrCore_BTGetAdapterList (
 
     lpDBusReply = btrCore_BTSendMethodCall("/", "org.bluez.Manager", "ListAdapters");
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - org.bluez.Manager.ListAdapters returned an error\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("org.bluez.Manager.ListAdapters returned an error\n");
         return rc;
     }
 
@@ -1396,7 +1396,7 @@ BtrCore_BTGetAdapterList (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - org.bluez.Manager.GetProperties parsing failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("org.bluez.Manager.GetProperties parsing failed\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return rc;
     }
@@ -1407,7 +1407,7 @@ BtrCore_BTGetAdapterList (
 
         for (i = 0; i < num; i++) {
             if (*(apcArrBtAdapterPath + i)) {
-                BTRCORELOG_INFO ("%d\t:%s - Adapter Path: %d is %s\n", __LINE__, __FUNCTION__, i, paths[i]);
+                BTRCORELOG_INFO ("Adapter Path: %d is %s\n", i, paths[i]);
                 strncpy(*(apcArrBtAdapterPath + i), paths[i], BD_NAME_LEN);
                 rc = 0;
             }
@@ -1442,7 +1442,7 @@ BtrCore_BTGetAdapterPath (
                                              "org.bluez.Manager",
                                              "FindAdapter");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return NULL;
     }
 
@@ -1453,7 +1453,7 @@ BtrCore_BTGetAdapterPath (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't find adapter %s\n", __LINE__, __FUNCTION__, apBtAdapter);
+        BTRCORELOG_ERROR ("Can't find adapter %s\n", apBtAdapter);
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return NULL;
     }
@@ -1462,7 +1462,7 @@ BtrCore_BTGetAdapterPath (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't get lpDBusReply arguments\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't get lpDBusReply arguments\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return NULL;
     }
@@ -1493,9 +1493,9 @@ BtrCore_BTReleaseAdapterPath (
     }
 
     if (gpcBTAdapterPath) {
-        if (gpcBTAdapterPath != apBtAdapter)
-            BTRCORELOG_ERROR ("%d\t:%s - ERROR: Looks like Adapter path has been changed by User\n", __LINE__, __FUNCTION__);
-
+        if (gpcBTAdapterPath != apBtAdapter) {
+            BTRCORELOG_ERROR ("ERROR: Looks like Adapter path has been changed by User\n");
+        }
         free(gpcBTAdapterPath);
         gpcBTAdapterPath = NULL;
     }
@@ -1521,12 +1521,12 @@ BtrCore_BTGetIfceNameVersion (
 
     lfpVersion = popen("/usr/sbin/bluetoothd --version", "r");
     if ((lfpVersion == NULL)) { 
-        BTRCORELOG_ERROR ("%d\t:%s - Failed to run Version command\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to run Version command\n");
         strncpy(lcpVersion, "4.XXX", strlen("4.XXX"));
     }   
     else {
         if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
-            BTRCORELOG_ERROR ("%d\t:%s - Failed to Valid Version\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("Failed to Valid Version\n");
             strncpy(lcpVersion, "4.XXX", strlen("4.XXX"));
         }
         
@@ -1571,7 +1571,7 @@ BtrCore_BTGetProp (
         return -1;
 
     if ((!apcPath) || (!pKey) || (!pValue)) {
-        BTRCORELOG_ERROR ("%d\t:%s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg - enBTRCoreInitFailure\n");
         return -1;
     }
 
@@ -1623,17 +1623,17 @@ BtrCore_BTGetProp (
     dbus_error_init(&lDBusErr);
     lpDBusReply = btrCore_BTSendMethodCall(apcPath, pInterface, "GetProperties");
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - %s.GetProperties returned an error: '%s'\n", __LINE__, __FUNCTION__, pInterface, lDBusErr.message);
+        BTRCORELOG_ERROR ("%s.GetProperties returned an error: '%s'\n", pInterface, lDBusErr.message);
         rc = -1;
         dbus_error_free(&lDBusErr);
     }
     else {
         if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
-            BTRCORELOG_ERROR ("%d\t:%s - GetProperties lpDBusReply has no arguments.", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("GetProperties lpDBusReply has no arguments.");
             rc = -1;
         }
         else if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
-            BTRCORELOG_ERROR ("%d\t:%s - GetProperties argument is not an array.", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("GetProperties argument is not an array.");
             rc = -1;
         }
         else {
@@ -1649,25 +1649,25 @@ BtrCore_BTGetProp (
                         dbus_message_iter_recurse(&dict_i, &variant_i);
                         if (type == DBUS_TYPE_STRING) {
                             dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
-                            //BTRCORELOG_ERROR ("%d\t:%s - Key is %s and the value in string is %s\n", __LINE__, __FUNCTION__, pParsedKey, pParsedValueString);
+                            //BTRCORELOG_ERROR ("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
                             strncpy (pValue, pParsedValueString, BD_NAME_LEN);
                         }
                         else if (type == DBUS_TYPE_UINT16) {
                             unsigned short* ptr = (unsigned short*) pValue;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedShort);
-                            //BTRCORELOG_ERROR ("%d\t:%s - Key is %s and the value is %u\n", __LINE__, __FUNCTION__, pParsedKey, parsedValueUnsignedNumber);
+                            //BTRCORELOG_ERROR ("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
                             *ptr = parsedValueUnsignedShort;
                         }
                         else if (type == DBUS_TYPE_UINT32) {
                             unsigned int* ptr = (unsigned int*) pValue;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedNumber);
-                            //BTRCORELOG_ERROR ("%d\t:%s - Key is %s and the value is %u\n", __LINE__, __FUNCTION__, pParsedKey, parsedValueUnsignedNumber);
+                            //BTRCORELOG_ERROR ("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
                             *ptr = parsedValueUnsignedNumber;
                         }
                         else { /* As of now ints and bools are used. This function has to be extended for array if needed */
                             int* ptr = (int*) pValue;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueNumber);
-                            //BTRCORELOG_ERROR ("%d\t:%s - Key is %s and the value is %d\n", __LINE__, __FUNCTION__, pParsedKey, parsedValueNumber);
+                            //BTRCORELOG_ERROR ("Key is %s and the value is %d\n", pParsedKey, parsedValueNumber);
                             *ptr = parsedValueNumber;
                         }
                         rc = 0;
@@ -1714,7 +1714,7 @@ BtrCore_BTSetAdapterProp (
                                             "org.bluez.Adapter",
                                             "SetProperty");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -1737,7 +1737,7 @@ BtrCore_BTSetAdapterProp (
         break;
     case enBTAdPropUnknown:
     default:
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid Adaptre Property\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid Adaptre Property\n");
         return -1;
     }
 
@@ -1752,7 +1752,7 @@ BtrCore_BTSetAdapterProp (
         lDBusTypeAsString = DBUS_TYPE_STRING_AS_STRING;
         break;
     default:
-        BTRCORELOG_ERROR ("%d\t:%s - Invalid DBus Type\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Invalid DBus Type\n");
         return -1;
     }
 
@@ -1767,7 +1767,7 @@ BtrCore_BTSetAdapterProp (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Reply Null\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Reply Null\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -1797,7 +1797,7 @@ BtrCore_BTStartDiscovery (
                                              "org.bluez.Adapter",
                                              "StartDiscovery");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -1805,7 +1805,7 @@ BtrCore_BTStartDiscovery (
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Not enough memory for message send\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
 
@@ -1832,7 +1832,7 @@ BtrCore_BTStopDiscovery (
                                              "org.bluez.Adapter",
                                              "StopDiscovery");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -1840,7 +1840,7 @@ BtrCore_BTStopDiscovery (
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Not enough memory for message send\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
 
@@ -1871,7 +1871,7 @@ BtrCore_BTGetPairedDeviceInfo (
     DBusMessage* lpDBusReply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
     if (lpDBusReply != NULL) {
         if (!dbus_message_get_args(lpDBusReply, &lDBusErr, DBUS_TYPE_ARRAY, DBUS_TYPE_OBJECT_PATH, &paths, &num, DBUS_TYPE_INVALID)) {
-            BTRCORELOG_ERROR ("%d\t:%s - org.bluez.Adapter.ListDevices returned an error: '%s'\n", __LINE__, __FUNCTION__, lDBusErr.message);
+            BTRCORELOG_ERROR ("org.bluez.Adapter.ListDevices returned an error: '%s'\n", lDBusErr.message);
         }
 
         /* Update the number of devices */
@@ -1889,7 +1889,7 @@ BtrCore_BTGetPairedDeviceInfo (
         if (lpDBusReply != NULL) {
             memset (&apstBTDeviceInfo, 0, sizeof(apstBTDeviceInfo));
             if (0 != btrCore_BTParseDevice(lpDBusReply, &apstBTDeviceInfo)) {
-                BTRCORELOG_ERROR ("%d\t:%s - Parsing the device %s failed..\n", __LINE__, __FUNCTION__, pPairedDeviceInfo->devicePath[i]);
+                BTRCORELOG_ERROR ("Parsing the device %s failed..\n", pPairedDeviceInfo->devicePath[i]);
                 dbus_message_unref(lpDBusReply);
                 return -1;
             }
@@ -1991,7 +1991,7 @@ BtrCore_BTDiscoverDeviceServices (
                                              "org.bluez.Device",
                                              "DiscoverServices");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2002,27 +2002,27 @@ BtrCore_BTDiscoverDeviceServices (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Discover Services FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Discover Services FAILED\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
     if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
-       BTRCORELOG_ERROR ("%d\t:%s - DiscoverServices information lpDBusReply empty", __LINE__, __FUNCTION__);
+       BTRCORELOG_ERROR ("DiscoverServices information lpDBusReply empty");
        dbus_message_unref(lpDBusReply);
        return -1;
     }
 
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
-    // BTRCORELOG_ERROR ("%d\t:%s - type is %d\n", __LINE__, __FUNCTION__, dbus_type);
+    // BTRCORELOG_ERROR ("type is %d\n", dbus_type);
 
     dbus_message_iter_recurse(&arg_i, &element_i);
     dbus_type = dbus_message_iter_get_arg_type(&element_i);
-    //BTRCORELOG_ERROR ("%d\t:%s - checking the type, it is %d\n", __LINE__, __FUNCTION__, dbus_type);
+    //BTRCORELOG_ERROR ("checking the type, it is %d\n", dbus_type);
 
     while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
         dbus_type = dbus_message_iter_get_arg_type(&element_i);
-        //BTRCORELOG_ERROR ("%d\t:%s - next element_i type is %d\n", __LINE__, __FUNCTION__, dbus_type);
+        //BTRCORELOG_ERROR ("next element_i type is %d\n", dbus_type);
 
         if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
             isUUIDFound = 0;
@@ -2030,14 +2030,14 @@ BtrCore_BTDiscoverDeviceServices (
 
             dbus_message_iter_recurse(&element_i, &dict_i);
             dbus_type = dbus_message_iter_get_arg_type(&dict_i);
-            // BTRCORELOG_ERROR ("%d\t:%s - checking the dict subtype, it is %d\n", __LINE__, __FUNCTION__, dbus_type);
+            // BTRCORELOG_ERROR ("checking the dict subtype, it is %d\n", dbus_type);
 
             dbus_message_iter_next(&dict_i);
             dbus_type = dbus_message_iter_get_arg_type(&dict_i);
-            // BTRCORELOG_ERROR ("%d\t:%s - interating the dict subtype, it is %d\n", __LINE__, __FUNCTION__, dbus_type);
+            // BTRCORELOG_ERROR ("interating the dict subtype, it is %d\n", dbus_type);
             dbus_message_iter_get_basic(&dict_i, &value);
 
-            //BTRCORELOG_ERROR ("%d\t:%s - Services: %s\n", __LINE__, __FUNCTION__, value);
+            //BTRCORELOG_ERROR ("Services: %s\n", value);
             ret =  strstr(value, pUUIDValue);
             if (ret != NULL) {
                 ret += lengthOfUUID;
@@ -2115,7 +2115,7 @@ BtrCore_BTFindServiceSupported (
                                              "org.bluez.Device",
                                              "DiscoverServices");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2128,40 +2128,40 @@ BtrCore_BTFindServiceSupported (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Failure attempting to Discover Services\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failure attempting to Discover Services\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
     if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
-       BTRCORELOG_ERROR ("%d\t:%s - DiscoverServices lpDBusReply has no information.", __LINE__, __FUNCTION__);
+       BTRCORELOG_ERROR ("DiscoverServices lpDBusReply has no information.");
        dbus_message_unref(lpDBusReply);
        return -1;
     }
 
     dbus_type = dbus_message_iter_get_arg_type(&arg_i);
-    // BTRCORELOG_ERROR ("%d\t:%s - type is %d\n", __LINE__, __FUNCTION__, dbus_type);
+    // BTRCORELOG_ERROR ("type is %d\n", dbus_type);
 
     dbus_message_iter_recurse(&arg_i, &element_i);
     dbus_type = dbus_message_iter_get_arg_type(&element_i);
-    //BTRCORELOG_ERROR ("%d\t:%s - checking the type, it is %d\n", __LINE__, __FUNCTION__, dbus_type);
+    //BTRCORELOG_ERROR ("checking the type, it is %d\n", dbus_type);
 
     while (dbus_message_iter_get_arg_type(&element_i) != DBUS_TYPE_INVALID) {
         dbus_type = dbus_message_iter_get_arg_type(&element_i);
-        //BTRCORELOG_ERROR ("%d\t:%s - next element_i type is %d\n", __LINE__, __FUNCTION__, dbus_type);
+        //BTRCORELOG_ERROR ("next element_i type is %d\n", dbus_type);
 
         if (dbus_message_iter_get_arg_type(&element_i) == DBUS_TYPE_DICT_ENTRY) {
 
             dbus_message_iter_recurse(&element_i, &dict_i);
             dbus_type = dbus_message_iter_get_arg_type(&dict_i);
-            // BTRCORELOG_ERROR ("%d\t:%s - checking the dict subtype, it is %d\n", __LINE__, __FUNCTION__, dbus_type);
+            // BTRCORELOG_ERROR ("checking the dict subtype, it is %d\n", dbus_type);
 
             dbus_message_iter_next(&dict_i);
             dbus_type = dbus_message_iter_get_arg_type(&dict_i);
-            // BTRCORELOG_ERROR ("%d\t:%s - interating the dict subtype, it is %d\n", __LINE__, __FUNCTION__, dbus_type);
+            // BTRCORELOG_ERROR ("interating the dict subtype, it is %d\n", dbus_type);
             dbus_message_iter_get_basic(&dict_i, &value);
 
-            // BTRCORELOG_ERROR ("%d\t:%s - Services: %s\n", __LINE__, __FUNCTION__, value);
+            // BTRCORELOG_ERROR ("Services: %s\n", value);
             if (apcDataString != NULL) {
                 strcpy(apcDataString, value);
             }
@@ -2173,7 +2173,7 @@ BtrCore_BTFindServiceSupported (
                 match = 1;//assume it does match
             }
             else {
-                //BTRCORELOG_ERROR ("%d\t:%s - NO match\n", __LINE__, __FUNCTION__);
+                //BTRCORELOG_ERROR ("NO match\n");
                 match = 0;//assume it does not match
             }
         }
@@ -2240,7 +2240,7 @@ BtrCore_BTPerformAdapterOp (
                                              "org.bluez.Adapter",
                                              deviceOpString);
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2262,7 +2262,7 @@ BtrCore_BTPerformAdapterOp (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Pairing failed...\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Pairing failed...\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -2310,7 +2310,7 @@ BtrCore_BTConnectDevice (
                                              larDBusIfce,
                                              "Connect");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2318,7 +2318,7 @@ BtrCore_BTConnectDevice (
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Not enough memory for message send\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
 
@@ -2365,7 +2365,7 @@ BtrCore_BTDisconnectDevice (
                                              larDBusIfce,
                                              "Disconnect");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2373,7 +2373,7 @@ BtrCore_BTDisconnectDevice (
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Not enough memory for message send\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
 
@@ -2436,7 +2436,7 @@ BtrCore_BTRegisterMedia (
 
     lDBusOp = dbus_connection_register_object_path(gpDBusConn, lpBtMediaType, &gDBusMediaEndpointVTable, NULL);
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't Register Media Object\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't Register Media Object\n");
         return -1;
     }
 
@@ -2445,7 +2445,7 @@ BtrCore_BTRegisterMedia (
                                              "org.bluez.Media",
                                              "RegisterEndpoint");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2513,7 +2513,7 @@ BtrCore_BTRegisterMedia (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Reply Null\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Reply Null\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -2565,7 +2565,7 @@ BtrCore_BTUnRegisterMedia (
                                              "org.bluez.Media",
                                              "UnregisterEndpoint");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2575,13 +2575,13 @@ BtrCore_BTUnRegisterMedia (
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Not enough memory for message send\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
 
     lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpBtMediaType);
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't Register Media Object\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't Register Media Object\n");
         return -1;
     }
 
@@ -2638,7 +2638,7 @@ BtrCore_BTAcquireDevDataPath (
                                              "org.bluez.MediaTransport",
                                              "Acquire");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2651,7 +2651,7 @@ BtrCore_BTAcquireDevDataPath (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Reply Null\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Reply Null\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -2665,7 +2665,7 @@ BtrCore_BTAcquireDevDataPath (
     dbus_message_unref(lpDBusReply);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't get lpDBusReply arguments\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't get lpDBusReply arguments\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -2698,7 +2698,7 @@ BtrCore_BTReleaseDevDataPath (
                                              "org.bluez.MediaTransport",
                                              "Release");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
 
@@ -2711,7 +2711,7 @@ BtrCore_BTReleaseDevDataPath (
     dbus_message_unref(lpDBusMsg);
 
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - Reply Null\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Reply Null\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
@@ -2889,7 +2889,7 @@ BtrCore_BTDevMediaPlayControl (
                                              "org.bluez.Control",
                                              mediaOper);
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t:%s - Cannot allocate Dbus message to play media file\n\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Cannot allocate Dbus message to play media file\n\n");
         return -1;
     }
 
@@ -2897,7 +2897,7 @@ BtrCore_BTDevMediaPlayControl (
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - Not enough memory for message send\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
 

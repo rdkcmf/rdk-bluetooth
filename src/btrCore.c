@@ -35,8 +35,9 @@
 
 #include "btrCore_priv.h"
 
-const char* BTMGR_DEBUG_ACTUAL_PATH    = "/etc/debug.ini";
-const char* BTMGR_DEBUG_OVERRIDE_PATH  = "/opt/debug.ini";
+#ifdef RDK_LOGGER_ENABLED
+int b_rdk_logger_enabled = 0;
+#endif
 
 //TODO: Move to a private header
 typedef struct _stBTRCoreDevStateInfo {
@@ -215,67 +216,67 @@ btrCore_MapClassIDtoDeviceType (
         unsigned int lastByte = (classID & 0xFF);
 
         if (lastByte == enBTRCore_DC_WearableHeadset) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_WearableHeadset \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_WearableHeadset \n");
             rc = enBTRCore_DC_WearableHeadset;
         }
         else if (lastByte == enBTRCore_DC_Handsfree) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_Handsfree \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Handsfree \n");
             rc = enBTRCore_DC_Handsfree;
         }
         else if (lastByte == enBTRCore_DC_Reserved) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_Reserved \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Reserved \n");
             rc = enBTRCore_DC_Reserved;
         }
         else if (lastByte == enBTRCore_DC_Microphone) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_Microphone \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Microphone \n");
             rc = enBTRCore_DC_Microphone;
         }
         else if (lastByte == enBTRCore_DC_Loudspeaker) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_Loudspeaker \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Loudspeaker \n");
             rc = enBTRCore_DC_Loudspeaker;
         }
         else if (lastByte == enBTRCore_DC_Headphones) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_Headphones \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Headphones \n");
             rc = enBTRCore_DC_Headphones;
         }
         else if (lastByte == enBTRCore_DC_PortableAudio) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_PortableAudio \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_PortableAudio \n");
             rc = enBTRCore_DC_PortableAudio;
         }
         else if (lastByte == enBTRCore_DC_CarAudio) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_CarAudio \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_CarAudio \n");
             rc = enBTRCore_DC_CarAudio;
         }
         else if (lastByte == enBTRCore_DC_STB) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_STB \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_STB \n");
             rc = enBTRCore_DC_STB;
         }
         else if (lastByte == enBTRCore_DC_HIFIAudioDevice) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_HIFIAudioDevice \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_HIFIAudioDevice \n");
             rc = enBTRCore_DC_HIFIAudioDevice;
         }
         else if (lastByte == enBTRCore_DC_VCR) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_VCR \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VCR \n");
             rc = enBTRCore_DC_VCR;
         }
         else if (lastByte == enBTRCore_DC_VideoCamera) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_VideoCamera \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoCamera \n");
             rc = enBTRCore_DC_VideoCamera;
         }
         else if (lastByte == enBTRCore_DC_Camcoder) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_Camcoder \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Camcoder \n");
             rc = enBTRCore_DC_Camcoder;
         }
         else if (lastByte == enBTRCore_DC_VideoMonitor) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_VideoMonitor \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoMonitor \n");
             rc = enBTRCore_DC_VideoMonitor;
         }
         else if (lastByte == enBTRCore_DC_TV) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_TV \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_TV \n");
             rc = enBTRCore_DC_TV;
         }
         else if (lastByte == enBTRCore_DC_VideoConference) {
-            BTRCORELOG_INFO ("%d\t: %s - Its a enBTRCore_DC_VideoConference \n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoConference \n");
             rc = enBTRCore_DC_TV;
         }
     }
@@ -310,7 +311,7 @@ btrCore_SetScannedDeviceInfo (
 
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if (!apsthBTRCore->stScannedDevicesArr[i].found) {
-            //BTRCORELOG_ERROR ("%d\t: %s - adding %s at location %d\n",apsthBTRCore->stFoundDevice.device_address,i);
+            //BTRCORELOG_ERROR ("adding %s at location %d\n",apsthBTRCore->stFoundDevice.device_address,i);
             apsthBTRCore->stScannedDevicesArr[i].found = TRUE; //mark the record as found
             strcpy(apsthBTRCore->stScannedDevicesArr[i].device_address, apsthBTRCore->stFoundDevice.device_address);
             strcpy(apsthBTRCore->stScannedDevicesArr[i].device_name, apsthBTRCore->stFoundDevice.device_name);
@@ -393,7 +394,7 @@ btrCore_PopulateListOfPairedDevices (
         return enBTRCoreSuccess;
     }
     else {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to populate List Of Paired Devices\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to populate List Of Paired Devices\n");
         return enBTRCoreFailure;
     }
 
@@ -450,22 +451,22 @@ btrCore_ShowSignalStrength (
 
     pos_str = 100 + strength;//strength is usually negative with number meaning more strength
 
-    BTRCORELOG_INFO ("%d\t: %s -  Signal Strength: %d dbmv  ", __LINE__, __FUNCTION__, strength);
+    BTRCORELOG_INFO (" Signal Strength: %d dbmv  ", strength);
 
     if (pos_str > 70) {
-        BTRCORELOG_INFO ("%d\t: %s - ++++\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("++++\n");
     }
 
     if ((pos_str > 50) && (pos_str <= 70)) {
-        BTRCORELOG_INFO ("%d\t: %s - +++\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("+++\n");
     }
 
     if ((pos_str > 37) && (pos_str <= 50)) {
-        BTRCORELOG_INFO ("%d\t: %s - ++\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("++\n");
     }
 
     if (pos_str <= 37) {
-        BTRCORELOG_INFO ("%d\t: %s - +\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("+\n");
     } 
 }
 
@@ -554,7 +555,7 @@ btrCore_BTParseDeviceConnectionState (
     enBTRCoreDeviceState rc = enBTRCoreDevStInitialized;
 
     if ((pcStateValue) && (pcStateValue[0] != '\0')) {
-        BTRCORELOG_INFO ("%d\t: %s - Current State of this connection is @@%s@@\n", __LINE__, __FUNCTION__, pcStateValue);
+        BTRCORELOG_INFO ("Current State of this connection is @@%s@@\n", pcStateValue);
 
         if (strcasecmp ("disconnected", pcStateValue) == 0) {
             rc = enBTRCoreDevStDisconnected;
@@ -584,11 +585,11 @@ DoDispatch (
     enBTRCoreRet*   penDispThreadExitStatus = malloc(sizeof(enBTRCoreRet));
 
     hBTRCore = (stBTRCoreHdl*) ptr;
-    BTRCORELOG_INFO ("%d\t: %s - %s \n", __LINE__, __FUNCTION__, "Dispatch Thread Started");
+    BTRCORELOG_INFO ("%s \n", "Dispatch Thread Started");
 
 
     if (!((stBTRCoreHdl*)hBTRCore) || !((stBTRCoreHdl*)hBTRCore)->connHdl) {
-        BTRCORELOG_ERROR ("%d\t: %s - Dispatch thread failure - BTRCore not initialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Dispatch thread failure - BTRCore not initialized\n");
         *penDispThreadExitStatus = enBTRCoreNotInitialized;
         return (void*)penDispThreadExitStatus;
     }
@@ -624,7 +625,7 @@ test_func (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg - enBTRCoreInitFailure\n");
         return;
     }
 
@@ -634,7 +635,7 @@ test_func (
         pstlhBTRCore->fptrBTRCoreStatusCB(&pstlhBTRCore->stDevStatusCbInfo, NULL);
     }
     else {
-        BTRCORELOG_ERROR ("%d\t: %s - no callback installed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("no callback installed\n");
     }
 
     return;
@@ -647,28 +648,36 @@ BTRCore_Init (
     tBTRCoreHandle* phBTRCore
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL; 
+
+#ifdef RDK_LOGGER_ENABLED
     const char* pDebugConfig = NULL;
+    const char* BTRCORE_DEBUG_ACTUAL_PATH    = "/etc/debug.ini";
+    const char* BTRCORE_DEBUG_OVERRIDE_PATH  = "/opt/debug.ini";
 
     /* Init the logger */
-    if( access(BTMGR_DEBUG_OVERRIDE_PATH, F_OK) != -1 ) {
-        pDebugConfig = BTMGR_DEBUG_OVERRIDE_PATH;
+    if( access(BTRCORE_DEBUG_OVERRIDE_PATH, F_OK) != -1 ) {
+        pDebugConfig = BTRCORE_DEBUG_OVERRIDE_PATH;
     }
     else {
-        pDebugConfig = BTMGR_DEBUG_ACTUAL_PATH;
+        pDebugConfig = BTRCORE_DEBUG_ACTUAL_PATH;
     }
-    rdk_logger_init(pDebugConfig);
+    if( 0==rdk_logger_init(pDebugConfig) ) {
+       b_rdk_logger_enabled = 1; 
+    }
+#endif
 
-    BTRCORELOG_INFO ("%d\t: %s - BTRCore_Init\n", __LINE__, __FUNCTION__);
+
+    BTRCORELOG_INFO ("BTRCore_Init\n");
 
     if (!phBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
 
     pstlhBTRCore = (stBTRCoreHdl*)malloc(sizeof(stBTRCoreHdl));
     if (!pstlhBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - Insufficient memory - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Insufficient memory - enBTRCoreInitFailure\n");
         return enBTRCoreInitFailure;
     }
     memset(pstlhBTRCore, 0, sizeof(stBTRCoreHdl));
@@ -676,7 +685,7 @@ BTRCore_Init (
 
     pstlhBTRCore->connHdl = BtrCore_BTInitGetConnection();
     if (!pstlhBTRCore->connHdl) {
-        BTRCORELOG_ERROR ("%d\t: %s - Can't get on system bus - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't get on system bus - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
@@ -686,7 +695,7 @@ BTRCore_Init (
 
     pstlhBTRCore->agentPath = BtrCore_BTGetAgentPath(pstlhBTRCore->connHdl);
     if (!pstlhBTRCore->agentPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - Can't get agent path - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't get agent path - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
@@ -694,45 +703,45 @@ BTRCore_Init (
     pstlhBTRCore->dispatchThreadQuit = FALSE;
     g_mutex_init(&pstlhBTRCore->dispatchMutex);
     if((pstlhBTRCore->dispatchThread = g_thread_new("BTRCoreTaskThread", DoDispatch, (void*)pstlhBTRCore)) == NULL) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to create Dispatch Thread - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to create Dispatch Thread - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
 
     pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHdl, NULL); //mikek hard code to default adapter for now
     if (!pstlhBTRCore->curAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to get BT Adapter - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to get BT Adapter - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
 
     if (BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, "Address", pstlhBTRCore->curAdapterAddr)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to get BT Adapter Address - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to get BT Adapter Address - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - BTRCore_Init - Adapter path %s - Adapter Address %s \n", __LINE__, __FUNCTION__, pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
+    BTRCORELOG_INFO ("BTRCore_Init - Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
 
     /* Initialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
     if (enBTRCoreSuccess != BTRCore_AVMedia_Init(&pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to Init AV Media Subsystem - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to Init AV Media Subsystem - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
 
     if(BtrCore_BTRegisterDevStatusUpdatecB(pstlhBTRCore->connHdl, &btrCore_BTDeviceStatusUpdate_cb, pstlhBTRCore)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to Register Device Status CB - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to Register Device Status CB - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
     if(BtrCore_BTRegisterConnIntimationcB(pstlhBTRCore->connHdl, &btrCore_BTDeviceConnectionIntimation_cb, pstlhBTRCore)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to Register Connection Intimation CB - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to Register Connection Intimation CB - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
     if(BtrCore_BTRegisterConnAuthcB(pstlhBTRCore->connHdl, &btrCore_BTDeviceAuthetication_cb, pstlhBTRCore)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to Register Connection Authentication CB - enBTRCoreInitFailure\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to Register Connection Authentication CB - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
@@ -755,20 +764,20 @@ BTRCore_DeInit (
     int             i;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    BTRCORELOG_INFO ("%d\t: %s - hBTRCore   =   0x%8p\n", __LINE__, __FUNCTION__, hBTRCore);
+    BTRCORELOG_INFO ("hBTRCore   =   0x%8p\n", hBTRCore);
 
     /* Free any memory allotted for use in BTRCore */
     
     /* DeInitialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
 
     if (enBTRCoreSuccess != BTRCore_AVMedia_DeInit(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to DeInit AV Media Subsystem\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to DeInit AV Media Subsystem\n");
         enDispThreadExitStatus = enBTRCoreFailure;
     }
 
@@ -779,13 +788,13 @@ BTRCore_DeInit (
     penDispThreadExitStatus = g_thread_join(pstlhBTRCore->dispatchThread);
     g_mutex_clear(&pstlhBTRCore->dispatchMutex);
     
-    BTRCORELOG_INFO ("%d\t: %s - BTRCore_DeInit - Exiting BTRCore - %d\n", __LINE__, __FUNCTION__, *((enBTRCoreRet*)penDispThreadExitStatus));
+    BTRCORELOG_INFO ("BTRCore_DeInit - Exiting BTRCore - %d\n", *((enBTRCoreRet*)penDispThreadExitStatus));
     enDispThreadExitStatus = *((enBTRCoreRet*)penDispThreadExitStatus);
     free(penDispThreadExitStatus);
 
     if (pstlhBTRCore->curAdapterPath) {
         if (BtrCore_BTReleaseAdapterPath(pstlhBTRCore->connHdl, NULL)) {
-            BTRCORELOG_ERROR ("%d\t: %s - Failure BtrCore_BTReleaseAdapterPath\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("Failure BtrCore_BTReleaseAdapterPath\n");
         }
         pstlhBTRCore->curAdapterPath = NULL;
     }
@@ -810,14 +819,14 @@ BTRCore_DeInit (
 
     if (pstlhBTRCore->agentPath) {
         if (BtrCore_BTReleaseAgentPath(pstlhBTRCore->connHdl)) {
-            BTRCORELOG_ERROR ("%d\t: %s - Failure BtrCore_BTReleaseAgentPath\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("Failure BtrCore_BTReleaseAgentPath\n");
         }
         pstlhBTRCore->agentPath = NULL;
     }
 
     if (pstlhBTRCore->connHdl) {
         if (BtrCore_BTDeInitReleaseConnection(pstlhBTRCore->connHdl)) {
-            BTRCORELOG_ERROR ("%d\t: %s - Failure BtrCore_BTDeInitReleaseConnection\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("Failure BtrCore_BTDeInitReleaseConnection\n");
         }
         pstlhBTRCore->connHdl = NULL;
     }
@@ -841,7 +850,7 @@ BTRCore_RegisterAgent (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -855,9 +864,9 @@ BTRCore_RegisterAgent (
         strcpy(capabilities,"NoInputNoOutput");
     }
 
-    // BTRCORELOG_ERROR ("%d\t: %s - Starting agent in mode %s\n", __LINE__, __FUNCTION__,capabilities);
+    // BTRCORELOG_ERROR ("Starting agent in mode %s\n",capabilities);
     if (BtrCore_BTRegisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities) < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - agent registration ERROR occurred\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("agent registration ERROR occurred\n");
         return enBTRCorePairingFailed;
     }
 
@@ -872,14 +881,14 @@ BTRCore_UnregisterAgent (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (BtrCore_BTUnregisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath) < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - agent unregistration  ERROR occurred\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("agent unregistration  ERROR occurred\n");
         return enBTRCorePairingFailed;//TODO add an enum error code for this situation
     }
 
@@ -897,11 +906,11 @@ BTRCore_GetListOfAdapters (
     int i;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pstListAdapters) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -934,11 +943,11 @@ BTRCore_GetAdapters (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pstGetAdapters) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -961,7 +970,7 @@ BTRCore_GetAdapter (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -969,7 +978,7 @@ BTRCore_GetAdapter (
 
     pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHdl, NULL); //mikek hard code to default adapter for now
     if (!pstlhBTRCore->curAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to get BT Adapter", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to get BT Adapter");
         return enBTRCoreInvalidAdapter;
     }
 
@@ -992,7 +1001,7 @@ BTRCore_SetAdapter (
     int pathlen;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -1019,10 +1028,10 @@ BTRCore_SetAdapter (
             pstlhBTRCore->curAdapterPath[pathlen-1]='5';
             break;
         default:
-            BTRCORELOG_INFO ("%d\t: %s - max adapter value is 5, setting default\n", __LINE__, __FUNCTION__);//6 adapters seems like plenty for now
+            BTRCORELOG_INFO ("max adapter value is 5, setting default\n");//6 adapters seems like plenty for now
             pstlhBTRCore->curAdapterPath[pathlen-1]='0';
     }
-    BTRCORELOG_INFO ("%d\t: %s - Now current adatper is %s\n", __LINE__, __FUNCTION__, pstlhBTRCore->curAdapterPath);
+    BTRCORELOG_INFO ("Now current adatper is %s\n", pstlhBTRCore->curAdapterPath);
 
     return enBTRCoreSuccess;
 }
@@ -1037,19 +1046,19 @@ BTRCore_EnableAdapter (
     int powered;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     powered = 1;
-    BTRCORELOG_ERROR ("%d\t: %s - BTRCore_EnableAdapter\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_ERROR ("BTRCore_EnableAdapter\n");
 
     apstBTRCoreAdapter->enable = TRUE;//does this even mean anything?
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropPowered - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1066,19 +1075,19 @@ BTRCore_DisableAdapter (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     powered = 0;
-    BTRCORELOG_ERROR ("%d\t: %s - BTRCore_DisableAdapter\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_ERROR ("BTRCore_DisableAdapter\n");
 
     apstBTRCoreAdapter->enable = FALSE;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropPowered - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1096,11 +1105,11 @@ BTRCore_GetAdapterAddr (
     int             i = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!apui8adapterAddr) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1126,7 +1135,7 @@ BTRCore_SetDiscoverable (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -1135,7 +1144,7 @@ BTRCore_SetDiscoverable (
     discoverable = apstBTRCoreAdapter->discoverable;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropDiscoverable - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1153,18 +1162,18 @@ BTRCore_SetAdapterDiscoverable (
     int isDiscoverable = (int) discoverable;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &isDiscoverable)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropDiscoverable - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1181,7 +1190,7 @@ BTRCore_SetDiscoverableTimeout (
     U32 timeout;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -1190,7 +1199,7 @@ BTRCore_SetDiscoverableTimeout (
     timeout = apstBTRCoreAdapter->DiscoverableTimeout;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &timeout)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1208,18 +1217,18 @@ BTRCore_SetAdapterDiscoverableTimeout (
     U32 givenTimeout = (U32) timeout;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &givenTimeout)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1237,18 +1246,18 @@ BTRCore_GetAdapterDiscoverableStatus (
     int discoverable = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if ((!pAdapterPath) || (!pDiscoverable)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Discoverable", &discoverable)) {
-        BTRCORELOG_INFO ("%d\t: %s - Get value for org.bluez.Adapter.powered = %d\n", __LINE__, __FUNCTION__, discoverable);
+        BTRCORELOG_INFO ("Get value for org.bluez.Adapter.powered = %d\n", discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
     }
@@ -1266,11 +1275,11 @@ BTRCore_SetAdapterDeviceName (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!apcAdapterDeviceName) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1284,7 +1293,7 @@ BTRCore_SetAdapterDeviceName (
     apstBTRCoreAdapter->pcAdapterDevName = strdup(apcAdapterDeviceName); //TODO: Free this memory
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropName, &(apstBTRCoreAdapter->pcAdapterDevName))) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropName - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropName - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1301,18 +1310,18 @@ BTRCore_SetAdapterName (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if ((!pAdapterPath) ||(!pAdapterName)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropName, &pAdapterName)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropName - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropName - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1332,18 +1341,18 @@ BTRCore_GetAdapterName (
     memset (name, '\0', sizeof (name));
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if ((!pAdapterPath) || (!pAdapterName)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Name", name)) {
-        BTRCORELOG_INFO ("%d\t: %s - Get value for org.bluez.Adapter.Name = %s\n", __LINE__, __FUNCTION__, name);
+        BTRCORELOG_INFO ("Get value for org.bluez.Adapter.Name = %s\n", name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
     }
@@ -1362,18 +1371,18 @@ BTRCore_SetAdapterPower (
     int power = powerStatus;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &power)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Set Adapter Property enBTAdPropPowered - FAILED\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
 
@@ -1391,18 +1400,18 @@ BTRCore_GetAdapterPower (
     int powerStatus = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if ((!pAdapterPath) || (!pAdapterPower)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Powered", &powerStatus)) {
-        BTRCORELOG_INFO ("%d\t: %s - Get value for org.bluez.Adapter.powered = %d\n", __LINE__, __FUNCTION__, powerStatus);
+        BTRCORELOG_INFO ("Get value for org.bluez.Adapter.powered = %d\n", powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;
     }
@@ -1421,11 +1430,11 @@ BTRCore_GetVersionInfo (
     char            lBtVersion[BTRCORE_STRINGS_MAX_LEN/4];
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!apcBtVersion) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1438,7 +1447,7 @@ BTRCore_GetVersionInfo (
         strncpy(apcBtVersion, lBtIfceName, strlen(lBtIfceName));
         strncat(apcBtVersion, "-", 1);
         strncat(apcBtVersion, lBtVersion, strlen(lBtVersion));
-        BTRCORELOG_INFO ("%d\t: %s - Ifce: %s Version: %s Out:%s\n", __LINE__, __FUNCTION__, lBtIfceName, lBtVersion, apcBtVersion);
+        BTRCORELOG_INFO ("Ifce: %s Version: %s Out:%s\n", lBtIfceName, lBtVersion, apcBtVersion);
 
         return enBTRCoreSuccess;
     }
@@ -1455,7 +1464,7 @@ BTRCore_StartDiscovery (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -1486,11 +1495,11 @@ BTRCore_StartDeviceDiscovery (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1513,11 +1522,11 @@ BTRCore_StopDeviceDiscovery (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pAdapterPath) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1540,33 +1549,33 @@ BTRCore_GetListOfScannedDevices (
     int i;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pListOfScannedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    BTRCORELOG_INFO ("%d\t: %s - adapter path is %s\n", __LINE__, __FUNCTION__, pstlhBTRCore->curAdapterPath);
+    BTRCORELOG_INFO ("adapter path is %s\n", pstlhBTRCore->curAdapterPath);
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if (pstlhBTRCore->stScannedDevicesArr[i].found) {
-            BTRCORELOG_INFO ("%d\t: %s - Device %d. %s\n - %s  %d dbmV ", __LINE__, __FUNCTION__,
+            BTRCORELOG_INFO ("Device %d. %s\n - %s  %d dbmV ",
                                                         i,
                                                         pstlhBTRCore->stScannedDevicesArr[i].device_name,
                                                         pstlhBTRCore->stScannedDevicesArr[i].device_address,
                                                         pstlhBTRCore->stScannedDevicesArr[i].RSSI);
             btrCore_ShowSignalStrength(pstlhBTRCore->stScannedDevicesArr[i].RSSI);
-            BTRCORELOG_INFO ("%d\t: %s - \n\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_INFO ("\n\n");
         }
     }   
 
     memset (pListOfScannedDevices, 0, sizeof(stBTRCoreScannedDevicesCount));
     memcpy (pListOfScannedDevices->devices, pstlhBTRCore->stScannedDevicesArr, sizeof (pstlhBTRCore->stScannedDevicesArr));
     pListOfScannedDevices->numberOfDevices = pstlhBTRCore->numOfScannedDevices;
-    BTRCORELOG_INFO ("%d\t: %s - Copied scanned details of %d devices\n", __LINE__, __FUNCTION__, pstlhBTRCore->numOfScannedDevices);
+    BTRCORELOG_INFO ("Copied scanned details of %d devices\n", pstlhBTRCore->numOfScannedDevices);
 
     return enBTRCoreSuccess;
 }
@@ -1581,11 +1590,11 @@ BTRCore_PairDevice (
     const char*     pDeviceAddress = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (aBTRCoreDevId < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1594,8 +1603,8 @@ BTRCore_PairDevice (
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         stBTRCoreScannedDevices* pstScannedDevice = NULL;
 
-        BTRCORELOG_INFO ("%d\t: %s - We will pair %s\n", __LINE__, __FUNCTION__, pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
-        BTRCORELOG_INFO ("%d\t: %s - address %s\n", __LINE__, __FUNCTION__, pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
+        BTRCORELOG_INFO ("We will pair %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
+        BTRCORELOG_INFO ("address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
         pstScannedDevice = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstScannedDevice->device_address;
@@ -1605,7 +1614,7 @@ BTRCore_PairDevice (
     }
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in Scanned devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
@@ -1614,11 +1623,11 @@ BTRCore_PairDevice (
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
                                     enBTAdpOpCreatePairedDev) < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to pair a device\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to pair a device\n");
         return enBTRCorePairingFailed;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - Pairing Success\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_INFO ("Pairing Success\n");
 
 
     return enBTRCoreSuccess;
@@ -1635,23 +1644,23 @@ BTRCore_UnPairDevice (
 
     /* We can enhance the BTRCore with passcode support later point in time */
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (aBTRCoreDevId < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("%d\t: %s - Possibly the list is not populated\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Possibly the list is not populated\n");
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -1665,7 +1674,7 @@ BTRCore_UnPairDevice (
     }
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
@@ -1674,11 +1683,11 @@ BTRCore_UnPairDevice (
                                     pstlhBTRCore->agentPath,
                                     pDeviceAddress,
                                     enBTAdpOpRemovePairedDev) != 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to unpair a device\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to unpair a device\n");
         return enBTRCorePairingFailed;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - UnPairing Success\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_INFO ("UnPairing Success\n");
 
 
     return enBTRCoreSuccess;
@@ -1693,11 +1702,11 @@ BTRCore_GetListOfPairedDevices (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!pListOfDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1706,7 +1715,7 @@ BTRCore_GetListOfPairedDevices (
     if (enBTRCoreSuccess ==  btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath)) {
         pListOfDevices->numberOfDevices = pstlhBTRCore->numOfPairedDevices;
         memcpy (pListOfDevices->devices, pstlhBTRCore->stKnownDevicesArr, sizeof (pstlhBTRCore->stKnownDevicesArr));
-        BTRCORELOG_INFO ("%d\t: %s - Copied all the known devices\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Copied all the known devices\n");
         return enBTRCoreSuccess;
     }
 
@@ -1723,22 +1732,22 @@ BTRCore_FindDevice (
     stBTRCoreScannedDevices* pstScannedDevice = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     pstScannedDevice = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
 
-    BTRCORELOG_INFO ("%d\t: %s -  We will try to find %s\n", __LINE__, __FUNCTION__, pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
-    BTRCORELOG_INFO ("%d\t: %s -  address %s\n", __LINE__, __FUNCTION__, pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
+    BTRCORELOG_INFO (" We will try to find %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
+    BTRCORELOG_INFO (" address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
     if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
                                     pstlhBTRCore->agentPath,
                                     pstScannedDevice->device_address,
                                     enBTAdpOpFindPairedDev) < 0) {
-       // BTRCORELOG_ERROR ("%d\t: %s - device not found\n", __LINE__, __FUNCTION__);
+       // BTRCORELOG_ERROR ("device not found\n");
         return enBTRCoreFailure;
     }
 
@@ -1759,7 +1768,7 @@ BTRCore_FindService (
     const char*     pDeviceAddress = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -1775,11 +1784,11 @@ BTRCore_FindService (
     }
 
     if (!pDeviceAddress) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in Scanned devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - Checking for service %s on %s\n", __LINE__, __FUNCTION__, UUID, pDeviceAddress);
+    BTRCORELOG_INFO ("Checking for service %s on %s\n", UUID, pDeviceAddress);
     *found = BtrCore_BTFindServiceSupported (pstlhBTRCore->connHdl, pDeviceAddress, UUID, XMLdata);
     if (*found < 0) {
         return enBTRCoreFailure;
@@ -1801,11 +1810,11 @@ BTRCore_GetSupportedServices (
     int i = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if ((!pProfileList) || (0 == aBTRCoreDevId)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
@@ -1821,7 +1830,7 @@ BTRCore_GetSupportedServices (
     }
 
     if (!pDeviceAddress) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in Scanned devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
@@ -1834,7 +1843,7 @@ BTRCore_GetSupportedServices (
         return enBTRCoreFailure;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - Successfully received the supported services... \n", __LINE__, __FUNCTION__);
+    BTRCORELOG_INFO ("Successfully received the supported services... \n");
 
     pProfileList->numberOfService = profileList.numberOfService;
     for (i = 0; i < profileList.numberOfService; i++) {
@@ -1859,24 +1868,24 @@ BTRCore_ConnectDevice (
     int loop = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (aBTRCoreDevId < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("%d\t: %s - Possibly the list is not populated; like booted and connecting\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -1893,7 +1902,7 @@ BTRCore_ConnectDevice (
 
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
@@ -1915,11 +1924,11 @@ BTRCore_ConnectDevice (
     }
 
     if (BtrCore_BTConnectDevice(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType) != 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - Connect to device failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Connect to device failed\n");
         return enBTRCoreFailure;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - Connected to device %s Successfully. Lets start Play the audio\n", __LINE__, __FUNCTION__, pDeviceName);
+    BTRCORELOG_INFO ("Connected to device %s Successfully. Lets start Play the audio\n", pDeviceName);
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected = TRUE;
@@ -1953,18 +1962,18 @@ BTRCore_DisconnectDevice (
     int loop = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (aBTRCoreDevId < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -1979,7 +1988,7 @@ BTRCore_DisconnectDevice (
 
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
@@ -1999,11 +2008,11 @@ BTRCore_DisconnectDevice (
     }
 
     if (BtrCore_BTDisconnectDevice(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType) != 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - DisConnect from device failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("DisConnect from device failed\n");
         return enBTRCoreFailure;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s - DisConnected from device Successfully.\n", __LINE__, __FUNCTION__);
+    BTRCORELOG_INFO ("DisConnected from device Successfully.\n");
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected = FALSE;
         pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDevicePrevState = pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState;
@@ -2038,24 +2047,24 @@ BTRCore_GetDeviceMediaInfo (
     stBTRCoreAVMediaSbcInfo     lstBtrCoreMediaSbcInfo;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if ((aBTRCoreDevId < 0) || (apstBTRCoreDevMediaInfo == NULL) || (apstBTRCoreDevMediaInfo->pstBtrCoreDevMCodecInfo == NULL)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("%d\t: %s - Possibly the list is not populated; like booted and connecting\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -2069,11 +2078,11 @@ BTRCore_GetDeviceMediaInfo (
     }
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s -  We will Media Info for %s\n", __LINE__, __FUNCTION__, pDeviceAddress);
+    BTRCORELOG_INFO (" We will Media Info for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is Connected before making the call
     switch (aenBTRCoreDevType) {
@@ -2099,7 +2108,7 @@ BTRCore_GetDeviceMediaInfo (
 
 
     if (BTRCore_AVMedia_GetCurMediaInfo (pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, &lstBtrCoreMediaInfo)) {
-        BTRCORELOG_ERROR ("%d\t: %s - AVMedia_GetCurMediaInfo ERROR occurred\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("AVMedia_GetCurMediaInfo ERROR occurred\n");
         return enBTRCoreFailure;
     }
 
@@ -2181,24 +2190,24 @@ BTRCore_AcquireDeviceDataPath (
     int             lidataWriteMTU = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (!aiDataPath || !aidataReadMTU || !aidataWriteMTU || (aBTRCoreDevId < 0)) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("%d\t: %s - Possibly the list is not populated; like booted and connecting\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -2212,11 +2221,11 @@ BTRCore_AcquireDeviceDataPath (
     }
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s -  We will Acquire Data Path for %s\n", __LINE__, __FUNCTION__, pDeviceAddress);
+    BTRCORELOG_INFO (" We will Acquire Data Path for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
     // before making the call
@@ -2239,7 +2248,7 @@ BTRCore_AcquireDeviceDataPath (
     (void)lenBTDeviceType;
 
     if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU) != enBTRCoreSuccess) {
-        BTRCORELOG_ERROR ("%d\t: %s - AVMedia_AcquireDataPath ERROR occurred\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
     }
 
@@ -2262,18 +2271,18 @@ BTRCore_ReleaseDeviceDataPath (
     enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (aBTRCoreDevId < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -2287,11 +2296,11 @@ BTRCore_ReleaseDeviceDataPath (
     }
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
-    BTRCORELOG_INFO ("%d\t: %s -  We will Release Data Path for %s\n", __LINE__, __FUNCTION__, pDeviceAddress);
+    BTRCORELOG_INFO (" We will Release Data Path for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
     // before making the call
@@ -2314,7 +2323,7 @@ BTRCore_ReleaseDeviceDataPath (
     (void)lenBTDeviceType;
 
     if(BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress) != enBTRCoreSuccess) {
-        BTRCORELOG_ERROR ("%d\t: %s - AVMedia_AcquireDataPath ERROR occurred\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
     }
 
@@ -2336,24 +2345,24 @@ BTRCore_MediaPlayControl (
     int             loop = 0;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
     else if (aBTRCoreDevId < 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreInvalidArg\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("%d\t: %s - Possibly the list is not populated; like booted and connecting\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
 
     if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("%d\t: %s - There is no device paried for this adapter\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
         return enBTRCoreFailure;
     }
 
@@ -2367,7 +2376,7 @@ BTRCore_MediaPlayControl (
     }
 
     if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("%d\t: %s - Failed to find device in paired devices list\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
@@ -2402,7 +2411,7 @@ BTRCore_MediaPlayControl (
         return enBTRCoreFailure;
 
     if (BtrCore_BTDevMediaPlayControl(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType, aenBTRCoreDMCtrl) != 0) {
-        BTRCORELOG_ERROR ("%d\t: %s - Connect to device failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Connect to device failed\n");
         return enBTRCoreFailure;
     }
 
@@ -2419,7 +2428,7 @@ BTRCore_RegisterDiscoveryCallback (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -2427,10 +2436,10 @@ BTRCore_RegisterDiscoveryCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB) {
         pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB = afptrBTRCoreDeviceDiscoveryCB;
-        BTRCORELOG_INFO ("%d\t: %s - Device Discovery Callback Registered Successfully\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Discovery Callback Registered Successfully\n");
     }
     else {
-        BTRCORELOG_INFO ("%d\t: %s - Device Discovery Callback Already Registered - Not Registering current CB\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("Device Discovery Callback Already Registered - Not Registering current CB\n");
     }
 
     return enBTRCoreSuccess;
@@ -2446,7 +2455,7 @@ BTRCore_RegisterStatusCallback (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -2455,10 +2464,10 @@ BTRCore_RegisterStatusCallback (
     if (!pstlhBTRCore->fptrBTRCoreStatusCB) {
         pstlhBTRCore->fptrBTRCoreStatusCB = afptrBTRCoreStatusCB;
         pstlhBTRCore->pvCBUserData = apUserData; 
-        BTRCORELOG_INFO ("%d\t: %s - BT Status Callback Registered Successfully\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("BT Status Callback Registered Successfully\n");
     }
     else {
-        BTRCORELOG_INFO ("%d\t: %s - BT Status Callback Already Registered - Not Registering current CB\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("BT Status Callback Already Registered - Not Registering current CB\n");
     }
 
     return enBTRCoreSuccess;
@@ -2474,7 +2483,7 @@ BTRCore_RegisterConnectionIntimationCallback (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -2484,10 +2493,10 @@ BTRCore_RegisterConnectionIntimationCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreConnIntimCB) {
         pstlhBTRCore->fptrBTRCoreConnIntimCB = afptrBTRCoreConnIntimCB;
-        BTRCORELOG_INFO ("%d\t: %s - BT Conn In Intimation Callback Registered Successfully\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("BT Conn In Intimation Callback Registered Successfully\n");
     }
     else {
-        BTRCORELOG_INFO ("%d\t: %s - BT Conn In Intimation Callback Already Registered - Not Registering current CB\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("BT Conn In Intimation Callback Already Registered - Not Registering current CB\n");
     }
 
     return enBTRCoreSuccess;
@@ -2503,7 +2512,7 @@ BTRCore_RegisterConnectionAuthenticationCallback (
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
-        BTRCORELOG_ERROR ("%d\t: %s - enBTRCoreNotInitialized\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
 
@@ -2513,10 +2522,10 @@ BTRCore_RegisterConnectionAuthenticationCallback (
 
     if (!pstlhBTRCore->fptrBTRCoreConnAuthCB) {
         pstlhBTRCore->fptrBTRCoreConnAuthCB = afptrBTRCoreConnAuthCB;
-        BTRCORELOG_INFO ("%d\t: %s - BT Conn Auth Callback Registered Successfully\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("BT Conn Auth Callback Registered Successfully\n");
     }
     else {
-        BTRCORELOG_INFO ("%d\t: %s - BT Conn Auth Callback Already Registered - Not Registering current CB\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_INFO ("BT Conn Auth Callback Already Registered - Not Registering current CB\n");
     }
 
     return enBTRCoreSuccess;
@@ -2531,7 +2540,7 @@ btrCore_BTDeviceStatusUpdate_cb (
     stBTDeviceInfo* apstBTDeviceInfo,
     void*           apUserData
 ) {
-    BTRCORELOG_INFO ("%d\t: %s - enBTDeviceType = %d enBTDeviceState = %d apstBTDeviceInfo = %p\n", __LINE__, __FUNCTION__, aeBtDeviceType, aeBtDeviceState, apstBTDeviceInfo);
+    BTRCORELOG_INFO ("enBTDeviceType = %d enBTDeviceState = %d apstBTDeviceInfo = %p\n", aeBtDeviceType, aeBtDeviceState, apstBTDeviceInfo);
 
     enBTRCoreDeviceType lenBTRCoreDevType = enBTRCoreUnknown;
 
@@ -2567,32 +2576,32 @@ btrCore_BTDeviceStatusUpdate_cb (
                 tBTRCoreDevId   lBTRCoreDevId = 0;
                 stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
-                BTRCORELOG_INFO ("%d\t: %s - bPaired = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bPaired);
-                BTRCORELOG_INFO ("%d\t: %s - bConnected = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bConnected);
-                BTRCORELOG_INFO ("%d\t: %s - bTrusted = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bTrusted);
-                BTRCORELOG_INFO ("%d\t: %s - bBlocked = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->bBlocked);
-                BTRCORELOG_INFO ("%d\t: %s - ui16Vendor = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16Vendor);
-                BTRCORELOG_INFO ("%d\t: %s - ui16VendorSource = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16VendorSource);
-                BTRCORELOG_INFO ("%d\t: %s - ui16Product = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16Product);
-                BTRCORELOG_INFO ("%d\t: %s - ui16Version = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui16Version);
-                BTRCORELOG_INFO ("%d\t: %s - ui32Class = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->ui32Class);
-                BTRCORELOG_INFO ("%d\t: %s - i32RSSI = %d\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->i32RSSI);
-                BTRCORELOG_INFO ("%d\t: %s - pcName = %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcName);
-                BTRCORELOG_INFO ("%d\t: %s - pcAddress = %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcAddress);
-                BTRCORELOG_INFO ("%d\t: %s - pcAlias = %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcAlias);
-                BTRCORELOG_INFO ("%d\t: %s - pcIcon = %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->pcIcon);
+                BTRCORELOG_INFO ("bPaired = %d\n", apstBTDeviceInfo->bPaired);
+                BTRCORELOG_INFO ("bConnected = %d\n", apstBTDeviceInfo->bConnected);
+                BTRCORELOG_INFO ("bTrusted = %d\n", apstBTDeviceInfo->bTrusted);
+                BTRCORELOG_INFO ("bBlocked = %d\n", apstBTDeviceInfo->bBlocked);
+                BTRCORELOG_INFO ("ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
+                BTRCORELOG_INFO ("ui16VendorSource = %d\n", apstBTDeviceInfo->ui16VendorSource);
+                BTRCORELOG_INFO ("ui16Product = %d\n", apstBTDeviceInfo->ui16Product);
+                BTRCORELOG_INFO ("ui16Version = %d\n", apstBTDeviceInfo->ui16Version);
+                BTRCORELOG_INFO ("ui32Class = %d\n", apstBTDeviceInfo->ui32Class);
+                BTRCORELOG_INFO ("i32RSSI = %d\n", apstBTDeviceInfo->i32RSSI);
+                BTRCORELOG_INFO ("pcName = %s\n", apstBTDeviceInfo->pcName);
+                BTRCORELOG_INFO ("pcAddress = %s\n", apstBTDeviceInfo->pcAddress);
+                BTRCORELOG_INFO ("pcAlias = %s\n", apstBTDeviceInfo->pcAlias);
+                BTRCORELOG_INFO ("pcIcon = %s\n", apstBTDeviceInfo->pcIcon);
 
                 for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
                     if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')
                         break;
                     else
-                        BTRCORELOG_INFO ("%d\t: %s - aUUIDs = %s\n", __LINE__, __FUNCTION__, apstBTDeviceInfo->aUUIDs[j]);
+                        BTRCORELOG_INFO ("aUUIDs = %s\n", apstBTDeviceInfo->aUUIDs[j]);
                 }
 
                 // TODO: Think of a way to move this to taskThread
                 lBTRCoreDevId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
                 if (btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId) != NULL) {
-                    BTRCORELOG_INFO ("%d\t: %s - Already we have a entry in the list; Skip Parsing now \n", __LINE__, __FUNCTION__);
+                    BTRCORELOG_INFO ("Already we have a entry in the list; Skip Parsing now \n");
                 }
                 else {
                     lpstlhBTRCore->stFoundDevice.found  = FALSE;
