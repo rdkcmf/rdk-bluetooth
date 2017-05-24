@@ -267,15 +267,15 @@ btrCore_BTMediaEndpointHandler_cb (
     BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint\n");
 
     if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "SelectConfiguration")) {
-        BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint-SelectConfiguration\n");
+        BTRCORELOG_DEBUG ("endpoint_handler: MediaEndpoint-SelectConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointSelectConfiguration(apDBusMsg);
     }
     else if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "SetConfiguration"))  {
-        BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint-SetConfiguration\n");
+        BTRCORELOG_DEBUG ("endpoint_handler: MediaEndpoint-SetConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointSetConfiguration(apDBusMsg);
     }
     else if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "ClearConfiguration")) {
-        BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint-ClearConfiguration\n");
+        BTRCORELOG_DEBUG "endpoint_handler: MediaEndpoint-ClearConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointClearConfiguration(apDBusMsg);
     }
     else {
@@ -440,7 +440,7 @@ btrCore_BTAgentRequestPincode (
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    BTRCORELOG_INFO ("Pincode request for device %s\n", lpcPath);
+    BTRCORELOG_DEBUG ("Pincode request for device %s\n", lpcPath);
     dbus_message_append_args(lpDBusReply, DBUS_TYPE_STRING, &gpcBTOutPassCode,DBUS_TYPE_INVALID);
 
 sendmsg:
@@ -477,7 +477,7 @@ btrCore_BTAgentRequestPasskey (
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
 
-    BTRCORELOG_INFO ("Pass code request for device %s\n", lpcPath);
+    BTRCORELOG_DEBUG ("Pass code request for device %s\n", lpcPath);
     ui32PassCode = strtoul(gpcBTOutPassCode, NULL, 10);
     dbus_message_append_args(lpDBusReply, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID);
 
@@ -507,7 +507,7 @@ btrCore_BTAgentRequestConfirmation (
     }
 
 
-    BTRCORELOG_INFO ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n",lpcPath, ui32PassCode);
+    BTRCORELOG_DEBUG ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n",lpcPath, ui32PassCode);
 
     if (gfpcBConnectionIntimation) {
         BTRCORELOG_ERROR ("calling ConnIntimation cb with %s...\n", lpcPath);
@@ -562,7 +562,7 @@ btrCore_BTAgentAuthorize (
     }
 
     if (gfpcBConnectionAuthentication) {
-        BTRCORELOG_INFO ("calling ConnAuth cb with %s...\n", lpcPath);
+        BTRCORELOG_DEBUG ("calling ConnAuth cb with %s...\n", lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName 
 
         if (dev_name != NULL) {
@@ -893,7 +893,7 @@ btrCore_BTParsePropertyChange (
             lpcstBtDevAddr[i32LoopIdx] = lpcinBtDevAddr[i32LoopIdx];
     }
 
-    BTRCORELOG_INFO("Path = %s Address = %s\n", lpcDBusMsgObjPath, lpcstBtDevAddr);
+    BTRCORELOG_DEBUG("Path = %s Address = %s\n", lpcDBusMsgObjPath, lpcstBtDevAddr);
 
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
        BTRCORELOG_ERROR ("GetProperties lpDBusReply has no arguments.");
@@ -906,7 +906,7 @@ btrCore_BTParsePropertyChange (
         return -1;
     }
 
-    BTRCORELOG_INFO (" Name: %s\n", bd_addr);//"State" then the variant is a string
+    BTRCORELOG_DEBUG (" Name: %s\n", bd_addr);//"State" then the variant is a string
     if (strcmp(bd_addr,"State") == 0) {
         dbus_type = dbus_message_iter_get_arg_type(&arg_i);
         //BTRCORELOG_ERROR ("type is %d\n", dbus_type);
@@ -1122,7 +1122,7 @@ btrCore_BTMediaEndpointClearConfiguration (
 
     dbus_message_iter_init(apDBusMsg, &lDBusMsgIter);
     dbus_message_iter_get_basic(&lDBusMsgIter, &lDevTransportPath);
-    BTRCORELOG_INFO ("Clear configuration - Transport Path %s\n", lDevTransportPath);
+    BTRCORELOG_DEBUG ("Clear configuration - Transport Path %s\n", lDevTransportPath);
 
     if (gpcDevTransportPath) {
         free(gpcDevTransportPath);
@@ -1926,7 +1926,7 @@ BtrCore_BTGetPairedDevices (
 
     lpDBusReply = btrCore_BTSendMethodCall(apBtAdapter, "org.bluez.Adapter", "ListDevices");
     if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("%d\t:%s - org.bluez.Adapter.ListDevices returned an error\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("org.bluez.Adapter.ListDevices returned an error\n");
         return rc;
     }
 
@@ -1937,7 +1937,7 @@ BtrCore_BTGetPairedDevices (
 
 
     if (!lDBusOp) {
-        BTRCORELOG_ERROR ("%d\t:%s - org.bluez.Adapter.ListDevices parsing failed\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("org.bluez.Adapter.ListDevices parsing failed\n");
         btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return rc;
     }

@@ -555,7 +555,7 @@ btrCore_BTParseDeviceConnectionState (
     enBTRCoreDeviceState rc = enBTRCoreDevStInitialized;
 
     if ((pcStateValue) && (pcStateValue[0] != '\0')) {
-        BTRCORELOG_INFO ("Current State of this connection is @@%s@@\n", pcStateValue);
+        BTRCORELOG_DEBUG ("Current State of this connection is @@%s@@\n", pcStateValue);
 
         if (strcasecmp ("disconnected", pcStateValue) == 0) {
             rc = enBTRCoreDevStDisconnected;
@@ -585,7 +585,7 @@ DoDispatch (
     enBTRCoreRet*   penDispThreadExitStatus = malloc(sizeof(enBTRCoreRet));
 
     hBTRCore = (stBTRCoreHdl*) ptr;
-    BTRCORELOG_INFO ("%s \n", "Dispatch Thread Started");
+    BTRCORELOG_DEBUG ("%s \n", "Dispatch Thread Started");
 
 
     if (!((stBTRCoreHdl*)hBTRCore) || !((stBTRCoreHdl*)hBTRCore)->connHdl) {
@@ -666,7 +666,6 @@ BTRCore_Init (
     }
 #endif
 
-
     BTRCORELOG_INFO ("BTRCore_Init\n");
 
     if (!phBTRCore) {
@@ -721,7 +720,7 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    BTRCORELOG_INFO ("BTRCore_Init - Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
+    BTRCORELOG_DEBUG ("Adapter path %s - Adapter Address %s \n", pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr);
 
     /* Initialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
     if (enBTRCoreSuccess != BTRCore_AVMedia_Init(&pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
@@ -1603,8 +1602,10 @@ BTRCore_PairDevice (
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         stBTRCoreScannedDevices* pstScannedDevice = NULL;
 
-        BTRCORELOG_INFO ("We will pair %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
-        BTRCORELOG_INFO ("address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
+        BTRCORELOG_DEBUG ("We will pair %s\n"
+                         "address %s\n",
+                         pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name,
+                         pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
         pstScannedDevice = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstScannedDevice->device_address;
@@ -1655,7 +1656,7 @@ BTRCore_UnPairDevice (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("Possibly the list is not populated\n");
+        BTRCORELOG_DEBUG ("Possibly the list is not populated\n");
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
 
@@ -1715,7 +1716,6 @@ BTRCore_GetListOfPairedDevices (
     if (enBTRCoreSuccess ==  btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath)) {
         pListOfDevices->numberOfDevices = pstlhBTRCore->numOfPairedDevices;
         memcpy (pListOfDevices->devices, pstlhBTRCore->stKnownDevicesArr, sizeof (pstlhBTRCore->stKnownDevicesArr));
-        BTRCORELOG_INFO ("Copied all the known devices\n");
         return enBTRCoreSuccess;
     }
 
@@ -1739,8 +1739,10 @@ BTRCore_FindDevice (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     pstScannedDevice = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
 
-    BTRCORELOG_INFO (" We will try to find %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name);
-    BTRCORELOG_INFO (" address %s\n", pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
+    BTRCORELOG_DEBUG (" We will try to find %s\n"
+                     " address %s\n",
+                     pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_name,
+                     pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId].device_address);
 
     if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
                                     pstlhBTRCore->curAdapterPath,
@@ -1879,7 +1881,7 @@ BTRCore_ConnectDevice (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
@@ -2058,7 +2060,7 @@ BTRCore_GetDeviceMediaInfo (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
@@ -2082,7 +2084,7 @@ BTRCore_GetDeviceMediaInfo (
         return enBTRCoreDeviceNotFound;
     }
 
-    BTRCORELOG_INFO (" We will Media Info for %s\n", pDeviceAddress);
+    BTRCORELOG_INFO (" We will get Media Info for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is Connected before making the call
     switch (aenBTRCoreDevType) {
@@ -2201,7 +2203,7 @@ BTRCore_AcquireDeviceDataPath (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
@@ -2356,7 +2358,7 @@ BTRCore_MediaPlayControl (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (pstlhBTRCore->numOfPairedDevices == 0) {
-        BTRCORELOG_INFO ("Possibly the list is not populated; like booted and connecting\n");
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
         /* Keep the list upto date */
         btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
     }
@@ -2576,20 +2578,35 @@ btrCore_BTDeviceStatusUpdate_cb (
                 tBTRCoreDevId   lBTRCoreDevId = 0;
                 stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
-                BTRCORELOG_INFO ("bPaired = %d\n", apstBTDeviceInfo->bPaired);
-                BTRCORELOG_INFO ("bConnected = %d\n", apstBTDeviceInfo->bConnected);
-                BTRCORELOG_INFO ("bTrusted = %d\n", apstBTDeviceInfo->bTrusted);
-                BTRCORELOG_INFO ("bBlocked = %d\n", apstBTDeviceInfo->bBlocked);
-                BTRCORELOG_INFO ("ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
-                BTRCORELOG_INFO ("ui16VendorSource = %d\n", apstBTDeviceInfo->ui16VendorSource);
-                BTRCORELOG_INFO ("ui16Product = %d\n", apstBTDeviceInfo->ui16Product);
-                BTRCORELOG_INFO ("ui16Version = %d\n", apstBTDeviceInfo->ui16Version);
-                BTRCORELOG_INFO ("ui32Class = %d\n", apstBTDeviceInfo->ui32Class);
-                BTRCORELOG_INFO ("i32RSSI = %d\n", apstBTDeviceInfo->i32RSSI);
-                BTRCORELOG_INFO ("pcName = %s\n", apstBTDeviceInfo->pcName);
-                BTRCORELOG_INFO ("pcAddress = %s\n", apstBTDeviceInfo->pcAddress);
-                BTRCORELOG_INFO ("pcAlias = %s\n", apstBTDeviceInfo->pcAlias);
-                BTRCORELOG_INFO ("pcIcon = %s\n", apstBTDeviceInfo->pcIcon);
+                BTRCORELOG_DEBUG ("\n"
+                                 "bPaired = %d\n"
+                                 "bConnected = %d\n"
+                                 "bTrusted = %d\n"
+                                 "bBlocked = %d\n"
+                                 "ui16Vendor = %d\n"
+                                 "ui16VendorSource = %d\n"
+                                 "ui16Product = %d\n"
+                                 "ui16Version = %d\n"
+                                 "ui32Class = %d\n"
+                                 "i32RSSI = %d\n"
+                                 "pcName = %s\n"
+                                 "pcAddress = %s\n"
+                                 "pcAlias = %s\n"
+                                 "pcIcon = %s\n",
+                                 apstBTDeviceInfo->bPaired,
+                                 apstBTDeviceInfo->bConnected,
+                                 apstBTDeviceInfo->bTrusted,
+                                 apstBTDeviceInfo->bBlocked,
+                                 apstBTDeviceInfo->ui16Vendor,
+                                 apstBTDeviceInfo->ui16VendorSource,
+                                 apstBTDeviceInfo->ui16Product,
+                                 apstBTDeviceInfo->ui16Version,
+                                 apstBTDeviceInfo->ui32Class,
+                                 apstBTDeviceInfo->i32RSSI,
+                                 apstBTDeviceInfo->pcName,
+                                 apstBTDeviceInfo->pcAddress,
+                                 apstBTDeviceInfo->pcAlias,
+                                 apstBTDeviceInfo->pcIcon);
 
                 for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
                     if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')

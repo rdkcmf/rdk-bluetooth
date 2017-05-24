@@ -96,7 +96,7 @@ AC_ARG_ENABLE([rdk-logger],
 AS_IF([test "x$rdk_logger_ok" = "xyes"], [
     AC_CHECK_LIB(rdkloggers, rdk_logger_init,
                        enable_rdk_logger=yes, enable_rdk_logger=no
-                       AC_MSG_ERROR([RDK_LOGGER library (librdklogger) not found]))
+                       AC_MSG_ERROR([RDK_LOGGER library (librdkloggers) not found]))
     if test "x$enable_rdk_logger" = "xyes"; then
        AC_MSG_CHECKING([for rdkloggers])
        AC_TRY_COMPILE(
@@ -111,7 +111,7 @@ AS_IF([test "x$rdk_logger_ok" = "xyes"], [
        if test "x$enable_rdk_logger" = "xyes"; then
          AC_DEFINE(RDK_LOGGER_ENABLED, 1, [Enabled RDK Logger]) 
        else
-          AC_MSG_ERROR([RDK_LOGGER library (librdklogger) not found])
+          AC_MSG_ERROR([RDK_LOGGER library (librdkloggers) not found])
        fi
     fi
 ], [])

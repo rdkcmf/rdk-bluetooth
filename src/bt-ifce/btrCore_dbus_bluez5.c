@@ -172,7 +172,7 @@ btrCore_BTDBusConnectionFilter_cb (
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
     lstBTDeviceInfo.i32RSSI = INT_MIN;
 
-    BTRCORELOG_INFO ("Connection Filter Activated....\n");
+    BTRCORELOG_DEBUG ("Connection Filter Activated....\n");
 
     if (!apDBusMsg) {
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -198,7 +198,7 @@ btrCore_BTDBusConnectionFilter_cb (
 
     }
     else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.Properties", "PropertiesChanged")) {
-        BTRCORELOG_ERROR ("Property Changed!\n");
+        BTRCORELOG_DEBUG ("Property Changed!\n");
 
         DBusMessageIter lDBusMsgIter;
         const char*     lpcDBusIface = NULL;
@@ -322,7 +322,7 @@ btrCore_BTDBusConnectionFilter_cb (
         }
     }
     else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved")) {
-        BTRCORELOG_ERROR ("Device Lost!\n");
+        BTRCORELOG_WARN ("Device Lost!\n");
 
         DBusMessageIter lDBusMsgIterStr;
         DBusMessageIter lDBusMsgIter;
@@ -423,7 +423,7 @@ btrCore_BTAgentMessageHandler_cb (
     DBusMessage*    apDBusMsg,
     void*           apvUserData
 ) {
-
+    
     BTRCORELOG_INFO ("btrCore_BTAgentMessageHandler_cb\n");
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "Release"))
@@ -574,7 +574,7 @@ btrCore_BTGetDefaultAdapterPath (
     }
 
     if (gpcBTDAdapterPath) {
-        BTRCORELOG_INFO ("\n\nDefault Adpater Path is: %s\n", gpcBTDAdapterPath);
+        BTRCORELOG_DEBUG ("\n\nDefault Adpater Path is: %s\n", gpcBTDAdapterPath);
     }
     return gpcBTDAdapterPath;
 }
@@ -721,7 +721,7 @@ btrCore_BTAgentRequestConfirmation (
     BTRCORELOG_INFO ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n", lpcPath, ui32PassCode);
 
     if (gfpcBConnectionIntimation) {
-        BTRCORELOG_INFO ("calling ConnIntimation cb with %s...\n",lpcPath);
+        BTRCORELOG_DEBUG ("calling ConnIntimation cb with %s...\n",lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName
 
         if (dev_name != NULL) {
@@ -774,7 +774,7 @@ btrCore_BTAgentAuthorize (
     }
 
     if (gfpcBConnectionAuthentication) {
-        BTRCORELOG_INFO ("calling ConnAuth cb with %s...\n",lpcPath);
+        BTRCORELOG_DEBUG ("calling ConnAuth cb with %s...\n",lpcPath);
         dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName
 
         if (dev_name != NULL) {
@@ -1048,7 +1048,7 @@ btrCore_BTParseDevice (
                         if ((dbus_type == DBUS_TYPE_STRING) && (count < BT_MAX_DEVICE_PROFILE)) {
                             char *pVal = NULL;
                             dbus_message_iter_get_basic (&variant_j, &pVal);
-                            BTRCORELOG_ERROR ("UUID value is %s\n", pVal);
+                            BTRCORELOG_INFO ("UUID value is %s\n", pVal);
                             strncpy(apstBTDeviceInfo->aUUIDs[count], pVal, (BT_MAX_UUID_STR_LEN - 1));
                             count++;
                         }
@@ -1240,7 +1240,7 @@ btrCore_BTMediaEndpointClearConfiguration (
     dbus_error_init(&lDBusErr);
     dbus_message_iter_init(apDBusMsg, &lDBusMsgIter);
     dbus_message_iter_get_basic(&lDBusMsgIter, &lDevTransportPath);
-    BTRCORELOG_INFO ("Clear configuration - Transport Path %s\n", lDevTransportPath);
+    BTRCORELOG_DEBUG ("Clear configuration - Transport Path %s\n", lDevTransportPath);
 
     if (gpcDevTransportPath) {
         free(gpcDevTransportPath);
@@ -1668,7 +1668,7 @@ BtrCore_BTGetAdapterList (
 
         for (c = 0; c < num; c++) {
             if (*(apcArrBtAdapterPath + c)) {
-                BTRCORELOG_INFO ("Adapter Path %d is: %s\n", c, paths[c]);
+                BTRCORELOG_DEBUG ("Adapter Path %d is: %s\n", c, paths[c]);
                 //strncpy(*(apcArrBtAdapterPath + c), paths[c], BD_NAME_LEN);
                 strncpy(apcArrBtAdapterPath[c], paths[c], BD_NAME_LEN);
                 rc = 0;
@@ -1739,7 +1739,7 @@ BtrCore_BTReleaseAdapterPath (
     if (gpcBTAdapterPath) {
 
         if (gpcBTAdapterPath != apBtAdapter) {
-            BTRCORELOG_DEBUG ("ERROR: Looks like Adapter path has been changed by User\n");
+            BTRCORELOG_ERROR ("ERROR: Looks like Adapter path has been changed by User\n");
         }
 
         free(gpcBTAdapterPath);
@@ -2025,7 +2025,7 @@ BtrCore_BTSetAdapterProp (
                                              "org.freedesktop.DBus.Properties",
                                              "Set");
     if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("%d\t: %s - Can't allocate new method call\n", __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
   
@@ -2325,7 +2325,7 @@ btrCore_BTGetDeviceInfo (
     if (!apcIface)
         return -1;
 
-    BTRCORELOG_INFO ("Getting properties for the device %s\n", apcIface);
+    BTRCORELOG_DEBUG ("Getting properties for the device %s\n", apcIface);
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcIface,
@@ -2400,8 +2400,6 @@ BtrCore_BTGetPairedDeviceInfo (
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter || !pPairedDeviceInfo)
         return -1;
 
-
-    BTRCORELOG_INFO ("Entering\n");
 
     memset (pPairedDeviceInfo, 0, sizeof (stBTPairedDeviceInfo));
 
@@ -2916,7 +2914,7 @@ BtrCore_BTPerformAdapterOp (
         dbus_message_unref(lpDBusMsg);
 
         if (!lpDBusReply) {
-            BTRCORELOG_ERROR ("%d\t: %s - UnPairing failed...\n", __LINE__, __FUNCTION__);
+            BTRCORELOG_ERROR ("UnPairing failed...\n");
             btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
             return -1;
         }
