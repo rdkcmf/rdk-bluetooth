@@ -66,6 +66,8 @@ typedef enum _enBTRCoreDeviceClass {
 typedef enum _enBTRCoreDeviceState {
     enBTRCoreDevStInitialized,
     enBTRCoreDevStFound,
+    enBTRCoreDevStPaired,
+    enBTRCoreDevStUnpaired,
     enBTRCoreDevStConnecting,
     enBTRCoreDevStConnected,
     enBTRCoreDevStDisconnecting,
@@ -368,6 +370,12 @@ enBTRCoreRet BTRCore_ConnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRC
 
 /* BTRCore_DisconnectDevice */
 enBTRCoreRet BTRCore_DisconnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
+
+/* BTRCore_GetDeviceConnected */
+enBTRCoreRet BTRCore_GetDeviceConnected (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
+
+/* BTRCore_GetDeviceDisconnected */
+enBTRCoreRet BTRCore_GetDeviceDisconnected (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
 /* BTRCore_GetDeviceMediaInfo */
 enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo);
