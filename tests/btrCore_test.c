@@ -346,17 +346,38 @@ sendSBCFileOverBT (
 
 
 int
-cb_connection_authentication (
+cb_connection_intimation (
     stBTRCoreConnCBInfo* apstConnCbInfo
 ) {
-#if 0
-    fprintf(stderr, "%d\t: %s - \n\nConnection attempt by: %s\n", __LINE__, __FUNCTION__path);
-#endif
-    fprintf(stderr, "%d\t: %s - Choose 35 to accept the connection/verify pin-passcode or 36 to deny the connection/discard pin-passcode\n\n", __LINE__, __FUNCTION__);
+    fprintf(stderr, "%d\t: %s - Choose 35 to verify pin-passcode or 36 to discard pin-passcode\n\n", __LINE__, __FUNCTION__);
 
     if (apstConnCbInfo->ui32devPassKey) {
         fprintf(stderr, "%d\t: %s - Incoming Connection passkey = %6d\n", __LINE__, __FUNCTION__, apstConnCbInfo->ui32devPassKey);
     }    
+
+    do {
+        usleep(20000);
+    } while (acceptConnection == 0);
+
+    fprintf(stderr, "%d\t: %s - you picked %d\n", __LINE__, __FUNCTION__, acceptConnection);
+    if (acceptConnection == 1) {
+        fprintf(stderr, "%d\t: %s - Pin-Passcode accepted\n", __LINE__, __FUNCTION__);
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 1;
+    }
+    else {
+        fprintf(stderr, "%d\t: %s - Pin-Passcode denied\n", __LINE__, __FUNCTION__);
+        acceptConnection = 0;//reset variabhle for the next connection
+        return 0;
+    }
+}
+
+
+int
+cb_connection_authentication (
+    stBTRCoreConnCBInfo* apstConnCbInfo
+) {
+    fprintf(stderr, "%d\t: %s - Choose 35 to accept the connection or 36 to deny the connection\n\n", __LINE__, __FUNCTION__);
 
     do {
         usleep(20000);
@@ -838,7 +859,7 @@ main (
             break;
         case 33:
             fprintf(stderr, "%d\t: %s - register connection-in Intimation CB\n", __LINE__, __FUNCTION__);
-            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_intimation, NULL);
             break;
         case 34:
             fprintf(stderr, "%d\t: %s - register authentication CB\n", __LINE__, __FUNCTION__);

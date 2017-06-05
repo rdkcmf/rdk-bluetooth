@@ -423,7 +423,7 @@ btrCore_BTAgentMessageHandler_cb (
     DBusMessage*    apDBusMsg,
     void*           apvUserData
 ) {
-    
+
     BTRCORELOG_INFO ("btrCore_BTAgentMessageHandler_cb\n");
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "Release"))
@@ -707,10 +707,8 @@ btrCore_BTAgentRequestConfirmation (
 ) {
     DBusMessage*    lpDBusReply = NULL;
     const char*     lpcPath     = NULL;
-    unsigned int    ui32PassCode= 0;;
-
-    const char *dev_name; //pass the dev name to the callback for app to use
-    int yesNo;
+    unsigned int    ui32PassCode= 0;
+    int             yesNo       = 0;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
@@ -720,39 +718,34 @@ btrCore_BTAgentRequestConfirmation (
 
     BTRCORELOG_INFO ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n", lpcPath, ui32PassCode);
 
-    if (gfpcBConnectionIntimation) {
-        BTRCORELOG_DEBUG ("calling ConnIntimation cb with %s...\n",lpcPath);
-        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName
-
-        if (dev_name != NULL) {
-            yesNo = gfpcBConnectionIntimation(dev_name, ui32PassCode, gpcBConnIntimUserData);
-        }
-        else {
-            //couldnt get the name, provide the bt address instead
-            yesNo = gfpcBConnectionIntimation(lpcPath, ui32PassCode, gpcBConnIntimUserData);
-        }
-
-        if (yesNo == 0) {
-            //BTRCORELOG_ERROR ("sorry dude, you cant connect....\n");
-            lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
-            goto sendReqConfError;
-        }
+    if (gfpcBConnectionIntimation && lpcPath) {
+        BTRCORELOG_INFO ("calling ConnIntimation cb with %s\n", lpcPath);
+        yesNo = gfpcBConnectionIntimation(lpcPath, ui32PassCode, gpcBConnIntimUserData);
     }
 
     gpcBConnAuthPassKey = ui32PassCode;
 
-    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+
+    if (yesNo == 0) {
+        BTRCORELOG_ERROR ("Sorry, you cant connect....\n");
+        lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+    }
+    else {
+        lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+    }
+
+
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
-
-sendReqConfError:
-    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
-    dbus_connection_flush(apDBusConn);
-    dbus_message_unref(lpDBusReply);
-
-    return DBUS_HANDLER_RESULT_HANDLED;
+    else {
+        BTRCORELOG_INFO ("Intimating request for %s\n", lpcPath);
+        dbus_connection_send(apDBusConn, lpDBusReply, NULL);
+        dbus_connection_flush(apDBusConn);
+        dbus_message_unref(lpDBusReply);
+        return DBUS_HANDLER_RESULT_HANDLED;
+    }
 }
 
 
@@ -765,49 +758,41 @@ btrCore_BTAgentAuthorize (
     DBusMessage*    lpDBusReply = NULL;
     const char*     lpcPath     = NULL;
     const char*     uuid        = NULL;
-    const char*     dev_name    = NULL; //pass the dev name to the callback for app to use
-    int             yesNo;
+    int             yesNo       = 0;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    if (gfpcBConnectionAuthentication) {
-        BTRCORELOG_DEBUG ("calling ConnAuth cb with %s...\n",lpcPath);
-        dev_name = "Bluetooth Device";//TODO connect device name with btrCore_GetKnownDeviceName
-
-        if (dev_name != NULL) {
-            yesNo = gfpcBConnectionAuthentication(dev_name, gpcBConnAuthUserData);
-        }
-        else {
-            //couldnt get the name, provide the bt address instead
-            yesNo = gfpcBConnectionAuthentication(lpcPath, gpcBConnAuthUserData);
-        }
-
-        if (yesNo == 0) {
-            //BTRCORELOG_ERROR ("sorry dude, you cant connect....\n");
-            lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
-            goto sendAuthError;
-        }
+    if (gfpcBConnectionAuthentication && lpcPath) {
+        BTRCORELOG_INFO ("calling ConnAuth cb with %s\n", lpcPath);
+        yesNo = gfpcBConnectionAuthentication(lpcPath, gpcBConnAuthUserData);
     }
 
     gpcBConnAuthPassKey = 0;
 
-    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+
+    if (yesNo == 0) {
+        BTRCORELOG_ERROR ("Sorry, you cant connect....\n");
+        lpDBusReply = dbus_message_new_error(apDBusMsg, "org.bluez.Error.Rejected", "");
+    }
+    else {
+        lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+    }
+
+
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("Can't create lpDBusReply message\n");
         return DBUS_HANDLER_RESULT_NEED_MEMORY;
     }
-
-    BTRCORELOG_INFO ("Authorizing request for %s\n", lpcPath);
-
-sendAuthError:
-    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
-    dbus_connection_flush(apDBusConn);
-    dbus_message_unref(lpDBusReply);
-
-    return DBUS_HANDLER_RESULT_HANDLED;
+    else {
+        BTRCORELOG_INFO ("Authorizing request for %s\n", lpcPath);
+        dbus_connection_send(apDBusConn, lpDBusReply, NULL);
+        dbus_connection_flush(apDBusConn);
+        dbus_message_unref(lpDBusReply);
+        return DBUS_HANDLER_RESULT_HANDLED;
+    }
 }
 
 

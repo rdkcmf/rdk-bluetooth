@@ -171,6 +171,7 @@ btrCore_InitDataSt (
 
     apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB = NULL;
     apsthBTRCore->fptrBTRCoreStatusCB = NULL;
+    apsthBTRCore->fptrBTRCoreConnIntimCB = NULL;
     apsthBTRCore->fptrBTRCoreConnAuthCB = NULL;
 
     apsthBTRCore->pvCBUserData = NULL;
@@ -844,8 +845,7 @@ BTRCore_RegisterAgent (
     tBTRCoreHandle  hBTRCore,
     int             iBTRCapMode
 ) {
-   // const char *capabilities = "NoInputNoOutput";   //I dont want to deal with pins and passcodes at this time
-    char capabilities[32] = {'\0'};
+    char            capabilities[32] = {'\0'};
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if (!hBTRCore) {
@@ -859,17 +859,17 @@ BTRCore_RegisterAgent (
         strcpy(capabilities,"DisplayYesNo");
     }
     else {
-        //default is no input no output
-        strcpy(capabilities,"NoInputNoOutput");
+        strcpy(capabilities,"NoInputNoOutput"); //default is no input no output
     }
 
-    // BTRCORELOG_ERROR ("Starting agent in mode %s\n",capabilities);
+
     if (BtrCore_BTRegisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath, capabilities) < 0) {
-        BTRCORELOG_ERROR ("agent registration ERROR occurred\n");
-        return enBTRCorePairingFailed;
+        BTRCORELOG_ERROR ("Agent registration ERROR occurred\n");
+        return enBTRCoreFailure;
     }
 
-     return enBTRCoreSuccess;
+    BTRCORELOG_TRACE ("Starting Agent in mode %s\n", capabilities);
+    return enBTRCoreSuccess;
 }
 
 
@@ -887,10 +887,11 @@ BTRCore_UnregisterAgent (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (BtrCore_BTUnregisterAgent(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath) < 0) {
-        BTRCORELOG_ERROR ("agent unregistration  ERROR occurred\n");
-        return enBTRCorePairingFailed;//TODO add an enum error code for this situation
+        BTRCORELOG_ERROR ("Agent unregistration  ERROR occurred\n");
+        return enBTRCoreFailure;
     }
 
+    BTRCORELOG_TRACE ("Stopping Agent\n");
     return enBTRCoreSuccess;
 }
 
@@ -3009,12 +3010,12 @@ btrCore_BTDeviceConnectionIntimation_cb (
     int i32DevConnIntimRet = 0;
     stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
-    if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnAuthCB)) {
+    if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnIntimCB)) {
         lpstlhBTRCore->stConnCbInfo.ui32devPassKey = aui32devPassKey;
         if (apBtDeviceName)
             strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
 
-        i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo);
+        i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo);
     }
 
     return i32DevConnIntimRet;
