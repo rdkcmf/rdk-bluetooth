@@ -2405,12 +2405,13 @@ BTRCore_AcquireDeviceDataPath (
     int*                aidataReadMTU,
     int*                aidataWriteMTU
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    const char*     pDeviceAddress = NULL;
+    stBTRCoreHdl*   pstlhBTRCore    = NULL;
+    const char*     pDeviceAddress  = NULL;
     enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
-    int             liDataPath = 0;
-    int             lidataReadMTU = 0;
-    int             lidataWriteMTU = 0;
+    int             liDataPath      = 0;
+    int             lidataReadMTU   = 0;
+    int             lidataWriteMTU  = 0;
+    int             i32LoopIdx      = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -2478,6 +2479,27 @@ BTRCore_AcquireDeviceDataPath (
     *aiDataPath     = liDataPath;
     *aidataReadMTU  = lidataReadMTU;
     *aidataWriteMTU = lidataWriteMTU;
+
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDevicePrevState   = pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState;
+
+        if (pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState  != enBTRCoreDevStPlaying) {
+            pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState   = enBTRCoreDevStPlaying; 
+        }
+    }
+    else {
+        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
+            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].deviceId) {
+                pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState  = pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
+
+                if (pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState  != enBTRCoreDevStPlaying) {
+                    pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState   = enBTRCoreDevStPlaying; 
+                }
+            }
+        }
+    }
+
 
     return enBTRCoreSuccess;
 }
