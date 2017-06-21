@@ -72,7 +72,8 @@ typedef enum _enBTRCoreDeviceState {
     enBTRCoreDevStConnected,
     enBTRCoreDevStDisconnecting,
     enBTRCoreDevStDisconnected,
-    enBTRCoreDevStPlaying
+    enBTRCoreDevStPlaying,
+    enBTRCoreDevStLost
 } enBTRCoreDeviceState;
 
 typedef enum _eBTRCoreDevMediaType {
@@ -144,9 +145,12 @@ typedef struct _stBTRCoreFilterMode {
 
 typedef struct _stBTRCoreDevStatusCBInfo {
     tBTRCoreDevId           deviceId;
+    BD_NAME                 deviceName; 
     enBTRCoreDeviceType     eDeviceType;
+    enBTRCoreDeviceClass    eDeviceClass;
     enBTRCoreDeviceState    eDevicePrevState;
     enBTRCoreDeviceState    eDeviceCurrState;
+    U8                      isPaired;
 } stBTRCoreDevStatusCBInfo;
 
 typedef struct _stBTRCoreConnCBInfo {
@@ -218,7 +222,6 @@ typedef struct _stBTRCorePairedDevicesCount {
     int                     numberOfDevices;
     stBTRCoreKnownDevice    devices[BTRCORE_MAX_NUM_BT_DEVICES];
 } stBTRCorePairedDevicesCount;
-
 
 typedef struct _stBTRCoreDevMediaPcmInfo {
     eBTRCoreDevMediaAChan   eDevMAChan;               // channel_mode

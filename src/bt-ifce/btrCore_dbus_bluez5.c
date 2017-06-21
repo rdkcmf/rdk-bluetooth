@@ -102,6 +102,7 @@ static void* gpcBConnIntimUserData = NULL;
 static void* gpcBConnAuthUserData = NULL;
 
 static unsigned int gpcBConnAuthPassKey = 0;
+static unsigned int gpDevLost = 0;
 
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
@@ -236,7 +237,13 @@ btrCore_BTDBusConnectionFilter_cb (
                                 strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                 strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                                lenBtDevState = enBTDevStPropChanged;
+                                if( !gpDevLost ) {
+                                   lenBtDevState = enBTDevStPropChanged;
+                                }
+                                else {
+                                   lenBtDevState = enBTDevStLost;
+                                   gpDevLost = 0;
+                                }
                             }
 
                             if(gfpcBDevStatusUpdate(enBTDevUnknown, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
@@ -359,6 +366,8 @@ btrCore_BTDBusConnectionFilter_cb (
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH)) {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH);
+                        // For Device Lost or Out Of Range cases                      
+                        gpDevLost = 1;                        
                     }
                     else {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", lpcDBusIfaceInternal);

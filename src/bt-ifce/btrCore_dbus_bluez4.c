@@ -83,6 +83,7 @@ static void* gpcBConnIntimUserData = NULL;
 static void* gpcBConnAuthUserData = NULL;
 
 static unsigned int gpcBConnAuthPassKey = 0;
+static unsigned int gpDevLost = 0;
 
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandler_cb,
@@ -175,16 +176,25 @@ btrCore_BTDBusConnectionFilter_cb (
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","Disconnected")) {
         BTRCORELOG_INFO ("Device Disconnected - AudioSink!\n");
         if (gfpcBDevStatusUpdate) {
+            gpDevLost = 1;
             if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStDisconnected, NULL, NULL)) {
             }
         }
     }
 
     if (dbus_message_is_signal(apDBusMsg, "org.bluez.AudioSink","PropertyChanged")) {
+        enBTDeviceState lenBtDevState = enBTDevStUnknown;
         BTRCORELOG_INFO ("Device PropertyChanged!\n");
         btrCore_BTParsePropertyChange(apDBusMsg, &lstBTDeviceInfo);
         if (gfpcBDevStatusUpdate) {
-            if(gfpcBDevStatusUpdate(enBTDevAudioSink, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+            if( !gpDevLost ) {
+               lenBtDevState = enBTDevStPropChanged;
+            }
+            else {
+               lenBtDevState = enBTDevStLost;
+               gpDevLost = 0;
+            }
+            if(gfpcBDevStatusUpdate(enBTDevAudioSink, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
             }
         }
     }
@@ -267,15 +277,15 @@ btrCore_BTMediaEndpointHandler_cb (
     BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint\n");
 
     if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "SelectConfiguration")) {
-        BTRCORELOG_DEBUG ("endpoint_handler: MediaEndpoint-SelectConfiguration\n");
+        BTRCORELOG_DEBUG ("MediaEndpoint-SelectConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointSelectConfiguration(apDBusMsg);
     }
     else if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "SetConfiguration"))  {
-        BTRCORELOG_DEBUG ("endpoint_handler: MediaEndpoint-SetConfiguration\n");
+        BTRCORELOG_DEBUG ("MediaEndpoint-SetConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointSetConfiguration(apDBusMsg);
     }
     else if (dbus_message_is_method_call(apDBusMsg, "org.bluez.MediaEndpoint", "ClearConfiguration")) {
-        BTRCORELOG_DEBUG "endpoint_handler: MediaEndpoint-ClearConfiguration\n");
+        BTRCORELOG_DEBUG ("MediaEndpoint-ClearConfiguration\n");
         lpDBusReply = btrCore_BTMediaEndpointClearConfiguration(apDBusMsg);
     }
     else {
