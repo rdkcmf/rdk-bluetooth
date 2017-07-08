@@ -61,14 +61,14 @@ typedef struct _stBTRCoreHdl {
     char*                       curAdapterAddr;
 
     unsigned int                numOfScannedDevices;
-    stBTRCoreScannedDevices     stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    stBTRCoreScannedDevice      stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
     stBTRCoreDevStateInfo       stScannedDevStInfoArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
     unsigned int                numOfPairedDevices;
     stBTRCoreKnownDevice        stKnownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
     stBTRCoreDevStateInfo       stKnownDevStInfoArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
-    stBTRCoreScannedDevices     stFoundDevice;
+    stBTRCoreScannedDevice      stFoundDevice;
 
     stBTRCoreDevStatusCBInfo    stDevStatusCbInfo;
 
@@ -104,8 +104,8 @@ static enBTRCoreDeviceState btrCore_BTParseDeviceConnectionState (const char* pc
 
 /* Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
-static int btrCore_BTDeviceConnectionIntimation_cb(const char* apBtDeviceName, unsigned int aui32devPassKey, void* apUserData);
-static int btrCore_BTDeviceAuthetication_cb(const char* apBtDeviceName, void* apUserData);
+static int btrCore_BTDeviceConnectionIntimation_cb(stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
+static int btrCore_BTDeviceAuthentication_cb(stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 
 
 /* Static Function Definition */
@@ -167,8 +167,7 @@ btrCore_InitDataSt (
     apsthBTRCore->stDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStInitialized;
 
 
-    apsthBTRCore->stConnCbInfo.ui32devPassKey = 0;
-    memset(apsthBTRCore->stConnCbInfo.cConnAuthDeviceName, '\0', BTRCORE_STRINGS_MAX_LEN);
+    memset(&apsthBTRCore->stConnCbInfo, 0, sizeof(stBTRCoreConnCBInfo));
 
     apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB = NULL;
     apsthBTRCore->fptrBTRCoreStatusCB = NULL;
@@ -214,71 +213,78 @@ btrCore_MapClassIDtoDeviceType (
     unsigned int classID
 ) {
     enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
-    if (classID & 0x400) {
-        unsigned int lastByte = (classID & 0xFF);
+    BTRCORELOG_DEBUG("btrCore_MapClassIDtoDeviceType - classID=%x\n", classID);
 
-        if (lastByte == enBTRCore_DC_WearableHeadset) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_WearableHeadset \n");
+    if ((classID & 0x200) || (classID & 0x400)) {
+        unsigned int ui32DevClassID = (classID & 0xFFF);
+        BTRCORELOG_DEBUG("btrCore_MapClassIDtoDeviceType - ui32DevClassID=%x\n", ui32DevClassID);
+
+        if (ui32DevClassID == enBTRCore_DC_SmartPhone) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_SmartPhone\n");
+            rc = enBTRCore_DC_SmartPhone;
+        }
+        else if (ui32DevClassID == enBTRCore_DC_WearableHeadset) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_WearableHeadset\n");
             rc = enBTRCore_DC_WearableHeadset;
         }
-        else if (lastByte == enBTRCore_DC_Handsfree) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_Handsfree \n");
+        else if (ui32DevClassID == enBTRCore_DC_Handsfree) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Handsfree\n");
             rc = enBTRCore_DC_Handsfree;
         }
-        else if (lastByte == enBTRCore_DC_Reserved) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_Reserved \n");
+        else if (ui32DevClassID == enBTRCore_DC_Reserved) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Reserved\n");
             rc = enBTRCore_DC_Reserved;
         }
-        else if (lastByte == enBTRCore_DC_Microphone) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_Microphone \n");
+        else if (ui32DevClassID == enBTRCore_DC_Microphone) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Microphone\n");
             rc = enBTRCore_DC_Microphone;
         }
-        else if (lastByte == enBTRCore_DC_Loudspeaker) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_Loudspeaker \n");
+        else if (ui32DevClassID == enBTRCore_DC_Loudspeaker) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Loudspeaker\n");
             rc = enBTRCore_DC_Loudspeaker;
         }
-        else if (lastByte == enBTRCore_DC_Headphones) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_Headphones \n");
+        else if (ui32DevClassID == enBTRCore_DC_Headphones) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Headphones\n");
             rc = enBTRCore_DC_Headphones;
         }
-        else if (lastByte == enBTRCore_DC_PortableAudio) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_PortableAudio \n");
+        else if (ui32DevClassID == enBTRCore_DC_PortableAudio) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_PortableAudio\n");
             rc = enBTRCore_DC_PortableAudio;
         }
-        else if (lastByte == enBTRCore_DC_CarAudio) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_CarAudio \n");
+        else if (ui32DevClassID == enBTRCore_DC_CarAudio) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_CarAudio\n");
             rc = enBTRCore_DC_CarAudio;
         }
-        else if (lastByte == enBTRCore_DC_STB) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_STB \n");
+        else if (ui32DevClassID == enBTRCore_DC_STB) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_STB\n");
             rc = enBTRCore_DC_STB;
         }
-        else if (lastByte == enBTRCore_DC_HIFIAudioDevice) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_HIFIAudioDevice \n");
+        else if (ui32DevClassID == enBTRCore_DC_HIFIAudioDevice) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_HIFIAudioDevice\n");
             rc = enBTRCore_DC_HIFIAudioDevice;
         }
-        else if (lastByte == enBTRCore_DC_VCR) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_VCR \n");
+        else if (ui32DevClassID == enBTRCore_DC_VCR) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VCR\n");
             rc = enBTRCore_DC_VCR;
         }
-        else if (lastByte == enBTRCore_DC_VideoCamera) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoCamera \n");
+        else if (ui32DevClassID == enBTRCore_DC_VideoCamera) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoCamera\n");
             rc = enBTRCore_DC_VideoCamera;
         }
-        else if (lastByte == enBTRCore_DC_Camcoder) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_Camcoder \n");
+        else if (ui32DevClassID == enBTRCore_DC_Camcoder) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Camcoder\n");
             rc = enBTRCore_DC_Camcoder;
         }
-        else if (lastByte == enBTRCore_DC_VideoMonitor) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoMonitor \n");
+        else if (ui32DevClassID == enBTRCore_DC_VideoMonitor) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoMonitor\n");
             rc = enBTRCore_DC_VideoMonitor;
         }
-        else if (lastByte == enBTRCore_DC_TV) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_TV \n");
+        else if (ui32DevClassID == enBTRCore_DC_TV) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_TV\n");
             rc = enBTRCore_DC_TV;
         }
-        else if (lastByte == enBTRCore_DC_VideoConference) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoConference \n");
+        else if (ui32DevClassID == enBTRCore_DC_VideoConference) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_VideoConference\n");
             rc = enBTRCore_DC_TV;
         }
     }
@@ -834,7 +840,7 @@ BTRCore_Init (
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
-    if(BtrCore_BTRegisterConnAuthcB(pstlhBTRCore->connHdl, &btrCore_BTDeviceAuthetication_cb, pstlhBTRCore)) {
+    if(BtrCore_BTRegisterConnAuthcB(pstlhBTRCore->connHdl, &btrCore_BTDeviceAuthentication_cb, pstlhBTRCore)) {
         BTRCORELOG_ERROR ("Failed to Register Connection Authentication CB - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
@@ -1697,7 +1703,7 @@ BTRCore_PairDevice (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreScannedDevices* pstScannedDevice = NULL;
+        stBTRCoreScannedDevice* pstScannedDevice = NULL;
 
         BTRCORELOG_DEBUG ("We will pair %s\n"
                          "address %s\n",
@@ -1862,8 +1868,8 @@ BTRCore_FindDevice (
     tBTRCoreHandle  hBTRCore,
     tBTRCoreDevId   aBTRCoreDevId
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    stBTRCoreScannedDevices* pstScannedDevice = NULL;
+    stBTRCoreHdl*           pstlhBTRCore = NULL;
+    stBTRCoreScannedDevice* pstScannedDevice = NULL;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -2989,7 +2995,7 @@ btrCore_BTDeviceStatusUpdate_cb (
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
                     if (lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB)
                     {
-                        stBTRCoreScannedDevices stFoundDevice;
+                        stBTRCoreScannedDevice  stFoundDevice;
                         memcpy (&stFoundDevice, &lpstlhBTRCore->stFoundDevice, sizeof(stFoundDevice));
                         lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB(stFoundDevice);
                     }
@@ -3155,17 +3161,47 @@ btrCore_BTDeviceStatusUpdate_cb (
 
 static int
 btrCore_BTDeviceConnectionIntimation_cb (
-    const char*     apBtDeviceName,
+    stBTDeviceInfo* apstBTDeviceInfo,
     unsigned int    aui32devPassKey,
     void*           apUserData
 ) {
     int i32DevConnIntimRet = 0;
+    int j = 0;
     stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
     if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnIntimCB)) {
+        BTRCORELOG_DEBUG("btrCore_BTDeviceConnectionIntimation_cb\n");
         lpstlhBTRCore->stConnCbInfo.ui32devPassKey = aui32devPassKey;
-        if (apBtDeviceName)
-            strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
+        if (apstBTDeviceInfo->pcName)
+            strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apstBTDeviceInfo->pcName, (strlen(apstBTDeviceInfo->pcName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apstBTDeviceInfo->pcName) : BTRCORE_STRINGS_MAX_LEN - 1);
+
+
+        lpstlhBTRCore->stConnCbInfo.stFoundDevice.found         = TRUE;
+        lpstlhBTRCore->stConnCbInfo.stFoundDevice.RSSI          = apstBTDeviceInfo->i32RSSI;
+        lpstlhBTRCore->stConnCbInfo.stFoundDevice.vendor_id     = apstBTDeviceInfo->ui16Vendor;
+        lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_type   = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        lpstlhBTRCore->stConnCbInfo.stFoundDevice.deviceId      = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
+        strcpy(lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_name, apstBTDeviceInfo->pcName);
+        strcpy(lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_address, apstBTDeviceInfo->pcAddress);
+
+        /* Populate the profile supported */
+        for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
+            if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')
+                break;
+            else
+                lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_profile.profile[j].uuid_value = btrCore_BTParseUUIDValue(apstBTDeviceInfo->aUUIDs[j],
+                                                                                                                          lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_profile.profile[j].profile_name);
+        }
+        lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_profile.numberOfService = j;
+
+                                    
+        if (lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_type == enBTRCore_DC_Unknown) {
+            for (j = 0; j < lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_profile.numberOfService; j++) {
+                if (lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_profile.profile[j].uuid_value ==  strtol(BTR_CORE_A2SRC, NULL, 16)) {
+                    lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_type = enBTRCore_DC_SmartPhone;
+                }
+            }
+        }
 
         i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo);
     }
@@ -3175,18 +3211,46 @@ btrCore_BTDeviceConnectionIntimation_cb (
 
 
 static int
-btrCore_BTDeviceAuthetication_cb (
-    const char*     apBtDeviceName,
+btrCore_BTDeviceAuthentication_cb (
+    stBTDeviceInfo* apstBTDeviceInfo,
     void*           apUserData
 ) {
     int i32DevAuthRet = 0;
+    int j = 0;
     stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
     if (lpstlhBTRCore && (lpstlhBTRCore->fptrBTRCoreConnAuthCB)) {
-        if (apBtDeviceName) {
-            strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apBtDeviceName, (strlen(apBtDeviceName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apBtDeviceName) : BTRCORE_STRINGS_MAX_LEN - 1);
-            i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo);
+        BTRCORELOG_DEBUG("btrCore_BTDeviceAuthentication_cb\n");
+        if (apstBTDeviceInfo->pcName)
+            strncpy(lpstlhBTRCore->stConnCbInfo.cConnAuthDeviceName, apstBTDeviceInfo->pcName, (strlen(apstBTDeviceInfo->pcName) < (BTRCORE_STRINGS_MAX_LEN - 1)) ? strlen(apstBTDeviceInfo->pcName) : BTRCORE_STRINGS_MAX_LEN - 1);
+
+
+        lpstlhBTRCore->stConnCbInfo.stKnownDevice.found         = TRUE;
+        lpstlhBTRCore->stConnCbInfo.stKnownDevice.vendor_id     = apstBTDeviceInfo->ui16Vendor;
+        lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_type   = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        lpstlhBTRCore->stConnCbInfo.stKnownDevice.deviceId      = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
+        strcpy(lpstlhBTRCore->stConnCbInfo.stKnownDevice.bd_path,        apstBTDeviceInfo->pcAddress);
+        strcpy(lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_name,    apstBTDeviceInfo->pcName);
+        strcpy(lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_address, apstBTDeviceInfo->pcAddress);
+
+        for (j = 0; j < BT_MAX_DEVICE_PROFILE; j++) {
+            if (apstBTDeviceInfo->aUUIDs[j][0] == '\0')
+                break;
+            else
+                lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_profile.profile[j].uuid_value = btrCore_BTParseUUIDValue(apstBTDeviceInfo->aUUIDs[j],
+                                                                                                                          lpstlhBTRCore->stConnCbInfo.stFoundDevice.device_profile.profile[j].profile_name);
         }
+        lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_profile.numberOfService = j;
+
+        if (lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_type == enBTRCore_DC_Unknown) {
+            for (j = 0; j < lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_profile.numberOfService; j++) {
+                if (lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_profile.profile[j].uuid_value == strtol(BTR_CORE_A2SRC, NULL, 16)) {
+                    lpstlhBTRCore->stConnCbInfo.stKnownDevice.device_type = enBTRCore_DC_SmartPhone;
+                }
+            }
+        }
+
+        i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo);
     }
 
     return i32DevAuthRet;

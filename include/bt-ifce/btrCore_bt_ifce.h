@@ -134,8 +134,8 @@ typedef struct _stBTDeviceSupportedServiceList {
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps, void* apUserData);
 typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
-typedef int (*fPtr_BtrCore_BTConnIntim_cB)(const char* apBtDeviceName, unsigned int aui32devPassKey, void* apUserData);
-typedef int (*fPtr_BtrCore_BTConnAuth_cB)(const char* apBtDeviceName, void* apUserData);
+typedef int (*fPtr_BtrCore_BTConnIntim_cB)(stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
+typedef int (*fPtr_BtrCore_BTConnAuth_cB)(stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 
 
 //callback to process connection requests:

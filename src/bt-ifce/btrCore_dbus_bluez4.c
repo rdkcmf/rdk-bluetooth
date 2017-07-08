@@ -509,6 +509,11 @@ btrCore_BTAgentRequestConfirmation (
     const char*     lpcPath     = NULL;
     unsigned int    ui32PassCode= 0;
     int             yesNo       = 0;
+    int             i32OpRet    = -1;
+    stBTDeviceInfo  lstBTDeviceInfo;
+
+    memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
+
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
@@ -519,8 +524,10 @@ btrCore_BTAgentRequestConfirmation (
     BTRCORELOG_DEBUG ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n",lpcPath, ui32PassCode);
 
     if (gfpcBConnectionIntimation && lpcPath) {
-        BTRCORELOG_INFO ("calling ConnIntimation cb with %s\n", lpcPath);
-        yesNo = gfpcBConnectionIntimation(lpcPath, ui32PassCode, gpcBConnIntimUserData);
+        //i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
+
+        BTRCORELOG_INFO ("calling ConnIntimation cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
+        yesNo = gfpcBConnectionIntimation(&lstBTDeviceInfo, ui32PassCode, gpcBConnIntimUserData);
     }
 
     gpcBConnAuthPassKey = ui32PassCode;
@@ -559,6 +566,10 @@ btrCore_BTAgentAuthorize (
     const char*     lpcPath     = NULL;
     const char*     uuid        = NULL;
     int             yesNo       = 0;
+    int             i32OpRet    = -1;
+    stBTDeviceInfo  lstBTDeviceInfo;
+
+    memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
@@ -566,8 +577,10 @@ btrCore_BTAgentAuthorize (
     }
 
     if (gfpcBConnectionAuthentication && lpcPath) {
-        BTRCORELOG_DEBUG ("calling ConnAuth cb with %s\n", lpcPath);
-        yesNo = gfpcBConnectionAuthentication(lpcPath, gpcBConnAuthUserData);
+        //i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
+
+        BTRCORELOG_DEBUG ("calling ConnAuth cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
+        yesNo = gfpcBConnectionAuthentication(&lstBTDeviceInfo, gpcBConnAuthUserData);
     }
 
     gpcBConnAuthPassKey = 0;
