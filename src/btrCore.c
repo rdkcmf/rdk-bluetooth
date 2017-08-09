@@ -3109,9 +3109,25 @@ btrCore_BTDeviceStatusUpdate_cb (
                                   ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected)))) {
                                 bTriggerDevStatusChangeCb = TRUE;
                             }
+                            //workaround for notifying the power Up event of a <paired && !connected> devices, as we are not able to track the
+                            //power Down event of such devices as per the current analysis
+                            if ((enBTRCoreDevStDisconnected == leBTDevState)
+                                && ((enBTRCoreDevStConnected     == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState)
+                                   || (enBTRCoreDevStDisconnecting == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState)
+                               )   ) {
+                               lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = enBTRCoreDevStPaired;
+                               lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = enBTRCoreDevStPaired;
+                            }
+                            else {
+                               if (! (enBTRCoreDevStConnected==leBTDevState
+                                     && enBTRCoreDevStDisconnecting==lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState)
+                                  ) {
+                                  lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
+                                                                    lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
+                               }
+                               lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
+                            }
 
-                            lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
-                            lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
                             lpstlhBTRCore->stDevStatusCbInfo.isPaired = 1;
                         }
                     }
