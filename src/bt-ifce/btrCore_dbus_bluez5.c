@@ -2591,7 +2591,6 @@ BtrCore_BTDiscoverDeviceServices (
     const char*                     apcDevPath,
     stBTDeviceSupportedServiceList* pProfileList
 ) {
-    const char*         apcSearchString = NULL;
     DBusMessage*        lpDBusMsg       = NULL;
     DBusMessage*        lpDBusReply     = NULL;
     DBusError           lDBusErr;
@@ -2599,23 +2598,27 @@ BtrCore_BTDiscoverDeviceServices (
     DBusMessageIter     MsgIter;
     DBusPendingCall*    lpDBusPendC;
     int                 match = 0;
+    const char*         apcSearchString = "UUIDs";
+    const char*         pDeviceInterface= BT_DBUS_BLUEZ_DEVICE_PATH;
 
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcDevPath,
                                              "org.freedesktop.DBus.Properties",
-                                             "Get");
+                                             "GetAll");
 
     dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_DEVICE_PATH, DBUS_TYPE_STRING, "UUIDs", DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pDeviceInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
     if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("failed to send message");
+        return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
     dbus_message_unref(lpDBusMsg);
+    lpDBusMsg = NULL;
 
     dbus_pending_call_block(lpDBusPendC);
     lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
@@ -3070,6 +3073,47 @@ BtrCore_BTPerformAdapterOp (
     }
 
     return 0;
+}
+
+
+int
+BtrCore_BTIsDeviceConnectable (
+    void*       apBtConn,
+    const char* apcDevPath
+) {
+    FILE*   lfpL2Ping = NULL;
+    int     i32OpRet = -1;
+    char    lcpL2PingIp[64] = {'\0'};
+    char    lcpL2PingOp[512] = {'\0'};
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apcDevPath)
+        return -1;
+
+    snprintf(lcpL2PingIp, 128, "l2ping -i hci0 -c 2 -s 2 %s", apcDevPath);
+    BTRCORELOG_INFO ("lcpL2PingIp: %s\n", lcpL2PingIp);
+
+    lfpL2Ping = popen(lcpL2PingIp, "r");
+    if ((lfpL2Ping == NULL)) {
+        BTRCORELOG_ERROR ("Failed to run BTIsDeviceConnectable command\n");
+    }
+    else {
+        if (fgets(lcpL2PingOp, sizeof(lcpL2PingOp)-1, lfpL2Ping) == NULL) {
+            BTRCORELOG_ERROR ("Failed to Output of l2ping\n");
+        }
+        else {
+            BTRCORELOG_WARN ("Output of l2ping =  %s\n", lcpL2PingOp);
+            if (!strstr(lcpL2PingOp, "Host is down")) {
+                i32OpRet = 0;
+            }
+        }
+
+        pclose(lfpL2Ping);
+    }
+
+    return i32OpRet;
 }
 
 

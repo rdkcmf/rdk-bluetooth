@@ -374,6 +374,9 @@ enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCor
 /* BTRCore_GetSupportedServices - confirm if a given service exists on a device*/
 enBTRCoreRet BTRCore_GetSupportedServices (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, stBTRCoreSupportedServiceList *pProfileList);
 
+/* BTRCore_IsDeviceConnectable */
+enBTRCoreRet BTRCore_IsDeviceConnectable (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId);
+
 /* BTRCore_ConnectDevice */
 enBTRCoreRet BTRCore_ConnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 

@@ -450,6 +450,7 @@ printMenu (
     fprintf( stderr, "34. Register connection authentication callback to allow accepting or rejection of connections.\n");
     fprintf( stderr, "35. Accept a connection request\n");
     fprintf( stderr, "36. Deny a connection request\n");
+    fprintf( stderr, "37. Check if Device is Connectable\n");
 
     fprintf( stderr, "88. debug test\n");
     fprintf( stderr, "99. Exit\n");
@@ -872,6 +873,11 @@ main (
         case 36:
             fprintf(stderr, "%d\t: %s - deny the connection\n", __LINE__, __FUNCTION__);
             acceptConnection = 2;//anything but 1 means do not connect
+            break;
+        case 37:
+            fprintf(stderr, "%d\t: %s - Pick a Device to Check if Connectable...\n", __LINE__, __FUNCTION__);
+            devnum = getChoice();
+            BTRCore_IsDeviceConnectable(lhBTRCore, devnum);
             break;
         case 88:
             test_func(lhBTRCore, &lstBTRCoreAdapter);

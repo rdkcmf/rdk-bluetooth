@@ -2284,6 +2284,47 @@ BtrCore_BTPerformAdapterOp (
 
 
 int
+BtrCore_BTIsDeviceConnectable (
+    void*       apBtConn,
+    const char* apcDevPath
+) {
+    FILE*   lfpL2Ping = NULL;
+    int     i32OpRet = -1;
+    char    lcpL2PingIp[64] = {'\0'};
+    char    lcpL2PingOp[512] = {'\0'};
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apcDevPath)
+        return -1;
+
+    snprintf(lcpL2PingIp, 128, "l2ping -i hci0 -c 2 -s 2 %s", apcDevPath);
+    BTRCORELOG_INFO ("lcpL2PingIp: %s\n", lcpL2PingIp);
+
+    lfpL2Ping = popen(lcpL2PingIp, "r");
+    if ((lfpL2Ping == NULL)) {
+        BTRCORELOG_ERROR ("Failed to run BTIsDeviceConnectable command\n");
+    }
+    else {
+        if (fgets(lcpL2PingOp, sizeof(lcpL2PingOp)-1, lfpL2Ping) == NULL) {
+            BTRCORELOG_ERROR ("Failed to Output of l2ping\n");
+        }
+        else {
+            BTRCORELOG_WARN ("Output of l2ping =  %s\n", lcpL2PingOp);
+			if (!strstr(lcpL2PingOp, "Host is down")) {
+                i32OpRet = 0;
+			}
+        }
+
+        pclose(lfpL2Ping);
+    }
+
+    return i32OpRet;
+}
+
+
+int
 BtrCore_BTConnectDevice (
     void*           apBtConn,
     const char*     apDevPath,

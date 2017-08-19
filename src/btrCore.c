@@ -98,6 +98,7 @@ static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCo
 static void btrCore_MapKnownDeviceListFromPairedDeviceInfo (stBTRCoreKnownDevice* knownDevicesArr, stBTPairedDeviceInfo* pairedDeviceInfo);
 static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static const char* btrCore_GetKnownDeviceName (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
+static const char* btrCore_GetKnownDeviceMac (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static void btrCore_ShowSignalStrength (short strength);
 static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut);
 static enBTRCoreDeviceState btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
@@ -539,6 +540,26 @@ btrCore_GetKnownDeviceName (
              return apsthBTRCore->stKnownDevicesArr[loop].device_name;
         }
 
+    }
+
+    return NULL;
+}
+
+static const char*
+btrCore_GetKnownDeviceMac (
+    stBTRCoreHdl*   apsthBTRCore,
+    tBTRCoreDevId   aBTRCoreDevId
+) {
+    int loop = 0;
+
+    if ((0 == aBTRCoreDevId) || (!apsthBTRCore))
+        return NULL;
+
+    if (apsthBTRCore->numOfPairedDevices) {
+        for (loop = 0; loop < apsthBTRCore->numOfPairedDevices; loop++) {
+            if (aBTRCoreDevId == apsthBTRCore->stKnownDevicesArr[loop].deviceId)
+             return apsthBTRCore->stKnownDevicesArr[loop].device_address;
+        }
     }
 
     return NULL;
@@ -1998,16 +2019,73 @@ BTRCore_GetSupportedServices (
 
 
 enBTRCoreRet
+BTRCore_IsDeviceConnectable (
+    tBTRCoreHandle      hBTRCore,
+    tBTRCoreDevId       aBTRCoreDevId
+) {
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    const char*         pDeviceAddress = NULL;
+
+
+    if (!hBTRCore) {
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
+        return enBTRCoreNotInitialized;
+    }
+    else if (aBTRCoreDevId < 0) {
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (pstlhBTRCore->numOfPairedDevices == 0) {
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
+        /* Keep the list upto date */
+        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
+    }
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
+        return enBTRCoreFailure;
+    }
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
+        pDeviceAddress  = pstKnownDevice->device_address;
+    }
+    else {
+        pDeviceAddress  = btrCore_GetKnownDeviceMac(pstlhBTRCore, aBTRCoreDevId);
+    }
+
+
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
+        return enBTRCoreDeviceNotFound;
+    }
+
+
+    if (BtrCore_BTIsDeviceConnectable(pstlhBTRCore->connHdl, pDeviceAddress) != 0) {
+        BTRCORELOG_ERROR ("Device NOT CONNECTABLE\n");
+        return enBTRCoreFailure;
+    }
+
+    BTRCORELOG_INFO ("Device CONNECTABLE\n");
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
 BTRCore_ConnectDevice (
-    tBTRCoreHandle      hBTRCore, 
-    tBTRCoreDevId       aBTRCoreDevId, 
+    tBTRCoreHandle      hBTRCore,
+    tBTRCoreDevId       aBTRCoreDevId,
     enBTRCoreDeviceType aenBTRCoreDevType
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    const char*     pDeviceAddress = NULL;
-    const char*     pDeviceName = NULL;
-    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
-    int             i32LoopIdx = 0;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    const char*         pDeviceAddress = NULL;
+    const char*         pDeviceName = NULL;
+    enBTDeviceType      lenBTDeviceType = enBTDevUnknown;
+    int                 i32LoopIdx = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -2334,7 +2412,9 @@ BTRCore_GetDeviceDisconnected (
     (void)lenBTDeviceType;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        if (pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState == enBTRCoreDevStDisconnected) {
+        if ((pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState == enBTRCoreDevStDisconnected) ||
+            ((pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDevicePrevState == enBTRCoreDevStDisconnected) &&
+             (pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState == enBTRCoreDevStLost))) {
             BTRCORELOG_DEBUG ("enBTRCoreDevStDisconnected\n");
             lenBTRCoreRet = enBTRCoreSuccess;
         }
@@ -2342,7 +2422,9 @@ BTRCore_GetDeviceDisconnected (
     else {
         for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
             if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].deviceId) {
-                if (pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) {
+                if ((pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) ||
+                    ((pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState == enBTRCoreDevStDisconnected) &&
+                     (pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState == enBTRCoreDevStLost))) {
                     BTRCORELOG_DEBUG ("enBTRCoreDevStDisconnected\n");
                     lenBTRCoreRet = enBTRCoreSuccess;
                 }
@@ -3109,6 +3191,8 @@ btrCore_BTDeviceStatusUpdate_cb (
                                   ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected)))) {
                                 bTriggerDevStatusChangeCb = TRUE;
                             }
+
+#if 0
                             //workaround for notifying the power Up event of a <paired && !connected> devices, as we are not able to track the
                             //power Down event of such devices as per the current analysis
                             if ((enBTRCoreDevStDisconnected == leBTDevState)
@@ -3127,6 +3211,10 @@ btrCore_BTDeviceStatusUpdate_cb (
                                }
                                lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
                             }
+#else
+                            lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
+                            lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
+#endif
 
                             lpstlhBTRCore->stDevStatusCbInfo.isPaired = 1;
                         }
