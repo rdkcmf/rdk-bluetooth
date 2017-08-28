@@ -489,8 +489,9 @@ btrCore_PopulateListOfPairedDevices (
          for (i_idx=0; i_idx < pairedDeviceInfo.numberOfDevices; i_idx++) {
            if (!pairedDev_index_array[i_idx]) {
              memcpy(&apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices], &knownDevicesArr[i_idx], sizeof(stBTRCoreKnownDevice));
-             apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDevicePrevState = enBTRCoreDevStPaired;
+             apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDevicePrevState = enBTRCoreDevStInitialized;
              apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDeviceCurrState = enBTRCoreDevStPaired;
+             apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices].device_connected   = FALSE;
              apsthBTRCore->numOfPairedDevices++;
            }
          }
@@ -1709,8 +1710,6 @@ BTRCore_PairDevice (
 ) {
     stBTRCoreHdl*   pstlhBTRCore    = NULL;
     const char*     pDeviceAddress  = NULL;
-    int             i32LoopIdx      = 0;
-    int             i32KnownDevIdx  = -1;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1752,26 +1751,8 @@ BTRCore_PairDevice (
         return enBTRCorePairingFailed;
     }
 
-
+    //Calling this api will update the KnownDevList appropriately
     btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-    if (pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_TRACE ("Scanned Device address = %s\n", pDeviceAddress);
-        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
-            BTRCORELOG_TRACE ("Known device address = %s\n", pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].device_address);
-            if (!strcmp(pDeviceAddress, pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].device_address)) {
-                i32KnownDevIdx = i32LoopIdx;
-                break;
-            }
-        }
-
-        
-        if (i32KnownDevIdx != -1) {
-            pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].device_connected    = FALSE;
-            pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState  = pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
-            pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState  = enBTRCoreDevStPaired; 
-        }
-    }
-
 
     BTRCORELOG_INFO ("Pairing Success\n");
     return enBTRCoreSuccess;
@@ -1785,7 +1766,6 @@ BTRCore_UnPairDevice (
 ) {
     stBTRCoreHdl*   pstlhBTRCore    = NULL;
     const char*     pDeviceAddress  = NULL;
-    int             i32LoopIdx      = 0;
 
     /* We can enhance the BTRCore with passcode support later point in time */
     if (!hBTRCore) {
@@ -1832,24 +1812,8 @@ BTRCore_UnPairDevice (
         return enBTRCorePairingFailed;
     }
 
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected = FALSE;
-        pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDevicePrevState = pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState;
-        pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState = enBTRCoreDevStUnpaired; 
-    }
-    else {
-        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
-            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].deviceId) {
-                pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].device_connected  = FALSE;
-                pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
-                pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = enBTRCoreDevStUnpaired; 
-            }
-        }
-    }
-
+    //Calling this api will update the KnownDevList appropriately
     btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-
 
     BTRCORELOG_INFO ("UnPairing Success\n");
     return enBTRCoreSuccess;
@@ -3212,8 +3176,9 @@ btrCore_BTDeviceStatusUpdate_cb (
                             }
                             else {
                                if (! (enBTRCoreDevStConnected       == leBTDevState
-                                     && enBTRCoreDevStDisconnecting == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState)
-                                  ) {
+                                     && (enBTRCoreDevStDisconnecting == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState
+                                        || enBTRCoreDevStInitialized == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState))
+                                  )  {
                                   lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
                                                                     lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
                                }
