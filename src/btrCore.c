@@ -2204,9 +2204,10 @@ BTRCore_DisconnectDevice (
     BTRCORELOG_INFO ("DisConnected from device Successfully.\n");
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected     = FALSE;
-        pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDevicePrevState   = pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState;
 
-        if (pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState   != enBTRCoreDevStDisconnected) {
+        if (pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState   != enBTRCoreDevStDisconnected &&
+            pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState   != enBTRCoreDevStLost) {
+            pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDevicePrevState    = pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState;
             pstlhBTRCore->stKnownDevStInfoArr[aBTRCoreDevId].eDeviceCurrState    = enBTRCoreDevStDisconnecting; 
         }
     }
@@ -2214,9 +2215,10 @@ BTRCore_DisconnectDevice (
         for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
             if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].deviceId) {
                 pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].device_connected    = FALSE;
-                pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState  = pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
 
-                if (pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState != enBTRCoreDevStDisconnected) {
+                if (pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState != enBTRCoreDevStDisconnected &&
+                    pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState != enBTRCoreDevStLost) {
+                    pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState  = pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
                     pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState  = enBTRCoreDevStDisconnecting; 
                 }
             }
