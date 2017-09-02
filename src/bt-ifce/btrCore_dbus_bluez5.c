@@ -2241,7 +2241,7 @@ BtrCore_BTSetAdapterProp (
     switch (aenBTAdapterProp) {
     case enBTAdPropName:
         lDBusType = DBUS_TYPE_STRING;
-        lDBusKey  = "Name";
+        lDBusKey  = "Alias";
         break;
     case enBTAdPropPowered:
         lDBusType = DBUS_TYPE_BOOLEAN;
