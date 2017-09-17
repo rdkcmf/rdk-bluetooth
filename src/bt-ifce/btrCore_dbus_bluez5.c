@@ -3092,7 +3092,7 @@ BtrCore_BTIsDeviceConnectable (
     if (!apcDevPath)
         return -1;
 
-    snprintf(lcpL2PingIp, 128, "l2ping -i hci0 -c 2 -s 2 %s", apcDevPath);
+    snprintf(lcpL2PingIp, 128, "l2ping -i hci0 -c 3 -s 2 -d 2 %s", apcDevPath);
     BTRCORELOG_INFO ("lcpL2PingIp: %s\n", lcpL2PingIp);
 
     lfpL2Ping = popen(lcpL2PingIp, "r");
