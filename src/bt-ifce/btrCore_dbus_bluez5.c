@@ -47,6 +47,8 @@
 #define BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH  "org.bluez.MediaTransport1"
 #define BT_DBUS_BLUEZ_MEDIA_CTRL_PATH       "org.bluez.MediaControl1"
 #define BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH     "org.bluez.MediaPlayer1"
+#define BT_DBUS_BLUEZ_MEDIA_ITEM_PATH       "org.bluez.MediaItem1"
+#define BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH     "org.bluez.MediaFolder1"
 #define BT_DBUS_BLUEZ_AGENT_PATH            "org.bluez.Agent1"
 #define BT_DBUS_BLUEZ_AGENT_MGR_PATH        "org.bluez.AgentManager1"
 
@@ -61,7 +63,6 @@ typedef struct _stBTMediaInfo {
     unsigned short  ui16Delay;
     unsigned short  ui16Volume;
 } stBTMediaInfo;
-
 
 /* Static Function Prototypes */
 static int btrCore_BTHandleDusError (DBusError* aDBusErr, int aErrline, const char* aErrfunc);
@@ -83,6 +84,8 @@ static DBusHandlerResult btrCore_BTAgentAuthorize (DBusConnection* apDBusConn, D
 static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
+
+static void btrCore_BTConnectDeviceConfirmation_cb (DBusPendingCall* pending_call, void* data);
 
 static int btrCore_BTGetDeviceInfo (stBTDeviceInfo* apstBTDeviceInfo, const char* apcIface);
 static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
@@ -110,6 +113,7 @@ static char* gpcDevTransportPath = NULL;
 static void* gpcBDevStatusUserData = NULL;
 static void* gpcBNegMediaUserData = NULL;
 static void* gpcBTransPathMediaUserData = NULL;
+static void* gpcBTMediaPlayerPathUserData = NULL;
 static void* gpcBConnIntimUserData = NULL;
 static void* gpcBConnAuthUserData = NULL;
 
@@ -124,12 +128,11 @@ static const DBusObjectPathVTable gDBusAgentVTable = {
     .message_function = btrCore_BTAgentMessageHandler_cb,
 };
 
-char*         playerObjectPath = NULL;
-
 /* Callbacks */
 static fPtr_BtrCore_BTDevStatusUpdate_cB    gfpcBDevStatusUpdate = NULL;
 static fPtr_BtrCore_BTNegotiateMedia_cB     gfpcBNegotiateMedia = NULL;
 static fPtr_BtrCore_BTTransportPathMedia_cB gfpcBTransportPathMedia = NULL;
+static fPtr_BtrCore_BTMediaPlayerPath_cB    gfpcBTMediaPlayerPath = NULL;
 static fPtr_BtrCore_BTConnIntim_cB          gfpcBConnectionIntimation = NULL;
 static fPtr_BtrCore_BTConnAuth_cB           gfpcBConnectionAuthentication = NULL;
 
@@ -354,7 +357,32 @@ btrCore_BTDBusConnectionFilter_cb (
                                 }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH);
-                                } 
+                                }
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
+
+                                    if (lpcDBusIface && gfpcBTMediaPlayerPath) {
+                                       if (!gfpcBTMediaPlayerPath(lpcDBusIface, gpcBTMediaPlayerPathUserData)) {
+                                          BTRCORELOG_ERROR ("Media Player Path callBack Failed!!!\n");
+                                       } 
+                                    }   
+                                }
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_ITEM_PATH);
+
+                                    if (strstr(lpcDBusIface, "item")) {
+                                        BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "item"));
+                                    }
+                                    else if (strstr(lpcDBusIface, "NowPlaying")) {
+                                        BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "NowPlaying"));
+                                    }
+                                    else if (strstr(lpcDBusIface, "FileSystem")) {
+                                        BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "FileSystem"));
+                                    }
+                                }
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH);
+                                }
                                 else {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", lpcDBusIfaceInternal);
                                 }
@@ -410,6 +438,31 @@ btrCore_BTDBusConnectionFilter_cb (
                        
                         //TODO: What if some other devices transport interface gets removed with delay ? 
                         strncpy(gpcMediaCurrState, "none", BT_MAX_STR_LEN - 1); 
+                    }
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH)) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
+                        // To free the player Path
+                        if (lpcDBusIface && gfpcBTMediaPlayerPath) {
+                           //if (!gfpcBTMediaPlayerPath(lpcDBusIface, gpcBTMediaPlayerPathUserData)) {
+                           //   BTRCORELOG_ERROR ("Media Player Path callBack Failed!!!\n");
+                           //}
+                        }  
+                    }
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH)) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_ITEM_PATH);
+
+                        if (strstr(lpcDBusIface, "item")) {
+                           BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "item"));
+                        }
+                        else if (strstr(lpcDBusIface, "NowPlaying")) {
+                           BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "NowPlaying"));
+                        }
+                        else if (strstr(lpcDBusIface, "FileSystem")) {
+                           BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "FileSystem"));
+                        }
+                    }
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH)) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH);
                     }
                     else {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", lpcDBusIfaceInternal);
@@ -1514,6 +1567,28 @@ btrCore_BTMediaEndpointClearConfiguration (
     return lpDBusReply;
 }
 
+
+static void 
+btrCore_BTConnectDeviceConfirmation_cb (
+     DBusPendingCall*   pending_call, 
+     void*              data
+) {
+    DBusMessage *lDBusReply = NULL;
+
+    BTRCORELOG_INFO ("Received Connect Device Confirmation\n");
+
+    lDBusReply = dbus_pending_call_steal_reply(pending_call);
+
+    dbus_pending_call_unref(pending_call);
+
+    if (dbus_message_get_type(lDBusReply) == DBUS_MESSAGE_TYPE_ERROR) {
+       BTRCORELOG_ERROR ("Connection Failure Reason : %s!!!", dbus_message_get_error_name(lDBusReply));
+    }
+
+    dbus_message_unref(lDBusReply);
+
+    /* Can try pre and post ConnectDevice Settings at BTRCore and BTRMgr level based on this confirmation */
+}
 
 
 /* Interfaces */
@@ -3123,8 +3198,10 @@ BtrCore_BTConnectDevice (
     const char*     apDevPath,
     enBTDeviceType  aenBTDeviceType
 ) {
-    DBusMessage*    lpDBusMsg  = NULL;
-    dbus_bool_t     lDBusOp;
+    DBusMessage*     lpDBusMsg    = NULL;
+    DBusPendingCall* pending_call = NULL;
+    DBusError        dbus_error;
+    dbus_bool_t      lDBusOp;
 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
@@ -3141,7 +3218,13 @@ BtrCore_BTConnectDevice (
         return -1;
     }
 
-    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_error_init(&dbus_error);
+    lDBusOp = dbus_connection_send_with_reply(gpDBusConn,
+                                              lpDBusMsg,
+                                              &pending_call,
+                                              DBUS_TIMEOUT_USE_DEFAULT);
+
+    dbus_connection_flush(gpDBusConn);
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
@@ -3149,8 +3232,15 @@ BtrCore_BTConnectDevice (
         return -1;
     }
 
-    dbus_connection_flush(gpDBusConn);
+    lDBusOp = dbus_pending_call_set_notify(pending_call,
+                                           btrCore_BTConnectDeviceConfirmation_cb,
+                                           gpDBusConn, NULL);
 
+    if (!lDBusOp) {
+        dbus_pending_call_cancel(pending_call);
+        dbus_pending_call_unref(pending_call);
+        return -1;
+    }
 
     return 0;
 }
@@ -3608,60 +3698,53 @@ BtrCore_BTRegisterTransportPathMediacB (
 }
 
 
+int
+BtrCore_BTRegisterMediaPlayerPathcB (
+    void*                                   apBtConn,
+    const char*                             apBtAdapter,
+    fPtr_BtrCore_BTMediaPlayerPath_cB       afpcBTMediaPlayerPath,
+    void*                                   apUserData
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apBtAdapter || !afpcBTMediaPlayerPath)
+        return -1;
+
+    gfpcBTMediaPlayerPath = afpcBTMediaPlayerPath;
+    gpcBTMediaPlayerPathUserData = apUserData;
+
+    return 0;
+}
+
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
 /* Get Player Object Path on Remote BT Device*/
 char*
 BtrCore_GetPlayerObjectPath (
-    void*       apBtConn,
-    const char* apBtAdapterPath
+    void*          apBtConn,
+    const char*    apBtDevPath
 ) {
-    DBusMessage*        lpDBusMsg   = NULL;
-    DBusMessage*        lpDBusReply = NULL;
-    DBusPendingCall*    lpDBusPendC = NULL;
-    DBusError           lDBusErr;
-    DBusMessageIter     args;
+    char*          playerObjectPath = NULL;
+    bool           isConnected      = FALSE;
 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
-        return NULL;
+       BTRCORELOG_ERROR ("DBus Connection Failure!!!");
+       return NULL;
     }
 
-    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apBtAdapterPath,
-                                             "org.freedesktop.DBus.Properties",
-                                             "Get");
-
-    dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH, DBUS_TYPE_STRING, "Player", DBUS_TYPE_INVALID);
-
-    dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
-        BTRCORELOG_ERROR ("failed to send message");
-        return NULL;
+    if (BtrCoreGetMediaProperty(apBtConn, apBtDevPath, enBTBluezMediaControlPath, "Connected", (void*)&isConnected)) {
+       BTRCORELOG_ERROR ("Failed to get %s property : Connected!!!", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
+       return NULL;
+    }
+    if (FALSE == isConnected) {
+       BTRCORELOG_WARN ("%s is not connected", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
+       return NULL;
     }
 
-    dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(lpDBusMsg);
-
-    dbus_pending_call_block(lpDBusPendC);
-    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
-    dbus_pending_call_unref(lpDBusPendC);
-
-    if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("GetPlayerObject returned an error: '%s'\n", lDBusErr.message);
-        dbus_error_free(&lDBusErr);
-        return NULL;
-    }
-
-    DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter); //pointer to dbus message received
-
-    if (DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type(&MsgIter)) {
-        dbus_message_iter_get_basic(&MsgIter, &playerObjectPath);
-        return playerObjectPath;
-    }
-    else {
-        return NULL;
+    if (BtrCoreGetMediaProperty(apBtConn, apBtDevPath, enBTBluezMediaControlPath, "Player", (void*)&playerObjectPath)) {
+       BTRCORELOG_ERROR ("Failed to get %s property : Player!!!", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
+       return NULL;
     }
 
     return playerObjectPath;
@@ -3671,18 +3754,18 @@ BtrCore_GetPlayerObjectPath (
 
 /* Control Media on Remote BT Device*/
 int
-BtrCore_BTDevMediaPlayControl (
-    void*            apBtConn,
-    const char*      apDevPath,
-    enBTDeviceType   aenBTDevType,
-    enBTMediaControl aenBTMediaOper
+BtrCore_BTDevMediaControl (
+    void*             apBtConn,
+    const char*       apMediaPlayerPath,
+    enBTMediaControl  aenBTMediaOper
 ) {
-    DBusMessage*    lpDBusMsg   = NULL;
-    dbus_bool_t     lDBusOp;
-    char            mediaOper[16] = {'\0'};
+    dbus_bool_t      lDBusOp;
+    DBusMessage*     lpDBusMsg     = NULL;
+    char             mediaOper[16] = "\0";
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
-        return -1;
+       BTRCORELOG_ERROR ("DBus Connection Failure!!!");
+       return -1;
     }
 
     switch (aenBTMediaOper) {
@@ -3717,12 +3800,13 @@ BtrCore_BTDevMediaPlayControl (
 
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apDevPath,
-                                             BT_DBUS_BLUEZ_MEDIA_CTRL_PATH,
+                                             apMediaPlayerPath,
+                                             BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH,
                                              mediaOper);
 
     if (lpDBusMsg == NULL) {
-        BTRCORELOG_ERROR ("Cannot allocate Dbus message to play media file\n\n");
+       BTRCORELOG_ERROR ("Can't allocate new method call\n");
+       return -1;
     }
 
     lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
@@ -3732,51 +3816,67 @@ BtrCore_BTDevMediaPlayControl (
         BTRCORELOG_ERROR ("Not enough memory for message send\n");
         return -1;
     }
-
     dbus_connection_flush(gpDBusConn);
 
     return 0;
 }
 
 /* Get Media Property on Remote BT Device*/
-
-char*
+// TODO : write a api that gets any properties irrespective of the objects' interfaces
+int
 BtrCoreGetMediaProperty (
-    void*       apBtConn,
-    const char* apBtAdapterPath,
-    char*       mediaProperty
+    void*             apBtConn,
+    const char*       apBtObjectPath,
+    enBTInterfaceType interfacePath,
+    const char*       mediaProperty,
+    void*             mediaPropertyValue
 ) {
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
     DBusPendingCall*    lpDBusPendC = NULL;
     DBusError           lDBusErr;
     DBusMessageIter     args;
-    DBusMessageIter     element;
-    char*               mediaPlayerObjectPath = NULL;
-    char*               mediaPropertyValue = NULL;
+    const char*         path ="\0";
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
-        return NULL;
+       BTRCORELOG_ERROR ("DBus Connection Failure!!!");
+       return -1;
     }
 
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
-
-    if (mediaPlayerObjectPath == NULL) {
-        return NULL;
+    /* To move this into a common BT i/f api */
+    switch(interfacePath)
+    {
+      case enBTBluezAdapterPath        : path = BT_DBUS_BLUEZ_ADAPTER_PATH;         break; 
+      case enBTBluezDevicePath         : path = BT_DBUS_BLUEZ_DEVICE_PATH;          break;
+      case enBTBluezMediaPath          : path = BT_DBUS_BLUEZ_MEDIA_PATH;           break;
+      case enBTBluezMediaTransportPath : path = BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH; break;
+      case enBTBluezMediaControlPath   : path = BT_DBUS_BLUEZ_MEDIA_CTRL_PATH;      break;
+      case enBTBluezMediaPlayerPath    : path = BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH;    break;
+      case enBTBluezPath               : path = BT_DBUS_BLUEZ_PATH;                 break;
+      case enBTBluezMediaEndpointPath  : path = BT_DBUS_BLUEZ_MEDIA_ENDPOINT_PATH;  break;
+      case enBTBluezMediaItemPath      : path = BT_DBUS_BLUEZ_MEDIA_ITEM_PATH;      break;
+      case enBTBluezMediaFolderPath    : path = BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH;    break;
+      case enBTBluezAgentPath          : path = BT_DBUS_BLUEZ_AGENT_PATH;           break;
+      case enBTBluezAgentManagerPath   : path = BT_DBUS_BLUEZ_AGENT_MGR_PATH;       break;
     }
-
+  
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             mediaPlayerObjectPath,
+                                             apBtObjectPath,
                                              "org.freedesktop.DBus.Properties",
                                              "Get");
 
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
     dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, mediaProperty, DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &path, DBUS_TYPE_STRING, &mediaProperty, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
     if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
         BTRCORELOG_ERROR ("failed to send message");
-        return NULL;
+        return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
@@ -3786,19 +3886,29 @@ BtrCoreGetMediaProperty (
     lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
     dbus_pending_call_unref(lpDBusPendC);
 
-    DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter);  //lpDBusMsg is pointer to dbus message received
-    dbus_message_iter_recurse(&MsgIter,&element);   //pointer to first element of the dbus messge receive
+    DBusMessageIter MsgIter, element;
+    int dbus_type = DBUS_TYPE_INVALID;
 
-    if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&element)) {
-        dbus_message_iter_get_basic(&element, &mediaPropertyValue);
-        return mediaPropertyValue;
+    dbus_message_iter_init(lpDBusReply, &MsgIter);            // lpDBusMsg is pointer to dbus message received
+    dbus_message_iter_recurse(&MsgIter, &element);            // pointer to first element of the dbus messge received
+    dbus_type = dbus_message_iter_get_arg_type(&element);
+
+    if (DBUS_TYPE_STRING      == dbus_type ||
+        DBUS_TYPE_UINT32      == dbus_type ||
+        DBUS_TYPE_BOOLEAN     == dbus_type ||
+        DBUS_TYPE_OBJECT_PATH == dbus_type ||
+        DBUS_TYPE_UINT16      == dbus_type ||
+        DBUS_TYPE_UINT64      == dbus_type ||
+        DBUS_TYPE_INT16       == dbus_type ||
+        DBUS_TYPE_INT32       == dbus_type ||
+        DBUS_TYPE_INT64       == dbus_type ||
+        DBUS_TYPE_BYTE        == dbus_type ||
+        DBUS_TYPE_DOUBLE      == dbus_type ){
+          dbus_message_iter_get_basic(&element, mediaPropertyValue);
     }
 
-    return mediaPropertyValue;
+    return 0;
 }
-
-
 
 
 /* Set Media Property on Remote BT Device (Equalizer, Repeat, Shuffle, Scan, Status)*/
@@ -3861,42 +3971,47 @@ BtrCoreSetMediaProperty (
     return 0;
 }
 
-/* Get Track information and place them in an array (Title, Artists, Album, number of tracks, tracknumber, duration)*/
+/* Get Track information and place them in an array (Title, Artists, Album, number of tracks, tracknumber, duration, Genre)*/
+// TODO : write a api that gets any properties irrespective of the objects' interfaces
 int
-BtrCoreGetTrackInformation (
-    void*           apBtConn,
-    const char*     apBtAdapterPath
+BtrCore_BTGetTrackInformation (
+    void*               apBtConn,
+    const char*         apBtmediaPlayerObjectPath,
+    stBTMediaTrackInfo* apstBTMediaTrackInfo
 ) {
+    unsigned int        ui32Value   = 0;
+    char*               pcKey       = "\0";
+    char*               pcValue     = "\0";
+    char*               Track       = "Track";
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
     DBusPendingCall*    lpDBusPendC = NULL;
     DBusError           lDBusErr;
     DBusMessageIter     args;
-    DBusMessageIter     element;
-    char*               mediaPlayerObjectPath = NULL;
-    char*               trackPropertyValue = NULL;
-    char*               trackInfo[4];
-    unsigned int*       trackData[3];
-    unsigned int*       trackUint32;
-    int                 a = 0;
+    char*               mediaPlayerPath = BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
+        BTRCORELOG_ERROR ("DBus Connection Failure!!!"); 
         return -1;
     }
 
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
-
-    if (mediaPlayerObjectPath == NULL) {
+    if (NULL == apBtmediaPlayerObjectPath) {
+        BTRCORELOG_ERROR ("Media Player Object is NULL!!!");
         return -1;
     }
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             mediaPlayerObjectPath,
+                                             apBtmediaPlayerObjectPath,
                                              "org.freedesktop.DBus.Properties",
                                              "Get");
 
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
     dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, "Track", DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &mediaPlayerPath, DBUS_TYPE_STRING, &Track, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
     if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
@@ -3909,101 +4024,87 @@ BtrCoreGetTrackInformation (
 
     dbus_pending_call_block(lpDBusPendC);
     lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+
+    if (!lpDBusReply) {
+        BTRCORELOG_ERROR ("lpDBusReply Null\n");
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+        return -1;
+    }
     dbus_pending_call_unref(lpDBusPendC);
 
-    DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter);//lpDBusMsg is pointer to dbus message received
-    //dbus_message_iter_recurse(&MsgIter,&element); //pointer to first element of the dbus messge receive
-    while (dbus_message_iter_has_next(&MsgIter)) {
+    DBusMessageIter MsgIter, arrayMsgIter, dictMsgIter, element, elementBasic;
+    int dbus_type = DBUS_TYPE_INVALID;
 
-        if (DBUS_TYPE_DICT_ENTRY == dbus_message_iter_get_arg_type(&MsgIter)) {
-            dbus_message_iter_recurse(&MsgIter,&element); //pointer to first element of the dbus messge receive
+    dbus_message_iter_init(lpDBusReply, &MsgIter);                    // lpDBusMsg is pointer to dbus message received
+    dbus_message_iter_recurse(&MsgIter, &arrayMsgIter);               // pointer to first element ARRAY of the dbus messge received
+      dbus_message_iter_recurse(&arrayMsgIter, &dictMsgIter);         // pointer to first element DICTIONARY of the dbus messge received
+
+    while (DBUS_TYPE_INVALID != (dbus_type = dbus_message_iter_get_arg_type(&dictMsgIter))) {
+        if (DBUS_TYPE_DICT_ENTRY == dbus_type) {
+            dbus_message_iter_recurse(&dictMsgIter,&element);         // pointer to element STRING of the dbus messge received
 
             if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&element)) {
-                dbus_message_iter_get_basic(&element, &trackPropertyValue);
-                trackInfo[a]=strdup(trackPropertyValue);
+               dbus_message_iter_get_basic(&element, &pcKey);
+
+               if (0==strcmp("Album", pcKey)) {        
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, &pcValue); 
+                  strncpy(apstBTMediaTrackInfo->pcAlbum, pcValue, BT_MAX_STR_LEN);
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->pcAlbum : %s\n", apstBTMediaTrackInfo->pcAlbum);
+               } else
+               if (0==strcmp("Artist", pcKey)) {
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, &pcValue);
+                  strncpy(apstBTMediaTrackInfo->pcArtist, pcValue, BT_MAX_STR_LEN);
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->pcArtist : %s\n", apstBTMediaTrackInfo->pcArtist);
+               } else
+               if (0==strcmp("Genre", pcKey)) {
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, &pcValue);
+                  strncpy(apstBTMediaTrackInfo->pcGenre, pcValue, BT_MAX_STR_LEN);
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->pcGenre : %s\n", apstBTMediaTrackInfo->pcGenre);
+               } else
+               if (0==strcmp("Title", pcKey)) {
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, &pcValue);
+                  strncpy(apstBTMediaTrackInfo->pcTitle, pcValue, BT_MAX_STR_LEN);
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->pcTitle : %s\n", apstBTMediaTrackInfo->pcTitle);
+               } else
+               if (0==strcmp("NumberOfTracks", pcKey)) {
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
+                  apstBTMediaTrackInfo->ui32NumberOfTracks = ui32Value;
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->ui32NumberOfTracks : %d\n", apstBTMediaTrackInfo->ui32NumberOfTracks);
+               } else
+               if (0==strcmp("TrackNumber", pcKey)) {
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
+                  apstBTMediaTrackInfo->ui32TrackNumber = ui32Value;
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->ui32TrackNumber : %d\n", apstBTMediaTrackInfo->ui32TrackNumber);
+               } else
+               if (0==strcmp("Duration", pcKey)) {
+                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                  dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
+                  apstBTMediaTrackInfo->ui32Duration = ui32Value;
+                  BTRCORELOG_INFO ("apstBTMediaTrackInfo->ui32Duration : %d\n", apstBTMediaTrackInfo->ui32Duration);
+               }
             }
-
-            if (DBUS_TYPE_UINT32 == dbus_message_iter_get_arg_type(&element)) {
-                dbus_message_iter_get_basic(&element, &trackUint32);
-                trackData[a]=trackUint32;
-            }
-
-        }
-
-        if (!dbus_message_iter_has_next(&MsgIter)) {
-            break; //check to see if end of dict
-        }
-        else {
-            a++;
-            dbus_message_iter_next(&MsgIter);
-        }
-
-    }
-
-    (void)trackInfo;
-    (void)trackData;
+         }
+         if (!dbus_message_iter_has_next(&dictMsgIter)) {
+            break;
+         }
+         else {
+            dbus_message_iter_next(&dictMsgIter);
+         }
+      }
 
     return 0;
-
 }
 
-int
-BtrCoreCheckPlayerBrowsable (
-    void*           apBtConn, 
-    const char*     apBtAdapterPath
-) {
-    DBusMessage*        lpDBusMsg   = NULL;
-    DBusMessage*        lpDBusReply = NULL;
-    DBusPendingCall*    lpDBusPendC = NULL;
-    DBusError           lDBusErr;
-    DBusMessageIter     args;
-    DBusMessageIter     element;
-    char*               mediaPlayerObjectPath = NULL;
-    bool*               browsable = FALSE;
-
-    if (!gpDBusConn || (gpDBusConn != apBtConn)) {
-        return -1;
-    }
-
-    mediaPlayerObjectPath = BtrCore_GetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
-    if (mediaPlayerObjectPath == NULL) {
-        return -1;
-    }
-
-    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             mediaPlayerObjectPath,
-                                             "org.freedesktop.DBus.Properties",
-                                             "Get");
-
-    dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, DBUS_TYPE_STRING, "Browsable", DBUS_TYPE_INVALID);
-
-    dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
-        BTRCORELOG_ERROR ("failed to send message");
-        return -1;
-    }
-
-    dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(lpDBusMsg);
-
-    dbus_pending_call_block(lpDBusPendC);
-    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
-    dbus_pending_call_unref(lpDBusPendC);
-
-    DBusMessageIter MsgIter;
-    dbus_message_iter_init(lpDBusReply, &MsgIter);  //lpDBusMsg is pointer to dbus message received
-    dbus_message_iter_recurse(&MsgIter,&element);   //pointer to first element of the dbus messge receive
-
-    if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&element)) {
-        dbus_message_iter_get_basic(&element, &browsable);
-    }
-
-    if (browsable) {
-        return 0;
-    }
-    else {
-        return -1;
-    }
-}

@@ -33,6 +33,7 @@ extern "C" {
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
 #define BTRCORE_STRINGS_MAX_LEN     32
 #define BTRCORE_MAX_DEVICE_PROFILE  32
+#define BTRCORE_MAX_STR_LEN         256
 
 
 typedef enum _enBTRCoreDeviceType {
@@ -263,6 +264,17 @@ typedef struct _stBTRCoreDevMediaInfo {
     void*                pstBtrCoreDevMCodecInfo;
 } stBTRCoreDevMediaInfo;
 
+typedef struct _stBTRCoreMediaTrackInfo {
+    char            pcAlbum[BTRCORE_MAX_STR_LEN];
+    char            pcGenre[BTRCORE_MAX_STR_LEN];
+    char            pcTitle[BTRCORE_MAX_STR_LEN];
+    char            pcArtist[BTRCORE_MAX_STR_LEN];
+    unsigned int    ui32TrackNumber;
+    unsigned int    ui32Duration;
+    unsigned int    ui32NumberOfTracks;
+} stBTRCoreMediaTrackInfo;
+
+
 
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevice astBTRCoreScannedDevice);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStatusCBInfo* apstDevStatusCbInfo, void* apvUserData);
@@ -399,7 +411,14 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
 /*BTRCore_ReleaseDeviceDataPath*/
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
-enBTRCoreRet BTRCore_MediaPlayControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl  aenBTRCoreDMCtrl);
+/* BTRCore_MediaControl */
+enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl lenBTRCoreMediaCtrl);
+
+/* BTRCore_GetTrackInformation */
+enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaTrackInfo *astBTMediaTrackInfo);
+
+/* BTRCore_GetMediaProperty */
+enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue); 
 
 /* Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB, void* apUserData);

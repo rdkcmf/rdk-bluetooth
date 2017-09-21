@@ -31,6 +31,21 @@
 
 
 /* Enum Types */
+typedef enum _enBTInterfaceType {
+    enBTBluezPath,
+    enBTBluezAdapterPath,
+    enBTBluezDevicePath,
+    enBTBluezMediaPath,
+    enBTBluezMediaEndpointPath,
+    enBTBluezMediaTransportPath,
+    enBTBluezMediaControlPath,
+    enBTBluezMediaPlayerPath,
+    enBTBluezMediaItemPath,
+    enBTBluezMediaFolderPath,
+    enBTBluezAgentPath,
+    enBTBluezAgentManagerPath
+} enBTInterfaceType;
+
 typedef enum _enBTDeviceType {
     enBTDevAudioSink,
     enBTDevAudioSource,
@@ -129,11 +144,22 @@ typedef struct _stBTDeviceSupportedServiceList {
     stBTDeviceSupportedService  profile[BT_MAX_DEVICE_PROFILE];
 } stBTDeviceSupportedServiceList;
 
+typedef struct _stBTMediaTrackInfo {
+    char            pcAlbum[BT_MAX_STR_LEN];
+    char            pcGenre[BT_MAX_STR_LEN];
+    char            pcTitle[BT_MAX_STR_LEN];
+    char            pcArtist[BT_MAX_STR_LEN];
+    unsigned int    ui32TrackNumber;
+    unsigned int    ui32Duration;
+    unsigned int    ui32NumberOfTracks;
+} stBTMediaTrackInfo;
+
 
 /* Callbacks Types */
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps, void* apUserData);
 typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
+typedef const char* (*fPtr_BtrCore_BTMediaPlayerPath_cB)(const char* afpcBTMediaPlayerPath, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnIntim_cB)(stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuth_cB)(stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 
@@ -177,14 +203,15 @@ int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapte
                                             fPtr_BtrCore_BTNegotiateMedia_cB afpcBNegotiateMedia, void* apUserData);
 int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
+int   BtrCore_BTRegisterMediaPlayerPathcB (void* apBtConn, const char* apBtAdapter,
+                                                fPtr_BtrCore_BTMediaPlayerPath_cB afpcBTMediaPlayerPath, void* apUserData); 
 
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
-int   BtrCore_BTDevMediaPlayControl (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType, enBTMediaControl aenBTMediaOper);
-char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtAdapterPath);
-char* BtrCoreGetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty);
+int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, enBTMediaControl aenBTMediaOper);
+char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtDevPath);
+int   BtrCoreGetMediaProperty (void* apBtConn, const char* apBtObjectPath, enBTInterfaceType interfacePath, const char* mediaProperty, void* mediaPropertyValue);
 int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
-int   BtrCoreGetTrackInformation (void* apBtConn, const char* apBtAdapterPath);
-int   BtrCoreCheckPlayerBrowsable (void* apBtConn, const char* apBtAdapterPath);
+int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* apstBTMediaTracktInfo);
 
 
 #endif // __BTR_CORE_DBUS_BT_H__

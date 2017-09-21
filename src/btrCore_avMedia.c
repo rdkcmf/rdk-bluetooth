@@ -38,8 +38,8 @@
 
 
 /* Local Headers */
-#include "btrCore_avMedia.h"
 #include "btrCore_bt_ifce.h"
+#include "btrCore_avMedia.h"
 
 #include "btrCore_priv.h"
 
@@ -103,6 +103,10 @@ typedef struct _stBTRCoreAVMediaHdl {
     a2dp_sbc_t*     pstBTMediaConfig;
     int             iBTMediaDefSampFreqPref;
     char*           pcAVMediaTransportPath;
+    char*           pcAVMediaPlayerPath;
+    //FileSystem Path
+    //NowPlaying Path
+    //MediaItem  List []
 } stBTRCoreAVMediaHdl;
 
 
@@ -113,6 +117,7 @@ static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, u
 /* Callbacks */
 static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps, void* apUserData);
 static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
+static const char* btrCore_AVMedia_MediaPlayerPath_cb (const char* apBtMediaPlayerPath, void* apUserData);
 
 
 /* Static Function Definition */
@@ -222,6 +227,7 @@ BTRCore_AVMedia_Init (
     int                     lBtAVMediaASrcRegRet    = -1;
     int                     lBtAVMediaNegotiateRet  = -1;
     int                     lBtAVMediaTransportPRet = -1;
+    int                     lBTAVMediaPlayerPRet    = -1;
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
     if (!phBTRCoreAVM || !apBtConn || !apBtAdapter) {
@@ -259,6 +265,7 @@ BTRCore_AVMedia_Init (
     memcpy(pstlhBTRCoreAVM->pstBTMediaConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
     pstlhBTRCoreAVM->iBTMediaDefSampFreqPref = BTR_SBC_SAMPLING_FREQ_48000;
     pstlhBTRCoreAVM->pcAVMediaTransportPath  = NULL;
+    pstlhBTRCoreAVM->pcAVMediaPlayerPath     = NULL;
 
     lBtAVMediaASinkRegRet = BtrCore_BTRegisterMedia(apBtConn,
                                                     apBtAdapter,
@@ -290,8 +297,14 @@ BTRCore_AVMedia_Init (
                                                                          apBtAdapter,
                                                                          &btrCore_AVMedia_TransportPath_cb,
                                                                          pstlhBTRCoreAVM);
-
+   
     if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet)
+        lBTAVMediaPlayerPRet = BtrCore_BTRegisterMediaPlayerPathcB(apBtConn,
+                                                                   apBtAdapter,
+                                                                   &btrCore_AVMedia_MediaPlayerPath_cb,
+                                                                   pstlhBTRCoreAVM);
+                                       
+    if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet && !lBTAVMediaPlayerPRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
     if (lenBTRCoreRet != enBTRCoreSuccess) {
@@ -338,6 +351,11 @@ BTRCore_AVMedia_DeInit (
     if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
         free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
         pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;
+    }
+
+    if (pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+        free(pstlhBTRCoreAVM->pcAVMediaPlayerPath);
+        pstlhBTRCoreAVM->pcAVMediaPlayerPath = NULL;
     }
 
     if (!lBtAVMediaASrcUnRegRet && !lBtAVMediaASinkUnRegRet)
@@ -774,3 +792,145 @@ btrCore_AVMedia_TransportPath_cb (
     else
         return NULL;
 }
+
+
+static const char*
+btrCore_AVMedia_MediaPlayerPath_cb (
+    const char* apBtMediaPlayerPath,
+    void*       apUserData
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+
+    if (!apBtMediaPlayerPath) {
+        BTRCORELOG_ERROR ("Invalid media path\n");
+        return NULL;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
+
+    if (pstlhBTRCoreAVM) {
+        if (pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+            if(!strncmp(pstlhBTRCoreAVM->pcAVMediaPlayerPath, apBtMediaPlayerPath, strlen(pstlhBTRCoreAVM->pcAVMediaPlayerPath))) {
+                BTRCORELOG_INFO ("Freeing 0x%p:%s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath);
+         
+                free(pstlhBTRCoreAVM->pcAVMediaPlayerPath);
+                pstlhBTRCoreAVM->pcAVMediaPlayerPath = NULL;
+            }
+            else {
+                BTRCORELOG_INFO ("Switching Media Player from  %s  to  %s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, apBtMediaPlayerPath);
+                free(pstlhBTRCoreAVM->pcAVMediaPlayerPath);
+                pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(apBtMediaPlayerPath);
+             }   
+        }
+        else {
+            BTRCORELOG_INFO ("Storing Media Player : %s\n", apBtMediaPlayerPath);
+            pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(apBtMediaPlayerPath);
+        }
+    }
+
+    if (pstlhBTRCoreAVM)
+        return pstlhBTRCoreAVM->pcAVMediaPlayerPath;
+    else
+        return NULL;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_MediaControl (
+       tBTRCoreAVMediaHdl  hBTRCoreAVM,
+       void*               apBtConn,
+       const char*         apBtDevAddr,
+       enBTMediaControl    aenBTMediaControl
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM || !apBtConn)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+          BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+          return enBTRCoreFailure;
+       }
+    }
+
+    if (BtrCore_BTDevMediaControl (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aenBTMediaControl)) {
+       BTRCORELOG_ERROR ("Failed to set the Media control option : %d", aenBTMediaControl);
+       lenBTRCoreRet = enBTRCoreFailure;
+    }
+      
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_GetTrackInfo (
+       tBTRCoreAVMediaHdl  hBTRCoreAVM,
+       void*               apBtConn,
+       const char*         apBtDevAddr,
+       stBTMediaTrackInfo  *astBTMediaTrackInfo
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM || !apBtConn)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+          BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+          return enBTRCoreFailure;
+       }
+    }
+
+    if (BtrCore_BTGetTrackInformation (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, astBTMediaTrackInfo)) {
+       BTRCORELOG_ERROR ("Failed to get Track information!!!");
+       lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_GetMediaProperty (
+                   tBTRCoreAVMediaHdl  hBTRCoreAVM,
+                   void*               apBtConn,
+                   const char*         apBtDevAddr,
+                   const char*         mediaPropertyKey,
+                   void*               mediaPropertyValue
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM || !apBtConn)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+          BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+          return enBTRCoreFailure;
+       }
+    }
+
+    if (BtrCoreGetMediaProperty (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, enBTBluezMediaPlayerPath, mediaPropertyKey, mediaPropertyValue)) {
+       BTRCORELOG_ERROR ("Failed to get Media Property : %s!!!",mediaPropertyKey);
+       lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    return lenBTRCoreRet;
+}
+

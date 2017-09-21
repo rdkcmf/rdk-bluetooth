@@ -2888,13 +2888,11 @@ BtrCore_BTRegisterTransportPathMediacB (
     return 0;
 }
 
-
 /* Control Media on Remote BT Device*/
 int
-BtrCore_BTDevMediaPlayControl (
+BtrCore_BTDevMediaControl (
     void*            apBtConn,
     const char*      apDevPath,
-    enBTDeviceType   aenBTDevType,
     enBTMediaControl aenBTMediaOper
 ) {
     DBusMessage*    lpDBusMsg   = NULL;
@@ -2955,4 +2953,29 @@ BtrCore_BTDevMediaPlayControl (
     dbus_connection_flush(gpDBusConn);
 
     return 0;
+}
+
+
+char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtDevPath)
+{
+  /* Dummy Function */
+  return NULL;
+}
+
+int   BtrCoreGetMediaProperty (void* apBtConn, const char* apBtObjectPath, enBTInterfaceType interfacePath, const char* mediaProperty, void* mediaPropertyValue)
+{
+  /* Dummy Function */
+  return 0;
+}
+
+int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue)
+{
+  /* Dummy Function */
+  return 0;
+}
+
+int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* apstBTMediaTracktInfo)
+{
+  /* Dummy Function */
+  return 0;
 }

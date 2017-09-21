@@ -28,10 +28,10 @@
 
 #include <glib.h>
 
-#include "btrCore.h"
-#include "btrCore_avMedia.h"
 #include "btrCore_bt_ifce.h"
+#include "btrCore_avMedia.h"
 #include "btrCore_service.h"
+#include "btrCore.h"
 
 #include "btrCore_priv.h"
 
@@ -2195,7 +2195,6 @@ BTRCore_DisconnectDevice (
             lenBTDeviceType = enBTDevUnknown;
             break;
     }
-
     if (BtrCore_BTDisconnectDevice(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType) != 0) {
         BTRCORELOG_ERROR ("DisConnect from device failed\n");
         return enBTRCoreFailure;
@@ -2725,7 +2724,7 @@ BTRCore_ReleaseDeviceDataPath (
 
 
 enBTRCoreRet
-BTRCore_MediaPlayControl (
+BTRCore_MediaControl (
     tBTRCoreHandle      hBTRCore, 
     tBTRCoreDevId       aBTRCoreDevId, 
     enBTRCoreDeviceType aenBTRCoreDevType,
@@ -2772,7 +2771,87 @@ BTRCore_MediaPlayControl (
         BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
+    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
+    // before making the connect call
 
+    switch (aenBTRCoreDevType) {
+        case enBTRCoreSpeakers:
+        case enBTRCoreHeadSet:
+            lenBTDeviceType = enBTDevAudioSink;
+            break;
+        case enBTRCoreMobileAudioIn:
+        case enBTRCorePCAudioIn:
+            lenBTDeviceType = enBTDevAudioSource;
+            break;
+        case enBTRCoreUnknown:
+        default:
+            lenBTDeviceType = enBTDevUnknown;
+            break;
+    }
+
+    //TODO: Make a Device specific call baced on lenBTDeviceType
+    (void)lenBTDeviceType;
+
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected;
+    }
+    else {
+        for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++) {
+            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[loop].deviceId)
+                lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[loop].device_connected;
+        }
+    }
+
+    if (lbBTDeviceConnected == FALSE) {
+       BTRCORELOG_ERROR ("Device is not Connected!!!\n");
+       return enBTRCoreFailure;
+    }
+
+    if (enBTRCoreSuccess != BTRCore_AVMedia_MediaControl(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, aenBTRCoreDMCtrl)) {
+        BTRCORELOG_ERROR ("Media Play Control Failed!!!\n");
+        return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+enBTRCoreRet
+BTRCore_GetMediaTrackInfo (
+    tBTRCoreHandle            hBTRCore,
+    tBTRCoreDevId             aBTRCoreDevId,
+    enBTRCoreDeviceType       aenBTRCoreDevType,
+    stBTRCoreMediaTrackInfo*  astBTRCoreMediaTrackInfo
+) {
+    stBTRCoreHdl*   pstlhBTRCore    = NULL;
+    const char*     pDeviceAddress  = NULL;
+    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
+    BOOLEAN         lbBTDeviceConnected = FALSE;
+    int             loop = 0;
+
+
+    if (!hBTRCore) {
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
+        return enBTRCoreNotInitialized;
+    }
+
+    if (aBTRCoreDevId < 0) {
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
+        /* Keep the list upto date */
+        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
+    }
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
+        return enBTRCoreFailure;
+    }
     // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
     // before making the connect call
     switch (aenBTRCoreDevType) {
@@ -2789,22 +2868,133 @@ BTRCore_MediaPlayControl (
             lenBTDeviceType = enBTDevUnknown;
             break;
     }
+    //TODO: Make a Device specific call baced on lenBTDeviceType
+    (void)lenBTDeviceType;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        pstKnownDevice      = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
+        pDeviceAddress      = pstKnownDevice->bd_path;
         lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected;
     }
     else {
+        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
+
         for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++) {
             if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[loop].deviceId)
                 lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[loop].device_connected;
         }
     }
 
-    if (lbBTDeviceConnected == FALSE)
-        return enBTRCoreFailure;
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
+        return enBTRCoreDeviceNotFound;
+    }
 
-    if (BtrCore_BTDevMediaPlayControl(pstlhBTRCore->connHdl, pDeviceAddress, lenBTDeviceType, aenBTRCoreDMCtrl) != 0) {
-        BTRCORELOG_ERROR ("Connect to device failed\n");
+    if (FALSE == lbBTDeviceConnected) {
+       BTRCORELOG_ERROR ("Device is not Connected!!!\n");
+       return enBTRCoreFailure;
+    }
+
+    if (enBTRCoreSuccess != BTRCore_AVMedia_GetTrackInfo(pstlhBTRCore->avMediaHdl,
+                                                         pstlhBTRCore->connHdl,
+                                                         pDeviceAddress,
+                                                         (stBTMediaTrackInfo*)astBTRCoreMediaTrackInfo))  {
+        BTRCORELOG_ERROR ("AVMedia get track information Failed!!!\n");
+        return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
+BTRCore_GetMediaProperty (
+    tBTRCoreHandle            hBTRCore,
+    tBTRCoreDevId             aBTRCoreDevId,
+    enBTRCoreDeviceType       aenBTRCoreDevType,
+    const char*               mediaPropertyKey,
+    void*                     mediaPropertyValue
+) {
+    stBTRCoreHdl*   pstlhBTRCore    = NULL;
+    const char*     pDeviceAddress  = NULL;
+    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
+    BOOLEAN         lbBTDeviceConnected = FALSE;
+    int             loop = 0;
+
+
+    if (!hBTRCore) {
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
+        return enBTRCoreNotInitialized;
+    }
+
+    if (aBTRCoreDevId < 0) {
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
+        /* Keep the list upto date */
+        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
+    }
+
+    if (!pstlhBTRCore->numOfPairedDevices) {
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
+        return enBTRCoreFailure;
+    }
+    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
+    // before making the connect call
+    switch (aenBTRCoreDevType) {
+        case enBTRCoreSpeakers:
+        case enBTRCoreHeadSet:
+            lenBTDeviceType = enBTDevAudioSink;
+            break;
+        case enBTRCoreMobileAudioIn:
+        case enBTRCorePCAudioIn:
+            lenBTDeviceType = enBTDevAudioSource;
+            break;
+        case enBTRCoreUnknown:
+        default:
+            lenBTDeviceType = enBTDevUnknown;
+            break;
+    }
+    //TODO: Make a Device specific call baced on lenBTDeviceType
+    (void)lenBTDeviceType;
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        pstKnownDevice      = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
+        pDeviceAddress      = pstKnownDevice->bd_path;
+        lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].device_connected;
+    }
+    else {
+        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
+
+        for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++) {
+            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[loop].deviceId)
+                lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[loop].device_connected;
+        }
+    }
+
+    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
+        return enBTRCoreDeviceNotFound;
+    }
+
+    if (FALSE == lbBTDeviceConnected) {
+       BTRCORELOG_ERROR ("Device is not Connected!!!\n");
+       return enBTRCoreFailure;
+    }
+
+    if (enBTRCoreSuccess != BTRCore_AVMedia_GetMediaProperty(pstlhBTRCore->avMediaHdl,
+                                                             pstlhBTRCore->connHdl,
+                                                             pDeviceAddress,
+                                                             mediaPropertyKey,
+                                                             mediaPropertyValue))  {
+        BTRCORELOG_ERROR ("AVMedia get property Failed!!!\n");
         return enBTRCoreFailure;
     }
 
