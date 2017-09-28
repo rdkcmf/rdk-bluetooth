@@ -259,9 +259,9 @@ btrCore_BTDBusConnectionFilter_cb (
                                 }
                                 else {
                                    lenBtDevState = enBTDevStLost;
-                                   gpDevLost = 0;
                                 }
                             }
+                            gpDevLost = 0;
 
                             if(gfpcBDevStatusUpdate(enBTDevUnknown, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
                             }

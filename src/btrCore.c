@@ -3254,6 +3254,11 @@ btrCore_BTDeviceStatusUpdate_cb (
                    for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
                       if (lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].deviceId == lBTRCoreDevId) {
                           BTRCORELOG_INFO ("Device %llu power state Off or OOR", lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].deviceId);
+                          BTRCORELOG_TRACE ("i32LoopIdx = %d\n", i32LoopIdx);
+                          BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = %d\n"
+                                           , lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState);
+                          BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = %d\n"
+                                           , lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState);
 
                           lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = 
                                                               lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
@@ -3340,11 +3345,17 @@ btrCore_BTDeviceStatusUpdate_cb (
                         BTRCORELOG_TRACE ("i32KnownDevIdx = %d\n", i32KnownDevIdx);
                         BTRCORELOG_TRACE ("leBTDevState = %d\n", leBTDevState);
                         BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = %d\n", lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState);
+                        BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = %d\n", lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState);
 
                         if ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState != leBTDevState) &&
                             (lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState != enBTRCoreDevStInitialized)) {
-                            if (!(((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected) && (leBTDevState == enBTRCoreDevStDisconnected)) ||
-                                  ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected) && (enBTRCoreDevStPaired != lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState)))) {
+                            if (! ( ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected)
+                                     && (leBTDevState == enBTRCoreDevStDisconnected))
+                                  || ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected)
+                                     && (leBTDevState == enBTRCoreDevStConnected)
+                                     && (enBTRCoreDevStPaired       != lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState
+                                        || enBTRCoreDevStConnecting != lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState))
+                               )  ) {
                                 bTriggerDevStatusChangeCb = TRUE;
                             }
 
@@ -3365,8 +3376,28 @@ btrCore_BTDeviceStatusUpdate_cb (
                                lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
                                                                lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
                             }
+                             
+                            if (enBTRCoreDevStDisconnected == leBTDevState
+                                && enBTRCoreDevStPlaying   == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState) {
+                               leBTDevState = enBTRCoreDevStLost;
+                            }
 
-                            lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
+                            if (!(enBTRCoreDevStDisconnected == leBTDevState
+                                  && enBTRCoreDevStLost      == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState
+                                  && enBTRCoreDevStPlaying   == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState)) {
+                                  if (!(enBTRCoreDevStConnected   == leBTDevState
+                                        && enBTRCoreDevStLost     == lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState
+                                        && enBTRCoreDevStPlaying  != lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState)) { 
+                                      lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
+                                  } else {
+                                      lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = enBTRCoreDevStConnecting;
+                                  } 
+                            }
+                            else {
+                                  leBTDevState = enBTRCoreDevStConnected;
+                                  lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = enBTRCoreDevStConnecting;
+                            }
+
                             lpstlhBTRCore->stDevStatusCbInfo.isPaired = 1;
                         }
                     }
@@ -3384,7 +3415,6 @@ btrCore_BTDeviceStatusUpdate_cb (
                             bTriggerDevStatusChangeCb = TRUE;
                         }
                     }
-
 
                     if (bTriggerDevStatusChangeCb == TRUE) {
                        lpstlhBTRCore->stDevStatusCbInfo.deviceId         = lBTRCoreDevId;
