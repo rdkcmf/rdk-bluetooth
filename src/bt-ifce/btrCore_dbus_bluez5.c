@@ -2120,14 +2120,14 @@ BtrCore_BTGetIfceNameVersion (
 
 int
 BtrCore_BTGetProp (
-    void*           apBtConn,
-    const char*     apcPath,
-    enBTOpType      aenBTOpType,
-    const char*     pKey,
-    void*           pValue
+    void*               apBtConn,
+    const char*         apcBtOpIfcePath,
+    enBTOpIfceType      aenBtOpIfceType,
+    unBTOpIfceProp      aunBtOpIfceProp,
+    void*               apvVal
 ) {
     int                 rc = 0;
-    int                 type;
+
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
     DBusPendingCall*    lpDBusPendC = NULL;
@@ -2137,72 +2137,108 @@ BtrCore_BTGetProp (
     DBusMessageIter     variant_i;
     DBusError           lDBusErr;
 
-    const char*     pParsedKey = NULL;
-    const char*     pParsedValueString = NULL;
-    int             parsedValueNumber = 0;
-    unsigned int    parsedValueUnsignedNumber = 0;
-    unsigned short  parsedValueUnsignedShort = 0;
+    const char*         pParsedKey = NULL;
+    const char*         pParsedValueString = NULL;
+    int                 parsedValueNumber = 0;
+    unsigned int        parsedValueUnsignedNumber = 0;
+    unsigned short      parsedValueUnsignedShort = 0;
 
-    const char*     pInterface          = NULL;
-    const char*     pAdapterInterface   = BT_DBUS_BLUEZ_ADAPTER_PATH;
-    const char*     pDeviceInterface    = BT_DBUS_BLUEZ_DEVICE_PATH;
-    const char*     pMediaTransInterface= BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH;
+    const char*         lDBusKey = NULL;
+    int                 lDBusType = DBUS_TYPE_INVALID;
+
+    const char*         pInterface          = NULL;
+    const char*         pAdapterInterface   = BT_DBUS_BLUEZ_ADAPTER_PATH;
+    const char*         pDeviceInterface    = BT_DBUS_BLUEZ_DEVICE_PATH;
+    const char*         pMediaTransInterface= BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if ((!apcPath) || (!pKey) || (!pValue)) {
+    if ((!apcBtOpIfcePath) || (!apvVal)) {
         BTRCORELOG_ERROR ("enBTRCoreInvalidArg - enBTRCoreInitFailure\n");
         return -1;
     }
 
-    switch (aenBTOpType) {
+
+    switch (aenBtOpIfceType) {
     case enBTAdapter:
         pInterface = pAdapterInterface;
+        switch (aunBtOpIfceProp.enBtAdapterProp) {
+        case enBTAdPropName:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Alias";
+            break;
+        case enBTAdPropAddress:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Address";
+            break;
+        case enBTAdPropPowered:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Powered";
+            break;
+        case enBTAdPropDiscoverable:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Discoverable";
+            break;
+        case enBTAdPropDiscoverableTimeOut:
+            lDBusType = DBUS_TYPE_UINT32;
+            lDBusKey  = "DiscoverableTimeout";
+            break;
+        case enBTAdPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Adapter Property\n");
+            return -1;
+        }
         break;
     case enBTDevice:
         pInterface = pDeviceInterface;
+        switch (aunBtOpIfceProp.enBtDeviceProp) {
+        case enBTDevPropPaired:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Paired";
+            break;
+        case enBTDevPropConnected:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Connected";
+            break;
+        case enBTDevPropVendor:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Vendor";
+            break;
+        case enBTDevPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Device Property\n");
+            return -1;
+        }
         break;
     case enBTMediaTransport:
         pInterface = pMediaTransInterface;
+        switch (aunBtOpIfceProp.enBtMediaTransportProp) {
+        case enBTMedTPropDelay:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Delay";
+            break;
+        case enBTMedTPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid MediaTransport Property\n");
+            return -1;
+        }
         break;
     case enBTUnknown:
     default:
-        pInterface = pAdapterInterface;
-        break;
-    }
-
-    if (!strcmp(pKey, "Name")) {
-        type = DBUS_TYPE_STRING;
-    }
-    else if (!strcmp(pKey, "Address")) {
-        type = DBUS_TYPE_STRING;
-    }
-    else if (!strcmp(pKey, "Powered")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Paired")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Connected")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Discoverable")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Vendor")) {
-        type = DBUS_TYPE_UINT16;
-    }
-    else if (!strcmp(pKey, "Delay")) {
-        type = DBUS_TYPE_UINT16;
-    }
-    else {
-        type = DBUS_TYPE_INVALID;
+        BTRCORELOG_ERROR ("Invalid Operational Interface\n");
         return -1;
     }
 
+
+    if (!lDBusKey || (lDBusType == DBUS_TYPE_INVALID)) {
+        BTRCORELOG_ERROR ("Invalid Interface Property\n");
+        return -1;
+    }
+    
+
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apcPath,
+                                             apcBtOpIfcePath,
                                              "org.freedesktop.DBus.Properties",
                                              "GetAll");
 
@@ -2246,28 +2282,28 @@ BtrCore_BTGetProp (
                     dbus_message_iter_recurse(&element_i, &dict_i);
                     dbus_message_iter_get_basic(&dict_i, &pParsedKey);
 
-                    if ((pParsedKey) && (strcmp (pParsedKey, pKey) == 0)) {
+                    if ((pParsedKey) && (strcmp (pParsedKey, lDBusKey) == 0)) {
                         dbus_message_iter_next(&dict_i);
                         dbus_message_iter_recurse(&dict_i, &variant_i);
-                        if (type == DBUS_TYPE_STRING) {
+                        if (lDBusType == DBUS_TYPE_STRING) {
                             dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
                             //BTRCORELOG_ERROR ("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
-                            strncpy (pValue, pParsedValueString, BD_NAME_LEN);
+                            strncpy (apvVal, pParsedValueString, BD_NAME_LEN);
                         }
-                        else if (type == DBUS_TYPE_UINT16) {
-                            unsigned short* ptr = (unsigned short*) pValue;
+                        else if (lDBusType == DBUS_TYPE_UINT16) {
+                            unsigned short* ptr = (unsigned short*) apvVal;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedShort);
                             //BTRCORELOG_ERROR ("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
                             *ptr = parsedValueUnsignedShort;
                         }
-                        else if (type == DBUS_TYPE_UINT32) {
-                            unsigned int* ptr = (unsigned int*) pValue;
+                        else if (lDBusType == DBUS_TYPE_UINT32) {
+                            unsigned int* ptr = (unsigned int*) apvVal;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedNumber);
                             //BTRCORELOG_ERROR ("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
                             *ptr = parsedValueUnsignedNumber;
                         }
                         else { /* As of now ints and bools are used. This function has to be extended for array if needed */
-                            int* ptr = (int*) pValue;
+                            int* ptr = (int*) apvVal;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueNumber);
                             //BTRCORELOG_ERROR ("Key is %s and the value is %d\n", pParsedKey, parsedValueNumber);
                             *ptr = parsedValueNumber;
@@ -2292,49 +2328,110 @@ BtrCore_BTGetProp (
 
 
 int
-BtrCore_BTSetAdapterProp (
-    void*           apBtConn,
-    const char*     apBtAdapter,
-    enBTAdapterProp aenBTAdapterProp,
-    void*           apvVal
+BtrCore_BTSetProp (
+    void*               apBtConn,
+    const char*         apcBtOpIfcePath,
+    enBTOpIfceType      aenBtOpIfceType,
+    unBTOpIfceProp      aunBtOpIfceProp,
+    void*               apvVal
 ) {
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusMessageIter     lDBusMsgIter;
+    DBusMessageIter     lDBusMsgIterValue;
+    DBusError           lDBusErr;
 
-    DBusMessage*    lpDBusMsg   = NULL;
-    DBusMessage*    lpDBusReply = NULL;
-    DBusMessageIter lDBusMsgIter;
-    DBusMessageIter lDBusMsgIterValue;
-    DBusError       lDBusErr;
-    int             lDBusType;
-    const char*     lDBusTypeAsString;
-    const char*     lDBusKey;
+    const char*         lDBusTypeAsString;
 
-    const char* defaultAdapterInterface = BT_DBUS_BLUEZ_ADAPTER_PATH;
+    const char*         lDBusKey = NULL;
+    int                 lDBusType = DBUS_TYPE_INVALID;
+
+    const char*         pInterface          = NULL;
+    const char*         pAdapterInterface   = BT_DBUS_BLUEZ_ADAPTER_PATH;
+    const char*         pDeviceInterface    = BT_DBUS_BLUEZ_DEVICE_PATH;
+    const char*         pMediaTransInterface= BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH;
+
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apvVal)
         return -1;
 
-    switch (aenBTAdapterProp) {
-    case enBTAdPropName:
-        lDBusType = DBUS_TYPE_STRING;
-        lDBusKey  = "Alias";
+
+    switch (aenBtOpIfceType) {
+    case enBTAdapter:
+        pInterface = pAdapterInterface;
+        switch (aunBtOpIfceProp.enBtAdapterProp) {
+        case enBTAdPropName:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Alias";
+            break;
+        case enBTAdPropAddress:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Address";
+            break;
+        case enBTAdPropPowered:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Powered";
+            break;
+        case enBTAdPropDiscoverable:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Discoverable";
+            break;
+        case enBTAdPropDiscoverableTimeOut:
+            lDBusType = DBUS_TYPE_UINT32;
+            lDBusKey  = "DiscoverableTimeout";
+            break;
+        case enBTAdPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Adapter Property\n");
+            return -1;
+        }
         break;
-    case enBTAdPropPowered:
-        lDBusType = DBUS_TYPE_BOOLEAN;
-        lDBusKey  = "Powered";
+    case enBTDevice:
+        pInterface = pDeviceInterface;
+        switch (aunBtOpIfceProp.enBtDeviceProp) {
+        case enBTDevPropPaired:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Paired";
+            break;
+        case enBTDevPropConnected:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Connected";
+            break;
+        case enBTDevPropVendor:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Vendor";
+            break;
+        case enBTDevPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Device Property\n");
+            return -1;
+        }
         break;
-    case enBTAdPropDiscoverable:
-        lDBusType = DBUS_TYPE_BOOLEAN;
-        lDBusKey  = "Discoverable";
+    case enBTMediaTransport:
+        pInterface = pMediaTransInterface;
+        switch (aunBtOpIfceProp.enBtMediaTransportProp) {
+        case enBTMedTPropDelay:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Delay";
+            break;
+        case enBTMedTPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid MediaTransport Property\n");
+            return -1;
+        }
         break;
-    case enBTAdPropDiscoverableTimeOut:
-        lDBusType = DBUS_TYPE_UINT32;
-        lDBusKey  = "DiscoverableTimeout";
-        break;
-    case enBTAdPropUnknown:
+    case enBTUnknown:
     default:
-        BTRCORELOG_ERROR ("Invalid Adaptre Property\n");
+        BTRCORELOG_ERROR ("Invalid Operational Interface\n");
         return -1;
     }
+
+
+    if (!lDBusKey || (lDBusType == DBUS_TYPE_INVALID)) {
+       BTRCORELOG_ERROR ("Invalid Interface Property\n");
+       return -1;
+    }
+
 
     switch (lDBusType) {
     case DBUS_TYPE_BOOLEAN:
@@ -2342,6 +2439,9 @@ BtrCore_BTSetAdapterProp (
         break;
     case DBUS_TYPE_UINT32:
         lDBusTypeAsString = DBUS_TYPE_UINT32_AS_STRING;
+        break;
+    case DBUS_TYPE_UINT16:
+        lDBusTypeAsString = DBUS_TYPE_UINT16_AS_STRING;
         break;
     case DBUS_TYPE_STRING:
         lDBusTypeAsString = DBUS_TYPE_STRING_AS_STRING;
@@ -2352,7 +2452,7 @@ BtrCore_BTSetAdapterProp (
     }
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apBtAdapter,
+                                             apcBtOpIfcePath,
                                              "org.freedesktop.DBus.Properties",
                                              "Set");
     if (!lpDBusMsg) {
@@ -2361,12 +2461,12 @@ BtrCore_BTSetAdapterProp (
     }
   
     dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &defaultAdapterInterface);
+    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &pInterface);
     dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &lDBusKey);
     dbus_message_iter_open_container(&lDBusMsgIter, DBUS_TYPE_VARIANT, lDBusTypeAsString, &lDBusMsgIterValue);
     dbus_message_iter_append_basic(&lDBusMsgIterValue, lDBusType, apvVal);
     dbus_message_iter_close_container(&lDBusMsgIter, &lDBusMsgIterValue);
-    //dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &defaultAdapterInterface, DBUS_TYPE_STRING, &lDBusKey, lDBusType, apvVal, DBUS_TYPE_INVALID);
+    //dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pInterface, DBUS_TYPE_STRING, &lDBusKey, lDBusType, apvVal, DBUS_TYPE_INVALID);
 
 
     dbus_error_init(&lDBusErr);

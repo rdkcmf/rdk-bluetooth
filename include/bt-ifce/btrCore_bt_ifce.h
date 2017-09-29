@@ -59,7 +59,7 @@ typedef enum _enBTOpType {
     enBTDevice,
     enBTMediaTransport,
     enBTUnknown
-} enBTOpType;
+} enBTOpIfceType;
 
 typedef enum _enBTDeviceState {
     enBTDevStCreated,
@@ -86,11 +86,24 @@ typedef enum _enBTAdapterOp {
 
 typedef enum _enBTAdapterProp {
     enBTAdPropName,
+    enBTAdPropAddress,
     enBTAdPropPowered,
     enBTAdPropDiscoverable,
     enBTAdPropDiscoverableTimeOut,
     enBTAdPropUnknown
 } enBTAdapterProp;
+
+typedef enum _enBTDeviceProp {
+    enBTDevPropPaired,
+    enBTDevPropConnected,
+    enBTDevPropVendor,
+    enBTDevPropUnknown
+} enBTDeviceProp;
+
+typedef enum _enBTMediaTransportProp {
+    enBTMedTPropDelay,
+    enBTMedTPropUnknown
+} enBTMediaTransportProp;
 
 typedef enum _enBTMediaControl {
 	enBTMediaPlay,
@@ -103,6 +116,15 @@ typedef enum _enBTMediaControl {
 	enBTMediaVolumeUp,
 	enBTMediaVolumeDown
 } enBTMediaControl;
+
+
+/* Union Types */
+typedef union _unBTOpIfceProp {
+    enBTAdapterProp         enBtAdapterProp;
+    enBTDeviceProp          enBtDeviceProp;
+    enBTMediaTransportProp  enBtMediaTransportProp;
+    // Add other enums which define the required properties 
+} unBTOpIfceProp;
 
 
 /* Structure Types */
@@ -178,8 +200,8 @@ int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, c
 char* BtrCore_BTGetAdapterPath (void* apBtConn, const char* apBtAdapter);
 int   BtrCore_BTReleaseAdapterPath (void* apBtConn, const char* apBtAdapter);
 int   BtrCore_BTGetIfceNameVersion (void* apBtConn, char* apBtOutIfceName, char* apBtOutVersion);
-int   BtrCore_BTGetProp (void* apBtConn, const char* apcPath, enBTOpType aenBTOpType, const char* pKey, void* pValue);
-int   BtrCore_BTSetAdapterProp (void* apBtConn, const char* apBtAdapter, enBTAdapterProp aenBTAdapterProp, void* apvVal);
+int   BtrCore_BTGetProp (void* apBtConn, const char* apcOpIfcePath, enBTOpIfceType aenBtOpIfceType, unBTOpIfceProp aunBtOpIfceProp, void* apvVal);
+int   BtrCore_BTSetProp (void* apBtConn, const char* apcOpIfcePath, enBTOpIfceType aenBtOpIfceType, unBTOpIfceProp aunBtOpIfceProp, void* apvVal);
 int   BtrCore_BTStartDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTStopDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 int   BtrCore_BTGetPairedDevices (void* apBtConn, const char* apBtAdapter, unsigned int* apui32PairedDevCnt, char** apcArrPairedDevPath);

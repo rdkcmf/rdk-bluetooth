@@ -1554,13 +1554,13 @@ BtrCore_BTGetIfceNameVersion (
 int
 BtrCore_BTGetProp (
     void*           apBtConn,
-    const char*     apcPath,
-    enBTOpType      aenBTOpType,
-    const char*     pKey,
-    void*           pValue
+    const char*     apcBtOpIfcePath,
+    enBTOpIfceType  aenBtOpIfceType,
+    unBTOpIfceProp  aunBtOpIfceProp,
+    void*           apvVal
 ) {
     int             rc = 0;
-    int             type;
+
     DBusMessage*    lpDBusReply = NULL;
     DBusMessageIter arg_i;
     DBusMessageIter element_i;
@@ -1572,6 +1572,9 @@ BtrCore_BTGetProp (
     unsigned int    parsedValueUnsignedNumber = 0;
     unsigned short  parsedValueUnsignedShort = 0;
 
+    const char*     lDBusKey = NULL;
+    int             lDBusType = DBUS_TYPE_INVALID;
+
     const char*     pInterface          = NULL;
     const char*     pAdapterInterface   = "org.bluez.Adapter";
     const char*     pDeviceInterface    = "org.bluez.Device";
@@ -1580,58 +1583,84 @@ BtrCore_BTGetProp (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    if ((!apcPath) || (!pKey) || (!pValue)) {
+    if ((!apcBtOpIfcePath) || (!apvVal)) {
         BTRCORELOG_ERROR ("enBTRCoreInvalidArg - enBTRCoreInitFailure\n");
         return -1;
     }
 
-    switch (aenBTOpType) {
+    switch (aenBtOpIfceType) {
     case enBTAdapter:
         pInterface = pAdapterInterface;
+        switch (aunBtOpIfceProp.enBtAdapterProp) {
+        case enBTAdPropName:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Name";
+            break;
+        case enBTAdPropAddress:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Address";
+            break;
+        case enBTAdPropPowered:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Powered";
+            break;
+        case enBTAdPropDiscoverable:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Discoverable";
+            break;
+        case enBTAdPropDiscoverableTimeOut:
+            lDBusType = DBUS_TYPE_UINT32;
+            lDBusKey  = "DiscoverableTimeout";
+            break;
+        case enBTAdPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Adapter Property\n");
+            return -1;
+        }
         break;
     case enBTDevice:
         pInterface = pDeviceInterface;
+        switch (aunBtOpIfceProp.enBtDeviceProp) {
+        case enBTDevPropPaired:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Paired";
+            break;
+        case enBTDevPropConnected:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Connected";
+            break;
+        case enBTDevPropVendor:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Vendor";
+            break;
+        case enBTDevPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Device Property\n");
+            return -1;
+        } 
         break;
     case enBTMediaTransport:
         pInterface = pMediaTransInterface;
+        switch (aunBtOpIfceProp.enBtMediaTransportProp) {
+        case enBTMedTPropDelay:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Delay";
+            break;
+        case enBTMedTPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid MediaTransport Property\n");
+            return -1;
+        }
         break;
     case enBTUnknown:
     default:
-        pInterface = pAdapterInterface;
-        break;
-    }
-
-    if (!strcmp(pKey, "Name")) {
-        type = DBUS_TYPE_STRING;
-    }
-    else if (!strcmp(pKey, "Address")) {
-        type = DBUS_TYPE_STRING;
-    }
-    else if (!strcmp(pKey, "Powered")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Paired")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Connected")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Discoverable")) {
-        type = DBUS_TYPE_BOOLEAN;
-    }
-    else if (!strcmp(pKey, "Vendor")) {
-        type = DBUS_TYPE_UINT16;
-    }
-    else if (!strcmp(pKey, "Delay")) {
-        type = DBUS_TYPE_UINT16;
-    }
-    else {
-        type = DBUS_TYPE_INVALID;
+        BTRCORELOG_ERROR ("Invalid Operational Interface\n");
         return -1;
     }
 
+
     dbus_error_init(&lDBusErr);
-    lpDBusReply = btrCore_BTSendMethodCall(apcPath, pInterface, "GetProperties");
+    lpDBusReply = btrCore_BTSendMethodCall(apcBtOpIfcePath, pInterface, "GetProperties");
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("%s.GetProperties returned an error: '%s'\n", pInterface, lDBusErr.message);
         rc = -1;
@@ -1654,28 +1683,28 @@ BtrCore_BTGetProp (
                     dbus_message_iter_recurse(&element_i, &dict_i);
                     dbus_message_iter_get_basic(&dict_i, &pParsedKey);
 
-                    if ((pParsedKey) && (strcmp (pParsedKey, pKey) == 0)) {
+                    if ((pParsedKey) && (strcmp (pParsedKey, lDBusKey) == 0)) {
                         dbus_message_iter_next(&dict_i);
                         dbus_message_iter_recurse(&dict_i, &variant_i);
-                        if (type == DBUS_TYPE_STRING) {
+                        if (lDBusType == DBUS_TYPE_STRING) {
                             dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
                             //BTRCORELOG_ERROR ("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
-                            strncpy (pValue, pParsedValueString, BD_NAME_LEN);
+                            strncpy (apvVal, pParsedValueString, BD_NAME_LEN);
                         }
-                        else if (type == DBUS_TYPE_UINT16) {
-                            unsigned short* ptr = (unsigned short*) pValue;
+                        else if (lDBusType == DBUS_TYPE_UINT16) {
+                            unsigned short* ptr = (unsigned short*) apvVal;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedShort);
                             //BTRCORELOG_ERROR ("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
                             *ptr = parsedValueUnsignedShort;
                         }
-                        else if (type == DBUS_TYPE_UINT32) {
-                            unsigned int* ptr = (unsigned int*) pValue;
+                        else if (lDBusType == DBUS_TYPE_UINT32) {
+                            unsigned int* ptr = (unsigned int*) apvVal;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueUnsignedNumber);
                             //BTRCORELOG_ERROR ("Key is %s and the value is %u\n", pParsedKey, parsedValueUnsignedNumber);
                             *ptr = parsedValueUnsignedNumber;
                         }
                         else { /* As of now ints and bools are used. This function has to be extended for array if needed */
-                            int* ptr = (int*) pValue;
+                            int* ptr = (int*) apvVal;
                             dbus_message_iter_get_basic(&variant_i, &parsedValueNumber);
                             //BTRCORELOG_ERROR ("Key is %s and the value is %d\n", pParsedKey, parsedValueNumber);
                             *ptr = parsedValueNumber;
@@ -1700,10 +1729,11 @@ BtrCore_BTGetProp (
 
 
 int
-BtrCore_BTSetAdapterProp (
+BtrCore_BTSetProp (
     void*           apBtConn,
-    const char*     apBtAdapter,
-    enBTAdapterProp aenBTAdapterProp,
+    const char*     apcBtOpIfcePath,
+    enBTOpIfceType  aenBtOpIfceType,
+    unBTOpIfceProp  aunBtOpIfceProp,
     void*           apvVal
 ) {
 
@@ -1712,44 +1742,97 @@ BtrCore_BTSetAdapterProp (
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterValue;
     DBusError       lDBusErr;
-    int             lDBusType;
+
     const char*     lDBusTypeAsString;
-    const char*     lDBusKey;
+
+    const char*     lDBusKey = NULL;
+    int             lDBusType = DBUS_TYPE_INVALID;
+
+    const char*     pInterface          = NULL;
+    const char*     pAdapterInterface   = "org.bluez.Adapter";
+    const char*     pDeviceInterface    = "org.bluez.Device";
+    const char*     pMediaTransInterface= "org.bluez.MediaTransport";
+
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apvVal)
         return -1;
 
-    lpDBusMsg = dbus_message_new_method_call("org.bluez",
-                                             apBtAdapter,
-                                            "org.bluez.Adapter",
-                                            "SetProperty");
-    if (!lpDBusMsg) {
-        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+    if ((!apcBtOpIfcePath) || (!apvVal)) {
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg - enBTRCoreInitFailure\n");
+        return -1;
+    }
+    
+
+    switch (aenBtOpIfceType) {
+    case enBTAdapter:
+        pInterface = pAdapterInterface;
+        switch (aunBtOpIfceProp.enBtAdapterProp) {
+        case enBTAdPropName:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Alias";
+            break;
+        case enBTAdPropAddress:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "Address";
+            break;
+        case enBTAdPropPowered:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Powered";
+            break;
+        case enBTAdPropDiscoverable:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Discoverable";
+            break;
+        case enBTAdPropDiscoverableTimeOut:
+            lDBusType = DBUS_TYPE_UINT32;
+            lDBusKey  = "DiscoverableTimeout";
+            break;
+        case enBTAdPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Adapter Property\n");
+            return -1;
+        }
+        break;
+    case enBTDevice:
+        pInterface = pDeviceInterface;
+        switch (aunBtOpIfceProp.enBtDeviceProp) {
+        case enBTDevPropPaired:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Paired";
+            break;
+        case enBTDevPropConnected:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Connected";
+            break;
+        case enBTDevPropVendor:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Vendor";
+            break;
+        case enBTDevPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid Device Property\n");
+            return -1;
+        } 
+        break;
+    case enBTMediaTransport:
+        pInterface = pMediaTransInterface;
+        switch (aunBtOpIfceProp.enBtMediaTransportProp) {
+        case enBTMedTPropDelay:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Delay";
+            break;
+        case enBTMedTPropUnknown:
+        default:
+            BTRCORELOG_ERROR ("Invalid MediaTransport Property\n");
+            return -1;
+        }
+        break;
+    case enBTUnknown:
+    default:
+        BTRCORELOG_ERROR ("Invalid Operational Interface\n");
         return -1;
     }
 
-    switch (aenBTAdapterProp) {
-    case enBTAdPropName:
-        lDBusType = DBUS_TYPE_STRING;
-        lDBusKey  = "Name";
-        break;
-    case enBTAdPropPowered:
-        lDBusType = DBUS_TYPE_BOOLEAN;
-        lDBusKey  = "Powered";
-        break;
-    case enBTAdPropDiscoverable:
-        lDBusType = DBUS_TYPE_BOOLEAN;
-        lDBusKey  = "Discoverable";
-        break;
-    case enBTAdPropDiscoverableTimeOut:
-        lDBusType = DBUS_TYPE_UINT32;
-        lDBusKey  = "DiscoverableTimeout";
-        break;
-    case enBTAdPropUnknown:
-    default:
-        BTRCORELOG_ERROR ("Invalid Adaptre Property\n");
-        return -1;
-    }
 
     switch (lDBusType) {
     case DBUS_TYPE_BOOLEAN:
@@ -1758,6 +1841,9 @@ BtrCore_BTSetAdapterProp (
     case DBUS_TYPE_UINT32:
         lDBusTypeAsString = DBUS_TYPE_UINT32_AS_STRING;
         break;
+    case DBUS_TYPE_UINT16:
+        lDBusTypeAsString = DBUS_TYPE_UINT16_AS_STRING;
+        break;
     case DBUS_TYPE_STRING:
         lDBusTypeAsString = DBUS_TYPE_STRING_AS_STRING;
         break;
@@ -1765,6 +1851,17 @@ BtrCore_BTSetAdapterProp (
         BTRCORELOG_ERROR ("Invalid DBus Type\n");
         return -1;
     }
+
+
+    lpDBusMsg = dbus_message_new_method_call("org.bluez",
+                                             apcBtOpIfcePath,
+                                             pInterface,
+                                             "SetProperty");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
 
     dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
     dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &lDBusKey);
@@ -2887,6 +2984,19 @@ BtrCore_BTRegisterTransportPathMediacB (
 
     return 0;
 }
+
+
+int
+BtrCore_BTRegisterMediaPlayerPathcB (
+    void*                                   apBtConn,
+    const char*                             apBtAdapter,
+    fPtr_BtrCore_BTMediaPlayerPath_cB       afpcBTMediaPlayerPath,
+    void*                                   apUserData
+) {
+
+    return 0;
+}
+
 
 /* Control Media on Remote BT Device*/
 int

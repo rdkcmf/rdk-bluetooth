@@ -771,6 +771,7 @@ BTRCore_Init (
     tBTRCoreHandle* phBTRCore
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL; 
+    unBTOpIfceProp  lunBtOpAdapProp;
 
 #ifdef RDK_LOGGER_ENABLED
     const char* pDebugConfig = NULL;
@@ -837,7 +838,12 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    if (BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, "Address", pstlhBTRCore->curAdapterAddr)) {
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropAddress;
+    if (BtrCore_BTGetProp(pstlhBTRCore->connHdl,
+                          pstlhBTRCore->curAdapterPath,
+                          enBTAdapter,
+                          lunBtOpAdapProp,
+                          pstlhBTRCore->curAdapterAddr)) {
         BTRCORELOG_ERROR ("Failed to get BT Adapter Address - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
@@ -1025,6 +1031,7 @@ BTRCore_GetListOfAdapters (
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
     enBTRCoreRet    rc = enBTRCoreFailure;
+    unBTOpIfceProp  lunBtOpAdapProp;
     int i;
 
     if (!hBTRCore) {
@@ -1045,7 +1052,8 @@ BTRCore_GetListOfAdapters (
             strncpy(pstListAdapters->adapter_path[i], pstlhBTRCore->adapterPath[i], BD_NAME_LEN - 1);
 
             memset(pstListAdapters->adapterAddr[i], '\0', sizeof(pstListAdapters->adapterAddr[i]));
-            if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->adapterPath[i], enBTAdapter, "Address", pstlhBTRCore->adapterAddr[i])) {
+            lunBtOpAdapProp.enBtAdapterProp = enBTAdPropAddress;
+            if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pstlhBTRCore->adapterPath[i], enBTAdapter, lunBtOpAdapProp, pstlhBTRCore->adapterAddr[i])) {
                 strncpy(pstListAdapters->adapterAddr[i], pstlhBTRCore->adapterAddr[i], BD_NAME_LEN - 1);
             }
 
@@ -1164,8 +1172,10 @@ BTRCore_EnableAdapter (
     tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    int powered;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    unBTOpIfceProp      lunBtOpAdapProp;
+    int                 powered = 1;
+
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1174,12 +1184,12 @@ BTRCore_EnableAdapter (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    powered = 1;
+
     BTRCORELOG_ERROR ("BTRCore_EnableAdapter\n");
+    apstBTRCoreAdapter->enable = TRUE; //does this even mean anything?
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPowered;
 
-    apstBTRCoreAdapter->enable = TRUE;//does this even mean anything?
-
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &powered)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1193,8 +1203,9 @@ BTRCore_DisableAdapter (
     tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter
 ) {
-    int powered;
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    unBTOpIfceProp      lunBtOpAdapProp;
+    int                 powered = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1203,12 +1214,11 @@ BTRCore_DisableAdapter (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    powered = 0;
     BTRCORELOG_ERROR ("BTRCore_DisableAdapter\n");
-
     apstBTRCoreAdapter->enable = FALSE;
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPowered;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &powered)) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &powered)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1223,8 +1233,8 @@ BTRCore_GetAdapterAddr (
     unsigned char       aui8adapterIdx,
     char*               apui8adapterAddr
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    int             i = 0;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    int                 i = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1253,8 +1263,9 @@ BTRCore_SetDiscoverable (
     tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter
 ) {
-    int discoverable;
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    unBTOpIfceProp      lunBtOpAdapProp;
+    int                 discoverable;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1264,8 +1275,9 @@ BTRCore_SetDiscoverable (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     discoverable = apstBTRCoreAdapter->discoverable;
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropDiscoverable;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &discoverable)) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &discoverable)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1281,7 +1293,8 @@ BTRCore_SetAdapterDiscoverable (
     unsigned char   discoverable
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
-    int isDiscoverable = (int) discoverable;
+    unBTOpIfceProp  lunBtOpAdapProp;
+    int             isDiscoverable = (int) discoverable;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1294,7 +1307,9 @@ BTRCore_SetAdapterDiscoverable (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverable, &isDiscoverable)) {
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropDiscoverable;
+
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &isDiscoverable)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverable - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1308,8 +1323,9 @@ BTRCore_SetDiscoverableTimeout (
     tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    U32 timeout;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    unBTOpIfceProp      lunBtOpAdapProp;
+    U32                 timeout;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1319,8 +1335,9 @@ BTRCore_SetDiscoverableTimeout (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     timeout = apstBTRCoreAdapter->DiscoverableTimeout;
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropDiscoverableTimeOut;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &timeout)) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &timeout)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1336,7 +1353,8 @@ BTRCore_SetAdapterDiscoverableTimeout (
     unsigned short  timeout
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
-    U32 givenTimeout = (U32) timeout;
+    unBTOpIfceProp  lunBtOpAdapProp;
+    U32             givenTimeout = (U32) timeout;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1349,7 +1367,10 @@ BTRCore_SetAdapterDiscoverableTimeout (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropDiscoverableTimeOut, &givenTimeout)) {
+
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropDiscoverableTimeOut;
+
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &givenTimeout)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropDiscoverableTimeOut - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1364,8 +1385,9 @@ BTRCore_GetAdapterDiscoverableStatus (
     const char*     pAdapterPath,
     unsigned char*  pDiscoverable
 ) {
-    stBTRCoreHdl*  pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-    int discoverable = 0;
+    stBTRCoreHdl*   pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    unBTOpIfceProp  lunBtOpAdapProp;
+    int             discoverable = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1377,8 +1399,8 @@ BTRCore_GetAdapterDiscoverableStatus (
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Discoverable", &discoverable)) {
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropDiscoverable;
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, lunBtOpAdapProp, &discoverable)) {
         BTRCORELOG_INFO ("Get value for org.bluez.Adapter.powered = %d\n", discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
@@ -1392,9 +1414,10 @@ enBTRCoreRet
 BTRCore_SetAdapterDeviceName (
     tBTRCoreHandle      hBTRCore,
     stBTRCoreAdapter*   apstBTRCoreAdapter,
-    char*                apcAdapterDeviceName
+    char*               apcAdapterDeviceName
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    unBTOpIfceProp      lunBtOpAdapProp;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1413,8 +1436,9 @@ BTRCore_SetAdapterDeviceName (
     }
 
     apstBTRCoreAdapter->pcAdapterDevName = strdup(apcAdapterDeviceName); //TODO: Free this memory
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropName;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropName, &(apstBTRCoreAdapter->pcAdapterDevName))) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &(apstBTRCoreAdapter->pcAdapterDevName))) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropName - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1425,11 +1449,12 @@ BTRCore_SetAdapterDeviceName (
 
 enBTRCoreRet
 BTRCore_SetAdapterName (
-    tBTRCoreHandle  hBTRCore,
-    const char*     pAdapterPath,
-    const char*     pAdapterName
+    tBTRCoreHandle      hBTRCore,
+    const char*         pAdapterPath,
+    const char*         pAdapterName
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    unBTOpIfceProp      lunBtOpAdapProp;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1441,8 +1466,9 @@ BTRCore_SetAdapterName (
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropName;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropName, &pAdapterName)) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &pAdapterName)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropName - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1458,6 +1484,7 @@ BTRCore_GetAdapterName (
     char*           pAdapterName
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
+    unBTOpIfceProp  lunBtOpAdapProp;
 
     char name[BD_NAME_LEN + 1] = "";
     memset (name, '\0', sizeof (name));
@@ -1472,8 +1499,8 @@ BTRCore_GetAdapterName (
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Name", name)) {
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropName;
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, lunBtOpAdapProp, name)) {
         BTRCORELOG_INFO ("Get value for org.bluez.Adapter.Name = %s\n", name);
         strcpy(pAdapterName, name);
         return enBTRCoreSuccess;
@@ -1490,7 +1517,8 @@ BTRCore_SetAdapterPower (
     unsigned char   powerStatus
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
-    int power = powerStatus;
+    unBTOpIfceProp  lunBtOpAdapProp;
+    int             power = powerStatus;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1502,8 +1530,9 @@ BTRCore_SetAdapterPower (
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPowered;
 
-    if (BtrCore_BTSetAdapterProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdPropPowered, &power)) {
+    if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &power)) {
         BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPowered - FAILED\n");
         return enBTRCoreFailure;
     }
@@ -1519,7 +1548,8 @@ BTRCore_GetAdapterPower (
     unsigned char*  pAdapterPower
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
-    int powerStatus = 0;
+    unBTOpIfceProp  lunBtOpAdapProp;
+    int             powerStatus = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1531,8 +1561,8 @@ BTRCore_GetAdapterPower (
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
-    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, "Powered", &powerStatus)) {
+    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPowered;
+    if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, lunBtOpAdapProp, &powerStatus)) {
         BTRCORELOG_INFO ("Get value for org.bluez.Adapter.powered = %d\n", powerStatus);
         *pAdapterPower = (unsigned char) powerStatus;
         return enBTRCoreSuccess;
