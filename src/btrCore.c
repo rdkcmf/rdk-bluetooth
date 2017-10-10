@@ -1610,8 +1610,10 @@ BTRCore_GetVersionInfo (
 
 enBTRCoreRet
 BTRCore_StartDiscovery (
-    tBTRCoreHandle           hBTRCore,
-    stBTRCoreStartDiscovery* pstStartDiscovery
+    tBTRCoreHandle      hBTRCore,
+    const char*         pAdapterPath,
+    enBTRCoreDeviceType aenBTRCoreDevType,
+    unsigned int        aui32DiscDuration
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -1619,20 +1621,38 @@ BTRCore_StartDiscovery (
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
+    else if (!pAdapterPath) {
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
+    }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-
     btrCore_ClearScannedDevicesList(pstlhBTRCore);
 
-    if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
-        return enBTRCoreDiscoveryFailure;
+    if (aenBTRCoreDevType == enBTRCoreLE)  {
+        if (BtrCore_BTStartLEDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+            return enBTRCoreDiscoveryFailure;
+        }
+
+        if (aui32DiscDuration) {
+            sleep(aui32DiscDuration); //TODO: Better to setup a timer which calls BTStopDiscovery
+            if (BtrCore_BTStopLEDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+                return enBTRCoreDiscoveryFailure;
+            }
+        }
     }
+    else {
+        if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+            return enBTRCoreDiscoveryFailure;
+        }
 
-    sleep(pstStartDiscovery->duration); //TODO: Better to setup a timer which calls BTStopDiscovery
-
-    if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->agentPath)) {
-        return enBTRCoreDiscoveryFailure;
+        if (aui32DiscDuration) {
+            sleep(aui32DiscDuration); //TODO: Better to setup a timer which calls BTStopDiscovery
+            if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+                return enBTRCoreDiscoveryFailure;
+            }
+        }
     }
 
     return enBTRCoreSuccess;
@@ -1640,9 +1660,10 @@ BTRCore_StartDiscovery (
 
 
 enBTRCoreRet
-BTRCore_StartDeviceDiscovery (
-    tBTRCoreHandle  hBTRCore,
-    const char*     pAdapterPath
+BTRCore_StopDiscovery (
+    tBTRCoreHandle      hBTRCore,
+    const char*         pAdapterPath,
+    enBTRCoreDeviceType aenBTRCoreDevType
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -1657,38 +1678,19 @@ BTRCore_StartDeviceDiscovery (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    btrCore_ClearScannedDevicesList(pstlhBTRCore);
-    if (0 == BtrCore_BTStartDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
-        return enBTRCoreSuccess;
+
+    if (aenBTRCoreDevType == enBTRCoreLE)  {
+        if (BtrCore_BTStopLEDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+            return enBTRCoreDiscoveryFailure;
+        }
+    }
+    else {
+        if (BtrCore_BTStopDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+            return enBTRCoreDiscoveryFailure;
+        }
     }
 
-    return enBTRCoreDiscoveryFailure;
-}
-
-
-enBTRCoreRet
-BTRCore_StopDeviceDiscovery (
-    tBTRCoreHandle  hBTRCore,
-    const char*     pAdapterPath
-) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-
-    if (!hBTRCore) {
-        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
-        return enBTRCoreNotInitialized;
-    }
-    else if (!pAdapterPath) {
-        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
-        return enBTRCoreInvalidArg;
-    }
-
-    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
-    if (0 ==  BtrCore_BTStopDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
-        return enBTRCoreSuccess;
-    }
-
-    return enBTRCoreDiscoveryFailure;
+    return enBTRCoreSuccess;
 }
 
 
@@ -2131,6 +2133,9 @@ BTRCore_ConnectDevice (
         case enBTRCorePCAudioIn:
             lenBTDeviceType = enBTDevAudioSource;
             break;
+        case enBTRCoreLE:
+            lenBTDeviceType = enBTDevLE;
+            break;
         case enBTRCoreUnknown:
         default:
             lenBTDeviceType = enBTDevUnknown;
@@ -2219,6 +2224,9 @@ BTRCore_DisconnectDevice (
         case enBTRCoreMobileAudioIn:
         case enBTRCorePCAudioIn:
             lenBTDeviceType = enBTDevAudioSource;
+            break;
+        case enBTRCoreLE:
+            lenBTDeviceType = enBTDevLE;
             break;
         case enBTRCoreUnknown:
         default:
@@ -2312,6 +2320,9 @@ BTRCore_GetDeviceConnected (
         case enBTRCoreMobileAudioIn:
         case enBTRCorePCAudioIn:
             lenBTDeviceType = enBTDevAudioSource;
+            break;
+        case enBTRCoreLE:
+            lenBTDeviceType = enBTDevLE;
             break;
         case enBTRCoreUnknown:
         default:

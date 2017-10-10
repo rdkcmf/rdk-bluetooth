@@ -1958,6 +1958,26 @@ BtrCore_BTStopDiscovery (
 
 
 int
+BtrCore_BTStartLEDiscovery (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+    return BtrCore_BTStartDiscovery(apBtConn, apBtAdapter, apBtAgentPath);
+} 
+
+
+int
+BtrCore_BTStopLEDiscovery (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+    return BtrCore_BTStopDiscovery(apBtConn, apBtAdapter, apBtAgentPath);
+}
+
+
+int
 BtrCore_BTGetPairedDeviceInfo (
     void*                   apBtConn,
     const char*             apBtAdapter,

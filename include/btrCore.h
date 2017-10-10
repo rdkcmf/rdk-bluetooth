@@ -41,6 +41,7 @@ typedef enum _enBTRCoreDeviceType {
     enBTRCoreHeadSet,
     enBTRCoreMobileAudioIn,
     enBTRCorePCAudioIn,
+    enBTRCoreLE,
     enBTRCoreUnknown
 } enBTRCoreDeviceType;
 
@@ -176,15 +177,6 @@ typedef struct _stBTRCoreAdapter {
     U32     DiscoverableTimeout;
 } stBTRCoreAdapter;
 
-/*startdiscovery*/
-typedef struct _stBTRCoreStartDiscovery {
-    U8      adapter_number;
-    U32     duration;
-    U8      max_devices;
-    BOOLEAN lookup_names;
-    U32     flags;
-    int     (*p_callback) ();
-} stBTRCoreStartDiscovery;
 
 typedef struct _stBTRCoreScannedDevice {           //TODO: Unify information
     tBTRCoreDevId                 deviceId;        // stBTRCoreScannedDevice & stBTRCoreKnownDevice
@@ -324,6 +316,7 @@ enBTRCoreRet BTRCore_EnableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* a
 /* BTRCore_DisableAdapter disable specific adapter*/
 enBTRCoreRet BTRCore_DisableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
+/* BTRCore_GetAdapterAddr Get Address of BT Adapter */
 enBTRCoreRet BTRCore_GetAdapterAddr (tBTRCoreHandle hBTRCore, unsigned char aui8adapterIdx, char* apui8adapterAddr);
 
 /* BTRCore_SetDiscoverable set adapter as discoverable or not discoverable*/
@@ -356,14 +349,11 @@ enBTRCoreRet BTRCore_ResetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* aps
 /* BTRCore_GetVersionInfo Get BT Version */
 enBTRCoreRet BTRCore_GetVersionInfo(tBTRCoreHandle hBTRCore, char* apcBtVersion);
 
-/* BTRCore_StartDiscovery - start the discovery process*/
-enBTRCoreRet BTRCore_StartDiscovery (tBTRCoreHandle hBTRCore, stBTRCoreStartDiscovery* pstStartDiscovery);
+/* BTRCore_StartDiscovery - Start the discovery process*/
+enBTRCoreRet BTRCore_StartDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath, enBTRCoreDeviceType aenBTRCoreDevType, unsigned int aui32DiscDuration);
 
-/* BTRCore_StartDeviceDiscovery - start the discovery process*/
-enBTRCoreRet BTRCore_StartDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath);
-
-/* BTRCore_StopDeviceDiscovery - aborts the discovery process*/
-enBTRCoreRet BTRCore_StopDeviceDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath);
+/* BTRCore_StopDiscovery - aborts the discovery process*/
+enBTRCoreRet BTRCore_StopDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath, enBTRCoreDeviceType aenBTRCoreDevType);
 
 /* BTRCore_GetListOfScannedDevices - gets the discovered devices list */
 enBTRCoreRet BTRCore_GetListOfScannedDevices (tBTRCoreHandle hBTRCore, stBTRCoreScannedDevicesCount *pListOfScannedDevices);

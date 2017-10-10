@@ -1192,7 +1192,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &i16RSSI);
                 apstBTDeviceInfo->i32RSSI = i16RSSI;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->i32RSSI = %d i16RSSI = %d\n", apstBTDeviceInfo->i32RSSI, i16RSSI);
+                BTRCORELOG_INFO ("apstBTDeviceInfo->i32RSSI = %d\n", apstBTDeviceInfo->i32RSSI);
             }
             else if (strcmp (pcKey, "UUIDs") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -2538,6 +2538,106 @@ BtrCore_BTStopDiscovery (
                                              apBtAdapter,
                                              BT_DBUS_BLUEZ_ADAPTER_PATH,
                                              "StopDiscovery");
+
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
+int
+BtrCore_BTStartLEDiscovery (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    dbus_bool_t     lDBusOp;
+    DBusMessageIter lDBusMsgIter;
+    DBusMessageIter lDBusMsgIterDict, lDBusMsgIterDictStr, lDBusMsgIterVariant;
+    char*   lpcKey      = "Transport";
+    char*   lpcValue    = "le";
+    int     i32DBusType = DBUS_TYPE_STRING;
+
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_ADAPTER_PATH,
+                                             "SetDiscoveryFilter");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+
+    dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_open_container(&lDBusMsgIter,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDict);
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+            dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+            dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
+            dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return BtrCore_BTStartDiscovery(apBtConn, apBtAdapter, apBtAgentPath);
+}
+
+
+int
+BtrCore_BTStopLEDiscovery (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    dbus_bool_t     lDBusOp;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (BtrCore_BTStopDiscovery(apBtConn, apBtAdapter, apBtAgentPath)) {
+        BTRCORELOG_WARN ("Failed to Stop Discovery\n");
+    }
+
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_ADAPTER_PATH,
+                                             "SetDiscoveryFilter");
 
     if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("Can't allocate new method call\n");
