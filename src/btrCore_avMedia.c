@@ -23,7 +23,8 @@
 
 /* System Headers */
 #include <stdlib.h>
-
+#include <unistd.h>
+#include <glib.h>
 
 /* External Library Headers */
 //TODO: Remove all direct references to bluetooth headers
@@ -36,10 +37,9 @@
 #include <bluetooth/audio/ipc.h>
 #endif
 
-
 /* Local Headers */
-#include "btrCore_bt_ifce.h"
 #include "btrCore_avMedia.h"
+#include "btrCore_bt_ifce.h"
 
 #include "btrCore_priv.h"
 
@@ -97,18 +97,46 @@
 
 #define BTR_SBC_DEFAULT_BITRATE_BITPOOL		BTR_SBC_HIGH_BITRATE_BITPOOL
 
+typedef enum _enBTRCoreAVMediaPlayerState {
+    enAVMPStInit,
+    enAVMPStPlaying,
+    enAVMPStPaused,
+    enAVMPStStopped,
+    enAVMPStForwardSeek,
+    enAVMPStReverseSeek,
+    enAVMPStError
+} enBTRCoreAVMediaPlayerState;
+
+
 
 typedef struct _stBTRCoreAVMediaHdl {
-    eBTRCoreAVMType eAVMediaType;
-    a2dp_sbc_t*     pstBTMediaConfig;
-    int             iBTMediaDefSampFreqPref;
-    char*           pcAVMediaTransportPath;
-    char*           pcAVMediaPlayerPath;
+    eBTRCoreAVMType                eAVMediaType;
+    a2dp_sbc_t*                    pstBTMediaConfig;
+    int                            iBTMediaDefSampFreqPref;
+    char*                          pcAVMediaTransportPath;
+    char*                          pcAVMediaPlayerPath;
     //FileSystem Path
     //NowPlaying Path
     //MediaItem  List []
+
+    enBTRCoreAVMediaPlayerState    eAVMPState;
+
+    BTRCore_AVMediaStatusUpdateCb  fptrBTRCoreAVMediaStatusUpdate;
+
+    void*                          pcBMediaStatusUserData;
+
+    GThread*                       pMediaPollingThread;
+    BOOLEAN                        mediaPollingThreadExit;
+    GMutex                         mediaPollingThreadExitMutex;
+    void*                          pvThreadData;
 } stBTRCoreAVMediaHdl;
 
+
+
+typedef struct _stBTRCoreAVMediaStatusUserData {
+    void*        apvAVMUserData;
+    const char*  apcAVMDevAddress;
+} stBTRCoreAVMediaStatusUserData;
 
 /* Static Function Prototypes */
 static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
@@ -118,6 +146,10 @@ static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, u
 static void* btrCore_AVMedia_NegotiateMedia_cb (void* apBtMediaCaps, void* apUserData);
 static const char* btrCore_AVMedia_TransportPath_cb (const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
 static const char* btrCore_AVMedia_MediaPlayerPath_cb (const char* apBtMediaPlayerPath, void* apUserData);
+static int   btrCore_AVMedia_MediaStatusUpdate_cb (enBTDeviceType aeBtDeviceType, stBTMediaStatusUpdate* apstBtMediaStUpdate, const char* apcBtDevAddr, void* apUserData);
+
+
+static void* btrCore_AVMedia_PlaybackPositionPolling (void* arg);
 
 
 /* Static Function Definition */
@@ -228,6 +260,7 @@ BTRCore_AVMedia_Init (
     int                     lBtAVMediaNegotiateRet  = -1;
     int                     lBtAVMediaTransportPRet = -1;
     int                     lBTAVMediaPlayerPRet    = -1;
+    int                     lBTAVMediaStatusRet     = -1;
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
     if (!phBTRCoreAVM || !apBtConn || !apBtAdapter) {
@@ -266,6 +299,10 @@ BTRCore_AVMedia_Init (
     pstlhBTRCoreAVM->iBTMediaDefSampFreqPref = BTR_SBC_SAMPLING_FREQ_48000;
     pstlhBTRCoreAVM->pcAVMediaTransportPath  = NULL;
     pstlhBTRCoreAVM->pcAVMediaPlayerPath     = NULL;
+    pstlhBTRCoreAVM->pvThreadData            = NULL;
+    pstlhBTRCoreAVM->pcBMediaStatusUserData  = NULL;
+    pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate  = NULL;
+    pstlhBTRCoreAVM->eAVMPState              = enAVMPStInit;
 
     lBtAVMediaASinkRegRet = BtrCore_BTRegisterMedia(apBtConn,
                                                     apBtAdapter,
@@ -305,6 +342,11 @@ BTRCore_AVMedia_Init (
                                                                    pstlhBTRCoreAVM);
                                        
     if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet && !lBTAVMediaPlayerPRet)
+        lBTAVMediaStatusRet = BtrCore_BTRegisterMediaStatusUpdatecB(apBtConn,
+                                                              &btrCore_AVMedia_MediaStatusUpdate_cb,
+                                                              pstlhBTRCoreAVM);
+
+    if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet && !lBTAVMediaPlayerPRet && !lBTAVMediaStatusRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
     if (lenBTRCoreRet != enBTRCoreSuccess) {
@@ -357,6 +399,11 @@ BTRCore_AVMedia_DeInit (
         free(pstlhBTRCoreAVM->pcAVMediaPlayerPath);
         pstlhBTRCoreAVM->pcAVMediaPlayerPath = NULL;
     }
+
+    pstlhBTRCoreAVM->pvThreadData            = NULL;
+    pstlhBTRCoreAVM->pcBMediaStatusUserData  = NULL;
+    pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate  = NULL;
+    pstlhBTRCoreAVM->eAVMPState = enAVMPStInit;
 
     if (!lBtAVMediaASrcUnRegRet && !lBtAVMediaASinkUnRegRet)
         lenBTRCoreRet = enBTRCoreSuccess;
@@ -809,7 +856,7 @@ btrCore_AVMedia_MediaPlayerPath_cb (
     }
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
-
+    //TODO: consider the player ended event case
     if (pstlhBTRCoreAVM) {
         if (pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
             if(!strncmp(pstlhBTRCoreAVM->pcAVMediaPlayerPath, apBtMediaPlayerPath, strlen(pstlhBTRCoreAVM->pcAVMediaPlayerPath))) {
@@ -838,11 +885,33 @@ btrCore_AVMedia_MediaPlayerPath_cb (
 
 
 enBTRCoreRet
+BTRCore_AVMedia_RegisterMediaStatusUpdatecB (
+    tBTRCoreAVMediaHdl              hBTRCoreAVM,
+    BTRCore_AVMediaStatusUpdateCb   afptrBTRCoreAVMediaStatusUpdate,
+    void*                           apvBMediaStatusUserData
+) {
+    stBTRCoreAVMediaHdl*  pstlhBTRCoreAVM = NULL;
+
+    if (!hBTRCoreAVM || !afptrBTRCoreAVMediaStatusUpdate)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM  = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+    
+    pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate = afptrBTRCoreAVMediaStatusUpdate;
+    pstlhBTRCoreAVM->pcBMediaStatusUserData         = apvBMediaStatusUserData;
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
 BTRCore_AVMedia_MediaControl (
        tBTRCoreAVMediaHdl  hBTRCoreAVM,
        void*               apBtConn,
        const char*         apBtDevAddr,
-       enBTMediaControl    aenBTMediaControl
+       void*               aBTMediaControl
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
     enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
@@ -855,27 +924,27 @@ BTRCore_AVMedia_MediaControl (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetPlayerObjectPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
     }
 
-    if (BtrCore_BTDevMediaControl (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aenBTMediaControl)) {
-       BTRCORELOG_ERROR ("Failed to set the Media control option : %d", aenBTMediaControl);
+    if (BtrCore_BTDevMediaControl (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aBTMediaControl)) {
+       BTRCORELOG_ERROR ("Failed to set the Media control option");
        lenBTRCoreRet = enBTRCoreFailure;
     }
       
     return lenBTRCoreRet;
 }
 
-
+//Combine TrackInfo, PositionInfo and basic info in GetMediaProperty handling with enums and switch?
 enBTRCoreRet
 BTRCore_AVMedia_GetTrackInfo (
        tBTRCoreAVMediaHdl  hBTRCoreAVM,
        void*               apBtConn,
        const char*         apBtDevAddr,
-       stBTMediaTrackInfo  *astBTMediaTrackInfo
+       void*               aBTMediaTrackInfo
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
     enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
@@ -888,13 +957,13 @@ BTRCore_AVMedia_GetTrackInfo (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetPlayerObjectPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
     }
 
-    if (BtrCore_BTGetTrackInformation (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, astBTMediaTrackInfo)) {
+    if (BtrCore_BTGetTrackInformation (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aBTMediaTrackInfo)) {
        BTRCORELOG_ERROR ("Failed to get Track information!!!");
        lenBTRCoreRet = enBTRCoreFailure;
     }
@@ -903,6 +972,56 @@ BTRCore_AVMedia_GetTrackInfo (
 }
 
 
+//Combine TrackInfo, PositionInfo and basic info in GetMediaProperty handling with enums and switch?
+enBTRCoreRet
+BTRCore_AVMedia_GetPositionInfo (
+       tBTRCoreAVMediaHdl  hBTRCoreAVM,
+       void*               apBtConn,
+       const char*         apBtDevAddr,
+       void*               apvMediaPositionInfo
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM || !apBtConn)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+          BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+          return enBTRCoreFailure;
+       }
+    }
+
+    stBTRCoreAVMediaPositionInfo* mediaPositionInfo = (stBTRCoreAVMediaPositionInfo*)apvMediaPositionInfo;
+    stBTRCoreAVMediaTrackInfo   mediaTrackInfo;
+    unsigned int  mediaPosition = 0;
+    char*         mediaStatus   = 0;
+    enBTRCoreRet  statusRet, positionRet, trackRet;
+
+    statusRet   = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Status",   (void*)&mediaStatus);
+    positionRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition);
+    trackRet    = BtrCore_BTGetTrackInformation   (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (void*)&mediaTrackInfo);
+
+    if (positionRet || statusRet || trackRet) {
+       BTRCORELOG_ERROR ("Failed to get media info!!!");
+       lenBTRCoreRet = enBTRCoreFailure;
+    }
+    else {
+       mediaPositionInfo->ui32Duration = mediaTrackInfo.ui32Duration;
+       mediaPositionInfo->ui32Position = mediaPosition;
+       strncpy (mediaPositionInfo->pcState, mediaStatus, BTRCORE_STR_LEN);
+    }
+
+    return lenBTRCoreRet;
+}
+
+
+//Combine TrackInfo, PositionInfo and basic info in GetMediaProperty handling with enums and switch?
 enBTRCoreRet
 BTRCore_AVMedia_GetMediaProperty (
                    tBTRCoreAVMediaHdl  hBTRCoreAVM,
@@ -922,13 +1041,13 @@ BTRCore_AVMedia_GetMediaProperty (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_GetPlayerObjectPath (apBtConn, apBtDevAddr))) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetPlayerObjectPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
     }
 
-    if (BtrCoreGetMediaProperty (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, enBTBluezMediaPlayerPath, mediaPropertyKey, mediaPropertyValue)) {
+    if (BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, mediaPropertyKey, mediaPropertyValue)) {
        BTRCORELOG_ERROR ("Failed to get Media Property : %s!!!",mediaPropertyKey);
        lenBTRCoreRet = enBTRCoreFailure;
     }
@@ -936,3 +1055,295 @@ BTRCore_AVMedia_GetMediaProperty (
     return lenBTRCoreRet;
 }
 
+
+enBTRCoreRet
+BTRCore_AVMedia_StartMediaPositionPolling (
+        tBTRCoreAVMediaHdl   hBTRCoreAVM,
+        void*                apBtConn,
+        const char*          apBtDevPath,
+        const char*          apBtDevAddr
+) {
+    stBTRCoreAVMediaHdl* pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet   lenBTRCoreRet = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM || !apBtDevAddr || !apBtConn)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM     =  (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetPlayerObjectPath (apBtConn, apBtDevPath))) {
+          BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+          return enBTRCoreFailure;
+       }
+    }
+
+    if (!pstlhBTRCoreAVM->pMediaPollingThread) {
+       stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*) malloc (sizeof(stBTRCoreAVMediaStatusUserData));
+
+       pstAVMediaStUserData->apvAVMUserData   = apBtConn;
+       pstAVMediaStUserData->apcAVMDevAddress = strdup(apBtDevAddr);
+
+       pstlhBTRCoreAVM->pvThreadData = (void*)pstAVMediaStUserData;
+
+       pstlhBTRCoreAVM->mediaPollingThreadExit = FALSE;
+       g_mutex_init(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+
+       pstlhBTRCoreAVM->pMediaPollingThread = g_thread_new ("btrCore_AVMedia_PlaybackPositionPolling", btrCore_AVMedia_PlaybackPositionPolling, (void*)(pstlhBTRCoreAVM));
+
+       if (!pstlhBTRCoreAVM->pMediaPollingThread) {
+          BTRCORELOG_ERROR ("Failed to thread create btrCore_AVMedia_PlaybackPositionPolling");
+          lenBTRCoreRet = enBTRCoreFailure;
+       }
+    } 
+    else {
+        BTRCORELOG_WARN ("btrCore_AVMedia_PlaybackPositionPolling thread is running already!!!");
+    }
+    
+    return lenBTRCoreRet;    
+}
+
+static void*
+btrCore_AVMedia_PlaybackPositionPolling (
+     void*    arg
+) {
+    
+  if (NULL == arg) {
+     BTRCORELOG_ERROR ("Exiting.. enBTRCoreInvalidArg!!!\n");
+     return NULL;
+  }
+
+  BTRCORELOG_INFO ("Started AVMedia Position Polling thread successfully...");
+  stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+  enBTRCoreRet positionRet, statusRet, trackRet;
+  unsigned char isPlaying          = 0;
+  unsigned char isPlayingPrev      = 0;
+  void*         apBtConn           = 0;
+
+  stBTRCoreAVMediaStreamStatus  mediaStreamStatus;
+  stBTRCoreAVMediaTrackInfo     mediaTrackInfo;
+  unsigned int  mediaPosition = 0;
+  char*         mediaStatus   = 0;
+
+  stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = NULL;
+  BOOLEAN  threadExit = FALSE;
+
+  pstlhBTRCoreAVM      = (stBTRCoreAVMediaHdl*)arg;
+  pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData;
+
+  if (!pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate || !pstlhBTRCoreAVM->pvThreadData) {
+     BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaHdl Data!!! | pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate : %p | pstlhBTRCoreAVM->pvThreadData : %p"
+                      , pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate, pstlhBTRCoreAVM->pvThreadData);
+     return NULL;
+  }
+
+  pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData; 
+
+  if (!pstAVMediaStUserData->apvAVMUserData || !pstAVMediaStUserData->apcAVMDevAddress) {
+     BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaStatusUserData Data!!! | pstAVMediaStUserData->apvAVMUserData : %p | pstAVMediaStUserData->apcAVMDevAddress : %s"
+                      , pstAVMediaStUserData->apvAVMUserData, pstAVMediaStUserData->apcAVMDevAddress);
+     return NULL;
+  }
+
+  apBtConn  = pstAVMediaStUserData->apvAVMUserData;
+
+  while(1) {
+
+     g_mutex_lock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+        threadExit = pstlhBTRCoreAVM->mediaPollingThreadExit;
+     g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+
+     if (threadExit)  break;
+
+     statusRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Status",   (void*)&mediaStatus);
+
+     if (isPlaying) {
+
+        sleep(1);        /* polling playback position with 1 sec interval */
+
+        positionRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition);
+        trackRet    = BtrCore_BTGetTrackInformation (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (void*)&mediaTrackInfo);
+
+        if (positionRet || statusRet || trackRet) {
+           BTRCORELOG_ERROR ("Failed to get media info!!!");
+           continue;     /* arrive a exit state if req. */
+        }
+
+        mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamPosition;
+        mediaStreamStatus.m_mediaPositionInfo.ui32Position = mediaPosition;
+        mediaStreamStatus.m_mediaPositionInfo.ui32Duration = mediaTrackInfo.ui32Duration;
+        strncpy (mediaStreamStatus.m_mediaPositionInfo.pcState, mediaStatus, BTRCORE_STR_LEN);
+        /* post callback */
+        pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate ((void*)&mediaStreamStatus, pstAVMediaStUserData->apcAVMDevAddress
+                                                                                  , pstlhBTRCoreAVM->pcBMediaStatusUserData);
+
+        if (!strcmp("playing", mediaStatus) || !strcmp("forward-seek", mediaStatus) || !strcmp("reverse-seek", mediaStatus))
+           continue;     /* continue to poll */
+     }
+     else {
+        usleep(100000);  /* sleeping 1/10th of a second to check playback status */
+     }
+     
+     if (!strcmp("playing",      mediaStatus)) {
+        isPlaying = 1;
+        mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamStarted;
+     } else
+     if (!strcmp("paused",       mediaStatus)) {
+        isPlaying = 0;
+        mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamPaused;
+     } else
+     if (!strcmp("forward-seek", mediaStatus)) {
+        isPlaying = 1;
+        mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamStarted;
+     } else
+     if (!strcmp("reverse-seek", mediaStatus)) {
+        isPlaying = 1;
+        mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamStarted;
+     } else
+     if (!strcmp("stopped",      mediaStatus)) {
+        isPlaying = 0;
+        mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamStopped;
+        BTRCORELOG_INFO  ("Audio StreamIn Status : %s !!!", mediaStatus);
+     } else
+     if (!strcmp("error",        mediaStatus)) {
+        isPlaying = 0;
+        BTRCORELOG_ERROR ("Audio StreamIn Status : %s !!!", mediaStatus);
+        //break;   is required?
+     }
+    
+     if ((isPlayingPrev != isPlaying)) {
+        /* post callback */
+        pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate ((void*)&mediaStreamStatus, pstAVMediaStUserData->apcAVMDevAddress
+                                                                                  , pstlhBTRCoreAVM->pcBMediaStatusUserData);
+        isPlayingPrev = isPlaying;
+     }
+  }
+
+  BTRCORELOG_INFO ("Exiting MediaPosition Polling Thread...");
+
+  free ((void*)pstAVMediaStUserData->apcAVMDevAddress);
+  free ((void*)pstAVMediaStUserData);
+
+  pstlhBTRCoreAVM->pMediaPollingThread = NULL;
+
+  return NULL;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_ExitMediaPositionPolling (
+    tBTRCoreAVMediaHdl      hBTRCoreAVM
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM )  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (pstlhBTRCoreAVM->pMediaPollingThread) {
+
+       g_mutex_lock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+          pstlhBTRCoreAVM->mediaPollingThreadExit = TRUE;   /* Exit playback position polling thread */
+       g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+
+       g_thread_join (pstlhBTRCoreAVM->pMediaPollingThread);
+       g_mutex_clear (&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+
+       BTRCORELOG_INFO ("Successfully Exited Media Position Polling Thread");
+    }
+    else {
+       BTRCORELOG_ERROR ("pstlhBTRCoreAVM->pMediaPollingThread doesn't exists!!!");
+       lenBTRCoreRet = enBTRCoreFailure;
+    } 
+
+    return lenBTRCoreRet;
+}
+
+/*implemented specific to StreamIn case, as it seems for StreamOut case that
+  with idle, pending and active transport states can't predict the actual media stream state */
+static int
+btrCore_AVMedia_MediaStatusUpdate_cb (
+    enBTDeviceType          aeBtDeviceType,
+    stBTMediaStatusUpdate*  apstBtMediaStUpdate,
+    const char*             apcBtDevAddr,
+    void*                   apUserData
+) {
+    if (!apcBtDevAddr || !apstBtMediaStUpdate || !apUserData) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg!!!");
+       return -1;
+    }
+
+    stBTRCoreAVMediaHdl* pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
+
+    if (!pstlhBTRCoreAVM->pcBMediaStatusUserData) {
+       BTRCORELOG_ERROR ("pstlhBTRCoreAVM->pcBMediaStatusUserData is NULL!!!");
+       return -1;
+    }
+
+    stBTRCoreAVMediaStreamStatus  mediaStreamStatus;
+    BOOLEAN  postEvent = FALSE; 
+
+    switch (apstBtMediaStUpdate->aeBtMediaStatus) {
+   
+    case enBTMediaTransportUpdate:   
+         {
+           switch (apstBtMediaStUpdate->m_mediaTransportState) { //Delay in polling stream state is possible, since depending on transport state
+                                                                 //Instead could directly rely on player state.
+           case enBTMTransportStIdle:
+                if (enAVMPStPaused  == pstlhBTRCoreAVM->eAVMPState) {
+                   mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamPaused;
+                   postEvent = TRUE;
+                } else
+                if (enAVMPStStopped == pstlhBTRCoreAVM->eAVMPState) {
+                   mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamStopped;
+                   postEvent = TRUE;
+                }
+                break;
+           case enBTMTransportStPending:
+                break;
+           case enBTMTransportStActive:
+                if (enAVMPStPlaying == pstlhBTRCoreAVM->eAVMPState) {
+                   mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamStarted;
+                   postEvent = TRUE;
+                }
+                break; 
+           default:
+                break;
+           }
+         }
+         break;
+
+    case enBTMediaItemUpdate:
+         {
+           mediaStreamStatus.eAVMStreamstate = eBTRCoreAVMStreamChanged;
+           memcpy(&mediaStreamStatus.m_mediaTrackInfo, apstBtMediaStUpdate->m_mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+           postEvent = TRUE;
+         }
+         break;
+    case enBTMediaPlayerUpdate:
+         {
+         }
+         break;
+    case enBTMediaPlaylistUpdate:
+         {
+         }
+         break;
+    case enBTMediaFileSystemUpdate:
+         {
+         }
+         break;
+    default:
+         break;
+    }
+    /* post callback */
+    if (postEvent)
+       pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate ((void*)&mediaStreamStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData);
+ 
+    return 0;
+}

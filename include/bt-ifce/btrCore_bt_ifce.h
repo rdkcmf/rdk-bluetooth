@@ -31,21 +31,6 @@
 
 
 /* Enum Types */
-typedef enum _enBTInterfaceType {
-    enBTBluezPath,
-    enBTBluezAdapterPath,
-    enBTBluezDevicePath,
-    enBTBluezMediaPath,
-    enBTBluezMediaEndpointPath,
-    enBTBluezMediaTransportPath,
-    enBTBluezMediaControlPath,
-    enBTBluezMediaPlayerPath,
-    enBTBluezMediaItemPath,
-    enBTBluezMediaFolderPath,
-    enBTBluezAgentPath,
-    enBTBluezAgentManagerPath
-} enBTInterfaceType;
-
 typedef enum _enBTDeviceType {
     enBTDevAudioSink,
     enBTDevAudioSource,
@@ -54,6 +39,27 @@ typedef enum _enBTDeviceType {
     enBTDevLE,
     enBTDevUnknown
 } enBTDeviceType;
+
+typedef enum _enBTDeviceClass {
+    enBT_DC_SmartPhone         = 0x20C,
+    enBT_DC_WearableHeadset    = 0x404,
+    enBT_DC_Handsfree          = 0x408,
+    enBT_DC_Reserved           = 0x40C,
+    enBT_DC_Microphone         = 0x410,
+    enBT_DC_Loudspeaker        = 0x414,
+    enBT_DC_Headphones         = 0x418,
+    enBT_DC_PortableAudio      = 0x41C,
+    enBT_DC_CarAudio           = 0x420,
+    enBT_DC_STB                = 0x424,
+    enBT_DC_HIFIAudioDevice    = 0x428,
+    enBT_DC_VCR                = 0x42C,
+    enBT_DC_VideoCamera        = 0x430,
+    enBT_DC_Camcoder           = 0x434,
+    enBT_DC_VideoMonitor       = 0x438,
+    enBT_DC_TV                 = 0x43C,
+    enBT_DC_VideoConference    = 0x440,
+    enBT_DC_Unknown            = 0x000
+} enBTDeviceClass;
 
 typedef enum _enBTOpType {
     enBTAdapter,
@@ -106,16 +112,31 @@ typedef enum _enBTMediaTransportProp {
     enBTMedTPropUnknown
 } enBTMediaTransportProp;
 
+typedef enum _enBTMediaTransportState {
+    enBTMTransportStNone,
+    enBTMTransportStIdle,           /* Not Streaming and not Acquired                      */
+    enBTMTransportStPending,        /* Streaming, but not acquire - acquire() to be called */
+    enBTMTransportStActive          /* Streaming and Acquired                              */
+} enBTMediaTransportState;
+
+typedef enum _enBTMediaStatusUpdate { 
+    enBTMediaTransportUpdate,       /* Transport path  Add/Rem/Change */
+    enBTMediaPlayerUpdate,          /* MediaPlayer     Add/Rem        */
+    enBTMediaItemUpdate,            /* Track change    Add/Rem        */
+    enBTMediaPlaylistUpdate,        /* NowPlaying list Add/Rem        */
+    enBTMediaFileSystemUpdate       /* Media Browser   Add/Rem        */
+} enBTMediaStatusUpdate;
+
 typedef enum _enBTMediaControl {
-	enBTMediaPlay,
-	enBTMediaPause,
-	enBTMediaStop,
-	enBTMediaNext,
-	enBTMediaPrevious,
-	enBTMediaFastForward,
-	enBTMediaRewind,
-	enBTMediaVolumeUp,
-	enBTMediaVolumeDown
+    enBTMediaPlay,
+    enBTMediaPause,
+    enBTMediaStop,
+    enBTMediaNext,
+    enBTMediaPrevious,
+    enBTMediaFastForward,
+    enBTMediaRewind,
+    enBTMediaVolumeUp,
+    enBTMediaVolumeDown
 } enBTMediaControl;
 
 
@@ -177,14 +198,25 @@ typedef struct _stBTMediaTrackInfo {
     unsigned int    ui32NumberOfTracks;
 } stBTMediaTrackInfo;
 
+typedef struct _stBTMediaStatusUpdate {
+    enBTMediaStatusUpdate  aeBtMediaStatus;
+
+    union {
+      enBTMediaTransportState m_mediaTransportState;
+      stBTMediaTrackInfo*     m_mediaTrackInfo;
+      //FileSystem
+      //Playlist
+    };
+} stBTMediaStatusUpdate;
 
 /* Callbacks Types */
 typedef int (*fPtr_BtrCore_BTDevStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
+typedef int (*fPtr_BtrCore_BTMediaStatusUpdate_cB)(enBTDeviceType aeBtDeviceType, stBTMediaStatusUpdate* apstBtMediaStUpdate, const char* apcBtDevAddr, void* apUserData);
 typedef void* (*fPtr_BtrCore_BTNegotiateMedia_cB)(void* apBtMediaCaps, void* apUserData);
 typedef const char* (*fPtr_BtrCore_BTTransportPathMedia_cB)(const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
 typedef const char* (*fPtr_BtrCore_BTMediaPlayerPath_cB)(const char* afpcBTMediaPlayerPath, void* apUserData);
-typedef int (*fPtr_BtrCore_BTConnIntim_cB)(stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
-typedef int (*fPtr_BtrCore_BTConnAuth_cB)(stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
+typedef int (*fPtr_BtrCore_BTConnIntim_cB)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
+typedef int (*fPtr_BtrCore_BTConnAuth_cB)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 
 
 //callback to process connection requests:
@@ -222,6 +254,7 @@ int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, i
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
 int   BtrCore_BTSendReceiveMessages (void* apBtConn);
 int   BtrCore_BTRegisterDevStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTDevStatusUpdate_cB afpcBDevStatusUpdate, void* apUserData);
+int   BtrCore_BTRegisterMediaStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTMediaStatusUpdate_cB afpcBMediaStatusUpdate, void* apUserData);
 int   BtrCore_BTRegisterConnIntimationcB (void* apBtConn, fPtr_BtrCore_BTConnIntim_cB afpcBConnIntim, void* apUserData);
 int   BtrCore_BTRegisterConnAuthcB (void* apBtConn, fPtr_BtrCore_BTConnAuth_cB afpcBConnAuth, void* apUserData);
 int   BtrCore_BTRegisterNegotiateMediacB (void* apBtConn, const char* apBtAdapter,
@@ -230,13 +263,15 @@ int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAd
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
 int   BtrCore_BTRegisterMediaPlayerPathcB (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTMediaPlayerPath_cB afpcBTMediaPlayerPath, void* apUserData); 
+//int   BtrCore_BTRegisterMediaStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTMediaStatusUpdate_CB afpcBMediaStatusUpdate, void* apUserData);
 
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
-int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, enBTMediaControl aenBTMediaOper);
-char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtDevPath);
-int   BtrCoreGetMediaProperty (void* apBtConn, const char* apBtObjectPath, enBTInterfaceType interfacePath, const char* mediaProperty, void* mediaPropertyValue);
-int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
-int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* apstBTMediaTracktInfo);
+int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, void* aBTMediaOper);
+char* BtrCore_BTGetPlayerObjectPath (void* apBtConn, const char* apBtDevPath);
+int   BtrCore_BTGetMediaPlayerProperty (void* apBtConn, const char* apBtObjectPath, const char* mediaProperty, void* mediaPropertyValue);
+int   BtrCore_BTGetTransportState (void* apBtConn, const char* apBtDataPath, void* state);
+int   BtrCore_BTSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
+int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, void* mediaTracktInfo);
 
 
 #endif // __BTR_CORE_DBUS_BT_H__

@@ -26,8 +26,11 @@
 
 #include "btrCoreTypes.h"
 
+#define BTRCORE_MAX_STR_LEN 256
+#define BTRCORE_STR_LEN     32
 
 typedef void* tBTRCoreAVMediaHdl;
+
 
 
 typedef enum _eBTRCoreAVMType {
@@ -47,6 +50,15 @@ typedef enum _eBTRCoreAVMAChan {
     eBTRCoreAVMAChan7_1,
     eBTRCoreAVMAChanUnknown
 } eBTRCoreAVMAChan;
+
+typedef enum _eBTRCoreAVMStreamingState {
+    eBTRCoreAVMStreamStarted,
+    eBTRCoreAVMStreamPaused,
+    eBTRCoreAVMStreamStopped,
+    eBTRCoreAVMStreamEnded,
+    eBTRCoreAVMStreamPosition,
+    eBTRCoreAVMStreamChanged,
+} eBTRCoreAVMStreamingState;
 
 
 typedef struct _stBTRMgrAVMediaPcmInfo {
@@ -81,11 +93,39 @@ typedef struct _stBTRCoreAVMediaMpegInfo {
     unsigned short      ui16AVMMpegBitrate;     // bitrate
 } stBTRCoreAVMediaMpegInfo;
 
-
 typedef struct _stBTRCoreAVMediaInfo {
     eBTRCoreAVMType eBtrCoreAVMType;
     void*           pstBtrCoreAVMCodecInfo;
 } stBTRCoreAVMediaInfo;
+
+typedef struct _stBTRCoreAVMediaTrackInfo {
+    char            pcAlbum[BTRCORE_MAX_STR_LEN];
+    char            pcGenre[BTRCORE_MAX_STR_LEN];
+    char            pcTitle[BTRCORE_MAX_STR_LEN];
+    char            pcArtist[BTRCORE_MAX_STR_LEN];
+    unsigned int    ui32TrackNumber;
+    unsigned int    ui32Duration;
+    unsigned int    ui32NumberOfTracks;
+} stBTRCoreAVMediaTrackInfo;
+
+typedef struct _stBTRCoreAVMediaPositionInfo {
+    char            pcState[BTRCORE_STR_LEN];
+    unsigned int    ui32Duration;
+    unsigned int    ui32Position;
+} stBTRCoreAVMediaPositionInfo;
+
+typedef struct _stBTRCoreAVMediaStreamStatus {
+    eBTRCoreAVMStreamingState       eAVMStreamstate;
+
+    union {
+      stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;
+      stBTRCoreAVMediaPositionInfo    m_mediaPositionInfo;
+    };
+} stBTRCoreAVMediaStreamStatus;
+
+
+
+typedef int (*BTRCore_AVMediaStatusUpdateCb) (void* pBTRCoreAVMediaStreamStatus, const char* apcAVMediaDevAddress, void* apvUserCbData);
 
 
 enBTRCoreRet BTRCore_AVMedia_Init (tBTRCoreAVMediaHdl* phBTRCoreAVM, void* apBtConn, const char* apBtAdapter);
@@ -93,7 +133,12 @@ enBTRCoreRet BTRCore_AVMedia_DeInit (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtC
 enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaInfo* apstBtrCoreAVMediaInfo);
 enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
 enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr);
-enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, enBTMediaControl aenBTMediaControl);
-enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTMediaTrackInfo  *astBTMediaTrackInfo);
-enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue); 
+enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, void* mediaControl);
+enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, void* mediaTrackInfo);
+enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, void*mediaPositionInfo);
+enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue);
+enBTRCoreRet BTRCore_AVMedia_StartMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevPath, const char* apBtDevAddr);
+enBTRCoreRet BTRCore_AVMedia_ExitMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM);
+
+enBTRCoreRet BTRCore_AVMedia_RegisterMediaStatusUpdatecB (tBTRCoreAVMediaHdl hBTRCoreAVM, BTRCore_AVMediaStatusUpdateCb afptrBTRCoreAVMediaStatusUpdate, void* apcBMediaStatusUserData);
 #endif // __BTR_CORE_AV_MEDIA_H__

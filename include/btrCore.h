@@ -109,6 +109,15 @@ typedef enum _enBTRCoreMediaCtrl {
     enBTRCoreMediaVolumeDown
 } enBTRCoreMediaCtrl;
 
+typedef enum _eBTRCoreStreamingState {
+    eBTRCoreStreamStarted,
+    eBTRCoreStreamPaused,
+    eBTRCoreStreamStopped,
+    eBTRCoreStreamEnded,
+    eBTRCoreStreamPosition,
+    eBTRCoreStreamChanged
+} eBTRCoreStreamingState;
+
 
 /*platform specific data lengths */
 typedef unsigned char   U8;
@@ -266,10 +275,33 @@ typedef struct _stBTRCoreMediaTrackInfo {
     unsigned int    ui32NumberOfTracks;
 } stBTRCoreMediaTrackInfo;
 
+typedef struct _stBTRCoreMediaPositionInfo {
+    char            pcState[BTRCORE_STRINGS_MAX_LEN];
+    unsigned int    ui32Duration;
+    unsigned int    ui32Position;
+} stBTRCoreMediaPositionInfo;
+
+typedef struct _stBTRCoreMediaStreamStatus {
+    eBTRCoreStreamingState          eStreamstate;
+
+    union {
+      stBTRCoreMediaTrackInfo       m_mediaTrackInfo;
+      stBTRCoreMediaPositionInfo    m_mediaPositionInfo;
+    };
+} stBTRCoreMediaStreamStatus;
+
+typedef struct _stBTRCoreMediaStatusCBInfo {
+    tBTRCoreDevId                   deviceId;
+    BD_NAME                         deviceName;
+    enBTRCoreDeviceClass            eDeviceClass;
+
+    stBTRCoreMediaStreamStatus*     m_mediaStreamStatus;
+} stBTRCoreMediaStatusCBInfo;
 
 
 typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevice astBTRCoreScannedDevice);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStatusCBInfo* apstDevStatusCbInfo, void* apvUserData);
+typedef void (*BTRCore_MediaStatusCb) (stBTRCoreMediaStatusCBInfo* apstMediaStatusCbInfo, void* apvUserData);
 typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
 typedef int  (*BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
 
@@ -402,19 +434,28 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* BTRCore_MediaControl */
-enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl lenBTRCoreMediaCtrl);
+enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl aBTRCoreMediaCtrl);
 
 /* BTRCore_GetTrackInformation */
-enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaTrackInfo *astBTMediaTrackInfo);
+enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, void* aBTMediaTrackInfo);
+
+/* BTRCore_GetMediaPositionInfo */
+enBTRCoreRet BTRCore_GetMediaPositionInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, void* aBTRCoreMediaPositionInfo);
 
 /* BTRCore_GetMediaProperty */
 enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue); 
+
+/* BTRCore_ReportMediaPosition */
+enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
 /* Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afptrBTRCoreDeviceDiscoveryCB, void* apUserData);
 
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
 enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afptrBTRCoreStatusCB, void* apUserData);
+
+/*BTRCore_RegisterMediaStatusCallback - callback for media state changes*/
+enBTRCoreRet BTRCore_RegisterMediaStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_MediaStatusCb afptrBTRCoreMediaStatusCB, void* apUserData);
 
 /*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
 enBTRCoreRet BTRCore_RegisterConnectionIntimationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnIntimCb afptrBTRCoreConnAuthCB, void* apUserData);

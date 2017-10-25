@@ -525,9 +525,10 @@ btrCore_BTAgentRequestConfirmation (
 
     if (gfpcBConnectionIntimation && lpcPath) {
         //i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
+        //enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
         BTRCORELOG_INFO ("calling ConnIntimation cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
-        yesNo = gfpcBConnectionIntimation(&lstBTDeviceInfo, ui32PassCode, gpcBConnIntimUserData);
+        yesNo = gfpcBConnectionIntimation(enBTDevUnknown, &lstBTDeviceInfo, ui32PassCode, gpcBConnIntimUserData);
     }
 
     gpcBConnAuthPassKey = ui32PassCode;
@@ -578,9 +579,10 @@ btrCore_BTAgentAuthorize (
 
     if (gfpcBConnectionAuthentication && lpcPath) {
         //i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
+        //enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
         BTRCORELOG_DEBUG ("calling ConnAuth cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
-        yesNo = gfpcBConnectionAuthentication(&lstBTDeviceInfo, gpcBConnAuthUserData);
+        yesNo = gfpcBConnectionAuthentication(enBTDevUnknown, &lstBTDeviceInfo, gpcBConnAuthUserData);
     }
 
     gpcBConnAuthPassKey = 0;
@@ -2929,6 +2931,17 @@ BtrCore_BTRegisterDevStatusUpdatecB (
 
 
 int
+BtrCore_BTRegisterMediaStatusUpdatecB (
+    void*                                apBtConn, 
+    fPtr_BtrCore_BTMediaStatusUpdate_cB  afpcBMediaStatusUpdate,
+    void*                                apUserData
+) {
+  /* Dummy Function */
+  return 0;
+}
+
+
+int
 BtrCore_BTRegisterConnIntimationcB (
     void*                       apBtConn,
     fPtr_BtrCore_BTConnIntim_cB afpcBConnIntim,
@@ -3023,11 +3036,12 @@ int
 BtrCore_BTDevMediaControl (
     void*            apBtConn,
     const char*      apDevPath,
-    enBTMediaControl aenBTMediaOper
+    void*             aBTMediaOper
 ) {
-    DBusMessage*    lpDBusMsg   = NULL;
-    dbus_bool_t     lDBusOp;
-    char            mediaOper[16] = {'\0'};
+    dbus_bool_t      lDBusOp;
+    DBusMessage*     lpDBusMsg      = NULL;
+    char             mediaOper[16]  = {'\0'};
+    enBTMediaControl aenBTMediaOper = *(enBTMediaControl*)aBTMediaOper;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
         return -1;
@@ -3086,26 +3100,40 @@ BtrCore_BTDevMediaControl (
 }
 
 
-char* BtrCore_GetPlayerObjectPath (void* apBtConn, const char* apBtDevPath)
+int BtrCore_BTGetMediaPlayerProperty (
+    void*             apBtConn,
+    const char*       apBtMediaPlayerPath,
+    const char*       mediaProperty,
+    void*             mediaPropertyValue
+) {
+  /* Dummy Function */
+  return 0;
+}
+
+
+char* BtrCore_BTGetPlayerObjectPath (void* apBtConn, const char* apBtDevPath)
 {
   /* Dummy Function */
   return NULL;
 }
 
-int   BtrCoreGetMediaProperty (void* apBtConn, const char* apBtObjectPath, enBTInterfaceType interfacePath, const char* mediaProperty, void* mediaPropertyValue)
+
+int   BtrCore_BTSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue)
 {
   /* Dummy Function */
   return 0;
 }
 
-int   BtrCoreSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue)
+int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, void* mediaTracktInfo)
 {
   /* Dummy Function */
   return 0;
 }
 
-int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* apstBTMediaTracktInfo)
+int   BtrCore_BTGetTransportState (void* apBtConn, const char* apBtDataPath, void* state)
 {
   /* Dummy Function */
   return 0;
 }
+
+
