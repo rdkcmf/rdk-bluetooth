@@ -1191,7 +1191,6 @@ btrCore_BTParseDevice (
     const char*     pcAddress = NULL;
     const char*     pcAlias = NULL;
     const char*     pcIcon = NULL;
-
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
         BTRCORELOG_ERROR ("dbus_message_iter_init Failed\n");
         return -1;
@@ -1222,6 +1221,18 @@ btrCore_BTParseDevice (
                 dbus_message_iter_get_basic(&variant_i, &pcAddress);
                 strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN);
                 BTRCORELOG_INFO ("apstBTDeviceInfo->pcAddress : %s\n", apstBTDeviceInfo->pcAddress);
+               
+ #if 1
+                char lcDevVen[4] = {'\0'};
+
+                lcDevVen[0]=pcAddress[12];
+                lcDevVen[1]=pcAddress[15];
+                lcDevVen[2]=pcAddress[16];
+                lcDevVen[3]='\0';
+                ui16Vendor =  strtoll(lcDevVen, NULL, 16);
+                apstBTDeviceInfo->ui16Vendor = ui16Vendor;
+                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
+ #endif
             }
             else if (strcmp (pcKey, "Name") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -1345,8 +1356,7 @@ btrCore_BTParseDevice (
         if (!dbus_message_iter_next(&element_i)) {
             break;
         }
-    }
-
+    }         
     (void)dbus_type;
 
     if (strlen(apstBTDeviceInfo->pcAlias))
