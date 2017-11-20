@@ -189,12 +189,12 @@ btrCore_BTMapDevClasstoDevType(
        unsigned int ui32DevClassID = (lui32Class & 0xFFF);
 
        switch (ui32DevClassID){
-         case enBT_DC_SmartPhone:
+         case enBTDCSmartPhone:
                                BTRCORELOG_DEBUG ("Its a enBTDevAudioSource\n");
                                lenBtDevType = enBTDevAudioSource;
                                break;
-         case enBT_DC_WearableHeadset:
-         case enBT_DC_Loudspeaker:
+         case enBTDCWearableHeadset:
+         case enBTDCLoudspeaker:
                                BTRCORELOG_DEBUG ("Its a enBTDevAudioSink\n");
                                lenBtDevType = enBTDevAudioSink;
                                break;
@@ -291,10 +291,9 @@ btrCore_BTDBusConnectionFilter_cb (
                                 strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                 strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                                if( !gpDevLost ) {
-                                   lenBtDevState = enBTDevStPropChanged;
-                                }
-                                else {
+                                lenBtDevState = enBTDevStPropChanged;
+        
+                                if (enBTDevAudioSink == lenBTDevType && gpDevLost) {
                                    lenBtDevState = enBTDevStLost;
                                 }
                             }
@@ -481,10 +480,10 @@ btrCore_BTDBusConnectionFilter_cb (
                                              strncpy(apcMediaIfce, lpcDBusIface, ui32MediaIfceLen);
                                           }
 
-                                          if (!BtrCore_BTGetTrackInformation (gpDBusConn, apcMediaIfce, (void*)&mediaTrackInfo)) {
+                                          if (!BtrCore_BTGetTrackInformation (gpDBusConn, apcMediaIfce, &mediaTrackInfo)) {
                                              stBTMediaStatusUpdate mediaStatusUpdate;
 
-                                             mediaStatusUpdate.aeBtMediaStatus  = enBTMediaItemUpdate;
+                                             mediaStatusUpdate.aeBtMediaStatus  = enBTMediaTrackUpdate;
                                              mediaStatusUpdate.m_mediaTrackInfo = &mediaTrackInfo;
 
                                              if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
@@ -4061,7 +4060,7 @@ BtrCore_BTRegisterMediaPlayerPathcB (
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
 /* Get Player Object Path on Remote BT Device*/
 char*
-BtrCore_BTGetPlayerObjectPath (
+BtrCore_BTGetMediaPlayerPath (
     void*          apBtConn,
     const char*    apBtDevPath
 ) {
@@ -4098,12 +4097,11 @@ int
 BtrCore_BTDevMediaControl (
     void*             apBtConn,
     const char*       apMediaPlayerPath,
-    void*             aBTMediaOper
+    enBTMediaControl  aenBTMediaOper
 ) {
     dbus_bool_t      lDBusOp;
     DBusMessage*     lpDBusMsg      = NULL;
     char             mediaOper[16]  = "\0";
-    enBTMediaControl aenBTMediaOper = *(enBTMediaControl*)aBTMediaOper; 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
        BTRCORELOG_ERROR ("DBus Connection Failure!!!");
@@ -4111,31 +4109,31 @@ BtrCore_BTDevMediaControl (
     }
 
     switch (aenBTMediaOper) {
-    case enBTMediaPlay:
+    case enBTMediaCtrlPlay:
         strcpy(mediaOper, "Play");
         break;
-    case enBTMediaPause:
+    case enBTMediaCtrlPause:
         strcpy(mediaOper, "Pause");
         break;
-    case enBTMediaStop:
+    case enBTMediaCtrlStop:
         strcpy(mediaOper, "Stop");
         break;
-    case enBTMediaNext:
+    case enBTMediaCtrlNext:
         strcpy(mediaOper, "Next");
         break;
-    case enBTMediaPrevious:
+    case enBTMediaCtrlPrevious:
         strcpy(mediaOper, "Previous");
         break;
-    case enBTMediaFastForward:
+    case enBTMediaCtrlFastForward:
         strcpy(mediaOper, "FastForward");
         break;
-    case enBTMediaRewind:
+    case enBTMediaCtrlRewind:
         strcpy(mediaOper, "Rewind");
         break;
-    case enBTMediaVolumeUp:
+    case enBTMediaCtrlVolumeUp:
         strcpy(mediaOper, "VolumeUp");
         break;
-    case enBTMediaVolumeDown:
+    case enBTMediaCtrlVolumeDown:
         strcpy(mediaOper, "VolumeDown");
         break;
     }
@@ -4276,7 +4274,7 @@ BtrCore_BTSetMediaProperty (
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !pValue)
         return -1;
 
-    mediaPlayerObjectPath = BtrCore_BTGetPlayerObjectPath (gpDBusConn, apBtAdapterPath);
+    mediaPlayerObjectPath = BtrCore_BTGetMediaPlayerPath (gpDBusConn, apBtAdapterPath);
 
     if (mediaPlayerObjectPath == NULL) {
         return -1;
@@ -4323,7 +4321,7 @@ int
 BtrCore_BTGetTrackInformation (
     void*               apBtConn,
     const char*         apBtmediaPlayerObjectPath,
-    void*               aBTMediaTrackInfo
+    stBTMediaTrackInfo* lpstBTMediaTrackInfo
 ) {
     unsigned int        ui32Value   = 0;
     char*               pcKey       = "\0";
@@ -4335,7 +4333,6 @@ BtrCore_BTGetTrackInformation (
     DBusError           lDBusErr;
     DBusMessageIter     args;
     char*               mediaPlayerPath = BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH;
-    stBTMediaTrackInfo* lpstBTMediaTrackInfo = (stBTMediaTrackInfo*)aBTMediaTrackInfo;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
         BTRCORELOG_ERROR ("DBus Connection Failure!!!"); 

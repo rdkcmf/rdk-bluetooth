@@ -31,8 +31,6 @@
 
 typedef void* tBTRCoreAVMediaHdl;
 
-
-
 typedef enum _eBTRCoreAVMType {
     eBTRCoreAVMTypePCM,
     eBTRCoreAVMTypeSBC,
@@ -51,14 +49,29 @@ typedef enum _eBTRCoreAVMAChan {
     eBTRCoreAVMAChanUnknown
 } eBTRCoreAVMAChan;
 
-typedef enum _eBTRCoreAVMStreamingState {
-    eBTRCoreAVMStreamStarted,
-    eBTRCoreAVMStreamPaused,
-    eBTRCoreAVMStreamStopped,
-    eBTRCoreAVMStreamEnded,
-    eBTRCoreAVMStreamPosition,
-    eBTRCoreAVMStreamChanged,
-} eBTRCoreAVMStreamingState;
+typedef enum _enBTRCoreAVMediaCtrl {
+    enBTRCoreAVMediaCtrlPlay,
+    enBTRCoreAVMediaCtrlPause,
+    enBTRCoreAVMediaCtrlStop,
+    enBTRCoreAVMediaCtrlNext,
+    enBTRCoreAVMediaCtrlPrevious,
+    enBTRCoreAVMediaCtrlFastForward,
+    enBTRCoreAVMediaCtrlRewind,
+    enBTRCoreAVMediaCtrlVolumeUp,
+    enBTRCoreAVMediaCtrlVolumeDown
+} enBTRCoreAVMediaCtrl;
+
+typedef enum _eBTRCoreAVMediaStatusUpdate {
+    eBTRCoreAVMediaTrkStStarted,
+    eBTRCoreAVMediaTrkStPlaying,
+    eBTRCoreAVMediaTrkStPaused,
+    eBTRCoreAVMediaTrkStStopped,
+    eBTRCoreAVMediaTrkStChanged,
+    eBTRCoreAVMediaTrkPosition,
+    eBTRCoreAVMediaPlaybackEnded,
+    eBTRCoreAVMediaPlaylistUpdate,
+    eBTRCoreAVMediaBrowserUpdate
+} eBTRCoreAVMediaStatusUpdate;
 
 
 typedef struct _stBTRMgrAVMediaPcmInfo {
@@ -109,19 +122,18 @@ typedef struct _stBTRCoreAVMediaTrackInfo {
 } stBTRCoreAVMediaTrackInfo;
 
 typedef struct _stBTRCoreAVMediaPositionInfo {
-    char            pcState[BTRCORE_STR_LEN];
     unsigned int    ui32Duration;
     unsigned int    ui32Position;
 } stBTRCoreAVMediaPositionInfo;
 
-typedef struct _stBTRCoreAVMediaStreamStatus {
-    eBTRCoreAVMStreamingState       eAVMStreamstate;
+typedef struct _stBTRCoreAVMediaStatusUpdate {
+    eBTRCoreAVMediaStatusUpdate     eAVMediaState;
 
     union {
       stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;
       stBTRCoreAVMediaPositionInfo    m_mediaPositionInfo;
     };
-} stBTRCoreAVMediaStreamStatus;
+} stBTRCoreAVMediaStatusUpdate;
 
 
 
@@ -133,9 +145,9 @@ enBTRCoreRet BTRCore_AVMedia_DeInit (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtC
 enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaInfo* apstBtrCoreAVMediaInfo);
 enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
 enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr);
-enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, void* mediaControl);
-enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, void* mediaTrackInfo);
-enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, void*mediaPositionInfo);
+enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl);
+enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaTrackInfo* apstBTAVMediaTrackInfo);
+enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaPositionInfo* apstBTAVMediaPositionInfo);
 enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue);
 enBTRCoreRet BTRCore_AVMedia_StartMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevPath, const char* apBtDevAddr);
 enBTRCoreRet BTRCore_AVMedia_ExitMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM);

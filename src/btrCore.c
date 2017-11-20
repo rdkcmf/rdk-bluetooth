@@ -2779,13 +2779,14 @@ BTRCore_MediaControl (
     tBTRCoreHandle      hBTRCore, 
     tBTRCoreDevId       aBTRCoreDevId, 
     enBTRCoreDeviceType aenBTRCoreDevType,
-    enBTRCoreMediaCtrl  aenBTRCoreDMCtrl
+    enBTRCoreMediaCtrl  aenBTRCoreMediaCtrl
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
     const char*     pDeviceAddress = NULL;
     enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
     BOOLEAN         lbBTDeviceConnected = FALSE; 
     int             loop = 0;
+    enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -2862,8 +2863,22 @@ BTRCore_MediaControl (
        return enBTRCoreFailure;
     }
 
+    switch (aenBTRCoreMediaCtrl) {
+
+    case enBTRCoreMediaCtrlPlay        : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPlay;        break;
+    case enBTRCoreMediaCtrlPause       : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPause;       break;
+    case enBTRCoreMediaCtrlStop        : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlStop;        break;
+    case enBTRCoreMediaCtrlNext        : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlNext;        break;
+    case enBTRCoreMediaCtrlPrevious    : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPrevious;    break;
+    case enBTRCoreMediaCtrlFastForward : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlFastForward; break;
+    case enBTRCoreMediaCtrlRewind      : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRewind;      break;
+    case enBTRCoreMediaCtrlVolumeUp    : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlVolumeUp;    break;
+    case enBTRCoreMediaCtrlVolumeDown  : aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlVolumeDown;  break;
+    }
+
+
     if (enBTRCoreSuccess != BTRCore_AVMedia_MediaControl(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress
-                                                                                                        , (void*)&aenBTRCoreDMCtrl)) {
+                                                                                                        , aenBTRCoreAVMediaCtrl)) {
         BTRCORELOG_ERROR ("Media Play Control Failed!!!\n");
         return enBTRCoreFailure;
     }
@@ -2876,7 +2891,7 @@ BTRCore_GetMediaTrackInfo (
     tBTRCoreHandle            hBTRCore,
     tBTRCoreDevId             aBTRCoreDevId,
     enBTRCoreDeviceType       aenBTRCoreDevType,
-    void*                     aBTRCoreMediaTrackInfo
+    stBTRCoreMediaTrackInfo*  apstBTMediaTrackInfo
 ) {
     stBTRCoreHdl*   pstlhBTRCore    = NULL;
     const char*     pDeviceAddress  = NULL;
@@ -2953,7 +2968,7 @@ BTRCore_GetMediaTrackInfo (
     if (enBTRCoreSuccess != BTRCore_AVMedia_GetTrackInfo(pstlhBTRCore->avMediaHdl,
                                                          pstlhBTRCore->connHdl,
                                                          pDeviceAddress,
-                                                         aBTRCoreMediaTrackInfo))  {
+                             (stBTRCoreAVMediaTrackInfo*)apstBTMediaTrackInfo))  {
         BTRCORELOG_ERROR ("AVMedia get media track information Failed!!!\n");
         return enBTRCoreFailure;
     }
@@ -2963,10 +2978,10 @@ BTRCore_GetMediaTrackInfo (
 
 enBTRCoreRet
 BTRCore_GetMediaPositionInfo (
-    tBTRCoreHandle            hBTRCore,
-    tBTRCoreDevId             aBTRCoreDevId,
-    enBTRCoreDeviceType       aenBTRCoreDevType,
-    void*                     aBTRCoreMediaPositionInfo
+    tBTRCoreHandle              hBTRCore,
+    tBTRCoreDevId               aBTRCoreDevId,
+    enBTRCoreDeviceType         aenBTRCoreDevType,
+    stBTRCoreMediaPositionInfo* apstBTMediaPositionInfo
 ) {
     stBTRCoreHdl*   pstlhBTRCore    = NULL;
     const char*     pDeviceAddress  = NULL;
@@ -3043,7 +3058,7 @@ BTRCore_GetMediaPositionInfo (
    if (enBTRCoreSuccess != BTRCore_AVMedia_GetPositionInfo(pstlhBTRCore->avMediaHdl,
                                                            pstlhBTRCore->connHdl,
                                                            pDeviceAddress,
-                                                           aBTRCoreMediaPositionInfo)) {
+                          (stBTRCoreAVMediaPositionInfo*)apstBTMediaPositionInfo)) {
         BTRCORELOG_ERROR ("AVMedia get Media Position Info Failed!!!\n");
         return enBTRCoreFailure;
     }
@@ -3477,7 +3492,7 @@ btrCore_BTDeviceStatusUpdate_cb (
                     {
                         stBTRCoreScannedDevice  stFoundDevice;
                         memcpy (&stFoundDevice, &lpstlhBTRCore->stFoundDevice, sizeof(stFoundDevice));
-                        lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB(stFoundDevice);
+                        lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB(stFoundDevice, NULL);
                     }
                 }
             }
@@ -3731,7 +3746,7 @@ btrCore_BTMediaStatusUpdate_cb (
     lpstlhBTRCore->stMediaStatusCbInfo.deviceId      = lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].deviceId;
     lpstlhBTRCore->stMediaStatusCbInfo.eDeviceClass  = lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].device_type;
     strncpy(lpstlhBTRCore->stMediaStatusCbInfo.deviceName, lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].device_name, BD_NAME_LEN-1);
-    lpstlhBTRCore->stMediaStatusCbInfo.m_mediaStreamStatus = (stBTRCoreMediaStreamStatus*)apMediaStreamStatus;
+    memcpy(&lpstlhBTRCore->stMediaStatusCbInfo.m_mediaStatusUpdate, apMediaStreamStatus, sizeof(stBTRCoreMediaStatusCBInfo));
 
     lpstlhBTRCore->fptrBTRCoreMediaStatusCB(&lpstlhBTRCore->stMediaStatusCbInfo, NULL); /* Invoke the callback */
 
@@ -3784,7 +3799,7 @@ btrCore_BTDeviceConnectionIntimation_cb (
             }
         }
 
-        i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo);
+        i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo, NULL);
     }
 
     return i32DevConnIntimRet;
@@ -3853,7 +3868,7 @@ btrCore_BTDeviceAuthentication_cb (
             }
         }
 
-        i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo);
+        i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo, NULL);
     }
 
     if (enBTRCoreMobileAudioIn == lenBTRCoreDevType && i32DevAuthRet) {

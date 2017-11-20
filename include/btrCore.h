@@ -98,25 +98,28 @@ typedef enum _eBTRCoreDevMediaAChan {
 } eBTRCoreDevMediaAChan;
 
 typedef enum _enBTRCoreMediaCtrl {
-    enBTRCoreMediaPlay,
-    enBTRCoreMediaPause,
-    enBTRCoreMediaStop,
-    enBTRCoreMediaNext,
-    enBTRCoreMediaPrevious,
-    enBTRCoreMediaFastForward,
-    enBTRCoreMediaRewind,
-    enBTRCoreMediaVolumeUp,
-    enBTRCoreMediaVolumeDown
+    enBTRCoreMediaCtrlPlay,
+    enBTRCoreMediaCtrlPause,
+    enBTRCoreMediaCtrlStop,
+    enBTRCoreMediaCtrlNext,
+    enBTRCoreMediaCtrlPrevious,
+    enBTRCoreMediaCtrlFastForward,
+    enBTRCoreMediaCtrlRewind,
+    enBTRCoreMediaCtrlVolumeUp,
+    enBTRCoreMediaCtrlVolumeDown
 } enBTRCoreMediaCtrl;
 
-typedef enum _eBTRCoreStreamingState {
-    eBTRCoreStreamStarted,
-    eBTRCoreStreamPaused,
-    eBTRCoreStreamStopped,
-    eBTRCoreStreamEnded,
-    eBTRCoreStreamPosition,
-    eBTRCoreStreamChanged
-} eBTRCoreStreamingState;
+typedef enum _eBTRCoreMediaStatusUpdate {
+    eBTRCoreMediaTrkStStarted,
+    eBTRCoreMediaTrkStPlaying,
+    eBTRCoreMediaTrkStPaused,
+    eBTRCoreMediaTrkStStopped,
+    eBTRCoreMediaTrkStChanged,
+    eBTRCoreMediaTrkPosition,
+    eBTRCoreMediaPlaybackEnded,
+    eBTRCoreMediaPlaylistUpdate,
+    eBTRCoreMediaBrowserUpdate
+} eBTRCoreMediaStatusUpdate;
 
 
 /*platform specific data lengths */
@@ -276,34 +279,33 @@ typedef struct _stBTRCoreMediaTrackInfo {
 } stBTRCoreMediaTrackInfo;
 
 typedef struct _stBTRCoreMediaPositionInfo {
-    char            pcState[BTRCORE_STRINGS_MAX_LEN];
     unsigned int    ui32Duration;
     unsigned int    ui32Position;
 } stBTRCoreMediaPositionInfo;
 
-typedef struct _stBTRCoreMediaStreamStatus {
-    eBTRCoreStreamingState          eStreamstate;
+typedef struct _stBTRCoreMediaStatusUpdate {
+   eBTRCoreMediaStatusUpdate     eBTMediaStUpdate;
 
     union {
       stBTRCoreMediaTrackInfo       m_mediaTrackInfo;
       stBTRCoreMediaPositionInfo    m_mediaPositionInfo;
     };
-} stBTRCoreMediaStreamStatus;
+} stBTRCoreMediaStatusUpdate;
 
 typedef struct _stBTRCoreMediaStatusCBInfo {
     tBTRCoreDevId                   deviceId;
     BD_NAME                         deviceName;
     enBTRCoreDeviceClass            eDeviceClass;
 
-    stBTRCoreMediaStreamStatus*     m_mediaStreamStatus;
+    stBTRCoreMediaStatusUpdate      m_mediaStatusUpdate;
 } stBTRCoreMediaStatusCBInfo;
 
 
-typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevice astBTRCoreScannedDevice);
+typedef void (*BTRCore_DeviceDiscoveryCb) (stBTRCoreScannedDevice astBTRCoreScannedDevice, void* apvUserData);
 typedef void (*BTRCore_StatusCb) (stBTRCoreDevStatusCBInfo* apstDevStatusCbInfo, void* apvUserData);
 typedef void (*BTRCore_MediaStatusCb) (stBTRCoreMediaStatusCBInfo* apstMediaStatusCbInfo, void* apvUserData);
-typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
-typedef int  (*BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo);
+typedef int  (*BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo, void* apvUserData);
+typedef int  (*BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo, void* apvUserData);
 
 
 /*
@@ -434,13 +436,13 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* BTRCore_MediaControl */
-enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl aBTRCoreMediaCtrl);
+enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl aenBTRCoreMediaCtrl);
 
 /* BTRCore_GetTrackInformation */
-enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, void* aBTMediaTrackInfo);
+enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaTrackInfo* apstBTMediaTrackInfo);
 
 /* BTRCore_GetMediaPositionInfo */
-enBTRCoreRet BTRCore_GetMediaPositionInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, void* aBTRCoreMediaPositionInfo);
+enBTRCoreRet BTRCore_GetMediaPositionInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaPositionInfo* apstBTMediaPositionInfo);
 
 /* BTRCore_GetMediaProperty */
 enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue); 

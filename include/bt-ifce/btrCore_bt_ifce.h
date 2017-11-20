@@ -17,12 +17,12 @@
  * limitations under the License.
 */
 /*
- * btrCore_dbus.h
+ * btrCore_bt_ifce_.h
  * DBus layer abstraction for BT functionality
  */
 
-#ifndef __BTR_CORE_DBUS_BT_H__
-#define __BTR_CORE_DBUS_BT_H__
+#ifndef __BTR_CORE_BT_IFCE_H__
+#define __BTR_CORE_BT_IFCE_H__
 
 #define BT_MAX_STR_LEN           256
 #define BT_MAX_UUID_STR_LEN      64
@@ -41,24 +41,24 @@ typedef enum _enBTDeviceType {
 } enBTDeviceType;
 
 typedef enum _enBTDeviceClass {
-    enBT_DC_SmartPhone         = 0x20C,
-    enBT_DC_WearableHeadset    = 0x404,
-    enBT_DC_Handsfree          = 0x408,
-    enBT_DC_Reserved           = 0x40C,
-    enBT_DC_Microphone         = 0x410,
-    enBT_DC_Loudspeaker        = 0x414,
-    enBT_DC_Headphones         = 0x418,
-    enBT_DC_PortableAudio      = 0x41C,
-    enBT_DC_CarAudio           = 0x420,
-    enBT_DC_STB                = 0x424,
-    enBT_DC_HIFIAudioDevice    = 0x428,
-    enBT_DC_VCR                = 0x42C,
-    enBT_DC_VideoCamera        = 0x430,
-    enBT_DC_Camcoder           = 0x434,
-    enBT_DC_VideoMonitor       = 0x438,
-    enBT_DC_TV                 = 0x43C,
-    enBT_DC_VideoConference    = 0x440,
-    enBT_DC_Unknown            = 0x000
+    enBTDCSmartPhone         = 0x20C,
+    enBTDCWearableHeadset    = 0x404,
+    enBTDCHandsfree          = 0x408,
+    enBTDCReserved           = 0x40C,
+    enBTDCMicrophone         = 0x410,
+    enBTDCLoudspeaker        = 0x414,
+    enBTDCHeadphones         = 0x418,
+    enBTDCPortableAudio      = 0x41C,
+    enBTDCCarAudio           = 0x420,
+    enBTDCSTB                = 0x424,
+    enBTDCHIFIAudioDevice    = 0x428,
+    enBTDCVCR                = 0x42C,
+    enBTDCVideoCamera        = 0x430,
+    enBTDCCamcoder           = 0x434,
+    enBTDCVideoMonitor       = 0x438,
+    enBTDCTV                 = 0x43C,
+    enBTDCVideoConference    = 0x440,
+    enBTDCUnknown            = 0x000
 } enBTDeviceClass;
 
 typedef enum _enBTOpType {
@@ -120,23 +120,23 @@ typedef enum _enBTMediaTransportState {
 } enBTMediaTransportState;
 
 typedef enum _enBTMediaStatusUpdate { 
-    enBTMediaTransportUpdate,       /* Transport path  Add/Rem/Change */
+    enBTMediaTransportUpdate,       /* Transport path  Add/Rem        */
     enBTMediaPlayerUpdate,          /* MediaPlayer     Add/Rem        */
-    enBTMediaItemUpdate,            /* Track change    Add/Rem        */
+    enBTMediaTrackUpdate,           /* Track change    Add/Rem        */
     enBTMediaPlaylistUpdate,        /* NowPlaying list Add/Rem        */
-    enBTMediaFileSystemUpdate       /* Media Browser   Add/Rem        */
+    enBTMediaBrowserUpdate          /* Media Browser   Add/Rem        */
 } enBTMediaStatusUpdate;
 
 typedef enum _enBTMediaControl {
-    enBTMediaPlay,
-    enBTMediaPause,
-    enBTMediaStop,
-    enBTMediaNext,
-    enBTMediaPrevious,
-    enBTMediaFastForward,
-    enBTMediaRewind,
-    enBTMediaVolumeUp,
-    enBTMediaVolumeDown
+    enBTMediaCtrlPlay,
+    enBTMediaCtrlPause,
+    enBTMediaCtrlStop,
+    enBTMediaCtrlNext,
+    enBTMediaCtrlPrevious,
+    enBTMediaCtrlFastForward,
+    enBTMediaCtrlRewind,
+    enBTMediaCtrlVolumeUp,
+    enBTMediaCtrlVolumeDown
 } enBTMediaControl;
 
 
@@ -204,7 +204,7 @@ typedef struct _stBTMediaStatusUpdate {
     union {
       enBTMediaTransportState m_mediaTransportState;
       stBTMediaTrackInfo*     m_mediaTrackInfo;
-      //FileSystem
+      //MediaBrowser
       //Playlist
     };
 } stBTMediaStatusUpdate;
@@ -263,15 +263,14 @@ int   BtrCore_BTRegisterTransportPathMediacB (void* apBtConn, const char* apBtAd
                                                 fPtr_BtrCore_BTTransportPathMedia_cB afpcBTransportPathMedia, void* apUserData);
 int   BtrCore_BTRegisterMediaPlayerPathcB (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTMediaPlayerPath_cB afpcBTMediaPlayerPath, void* apUserData); 
-//int   BtrCore_BTRegisterMediaStatusUpdatecB (void* apBtConn, fPtr_BtrCore_BTMediaStatusUpdate_CB afpcBMediaStatusUpdate, void* apUserData);
 
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
-int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, void* aBTMediaOper);
-char* BtrCore_BTGetPlayerObjectPath (void* apBtConn, const char* apBtDevPath);
+int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, enBTMediaControl  aenBTMediaOper);
+char* BtrCore_BTGetMediaPlayerPath (void* apBtConn, const char* apBtDevPath);
 int   BtrCore_BTGetMediaPlayerProperty (void* apBtConn, const char* apBtObjectPath, const char* mediaProperty, void* mediaPropertyValue);
 int   BtrCore_BTGetTransportState (void* apBtConn, const char* apBtDataPath, void* state);
 int   BtrCore_BTSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, char* mediaProperty, char* pValue);
-int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, void* mediaTracktInfo);
+int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* lpstBTMediaTrackInfo);
 
 
-#endif // __BTR_CORE_DBUS_BT_H__
+#endif // __BTR_CORE_BT_IFCE_H__

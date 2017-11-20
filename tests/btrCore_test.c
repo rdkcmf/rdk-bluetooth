@@ -347,7 +347,8 @@ sendSBCFileOverBT (
 
 int
 cb_connection_intimation (
-    stBTRCoreConnCBInfo* apstConnCbInfo
+    stBTRCoreConnCBInfo* apstConnCbInfo,
+    void*                apvUserData
 ) {
     fprintf(stderr, "%d\t: %s - Choose 35 to verify pin-passcode or 36 to discard pin-passcode\n\n", __LINE__, __FUNCTION__);
 
@@ -375,7 +376,8 @@ cb_connection_intimation (
 
 int
 cb_connection_authentication (
-    stBTRCoreConnCBInfo* apstConnCbInfo
+    stBTRCoreConnCBInfo* apstConnCbInfo,
+    void*                apvUserData
 ) {
     fprintf(stderr, "%d\t: %s - Choose 35 to accept the connection or 36 to deny the connection\n\n", __LINE__, __FUNCTION__);
 
