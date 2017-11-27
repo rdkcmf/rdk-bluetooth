@@ -1341,7 +1341,6 @@ BTRCore_SetDiscoverableTimeout (
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
-
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     timeout = apstBTRCoreAdapter->DiscoverableTimeout;
@@ -3688,8 +3687,8 @@ btrCore_BTDeviceStatusUpdate_cb (
                        lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass     = lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].device_type;
                        strncpy(lpstlhBTRCore->stDevStatusCbInfo.deviceName, lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].device_name,
                                                                                                                         (BD_NAME_LEN-1));
-                        /* Invoke the callback */
-                        lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvCBUserData);
+                            /* Invoke the callback */
+                       lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvCBUserData);
                     }
                 }
             }
@@ -3748,9 +3747,10 @@ btrCore_BTMediaStatusUpdate_cb (
     strncpy(lpstlhBTRCore->stMediaStatusCbInfo.deviceName, lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].device_name, BD_NAME_LEN-1);
     memcpy(&lpstlhBTRCore->stMediaStatusCbInfo.m_mediaStatusUpdate, apMediaStreamStatus, sizeof(stBTRCoreMediaStatusCBInfo));
 
-    lpstlhBTRCore->fptrBTRCoreMediaStatusCB(&lpstlhBTRCore->stMediaStatusCbInfo, NULL); /* Invoke the callback */
-
-  return 0;
+    if(NULL != lpstlhBTRCore->fptrBTRCoreMediaStatusCB) {
+        lpstlhBTRCore->fptrBTRCoreMediaStatusCB(&lpstlhBTRCore->stMediaStatusCbInfo, NULL); /* Invoke the callback */
+    }
+    return 0;
 }
 
 
@@ -3800,6 +3800,7 @@ btrCore_BTDeviceConnectionIntimation_cb (
         }
 
         i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo, NULL);
+
     }
 
     return i32DevConnIntimRet;
