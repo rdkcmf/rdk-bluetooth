@@ -62,14 +62,14 @@ typedef struct _stBTRCoreHdl {
     char*                       curAdapterAddr;
 
     unsigned int                numOfScannedDevices;
-    stBTRCoreScannedDevice      stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    stBTRCoreBTDevice            stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
     stBTRCoreDevStateInfo       stScannedDevStInfoArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
     unsigned int                numOfPairedDevices;
-    stBTRCoreKnownDevice        stKnownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    stBTRCoreBTDevice           stKnownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
     stBTRCoreDevStateInfo       stKnownDevStInfoArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
-    stBTRCoreScannedDevice      stFoundDevice;
+    stBTRCoreBTDevice           stFoundDevice;
 
     stBTRCoreDevStatusCBInfo    stDevStatusCbInfo;
 
@@ -99,7 +99,7 @@ static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
 static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static void btrCore_SetScannedDeviceInfo (stBTRCoreHdl* apsthBTRCore); 
 static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCore, const char* pAdapterPath);
-static void btrCore_MapKnownDeviceListFromPairedDeviceInfo (stBTRCoreKnownDevice* knownDevicesArr, stBTPairedDeviceInfo* pairedDeviceInfo);
+static void btrCore_MapKnownDeviceListFromPairedDeviceInfo (stBTRCoreBTDevice* knownDevicesArr, stBTPairedDeviceInfo* pairedDeviceInfo);
 static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static const char* btrCore_GetKnownDeviceName (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static const char* btrCore_GetKnownDeviceMac (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
@@ -369,7 +369,7 @@ btrCore_GetScannedDeviceAddress (
 
 static void
 btrCore_MapKnownDeviceListFromPairedDeviceInfo (
-    stBTRCoreKnownDevice* knownDevicesArr,
+    stBTRCoreBTDevice* knownDevicesArr,
     stBTPairedDeviceInfo* pairedDeviceInfo
 ) {
     U8 i_idx=0, j_idx=0;
@@ -411,7 +411,7 @@ btrCore_PopulateListOfPairedDevices (
     U8 i_idx=0, j_idx=0;
     enBTRCoreRet           retResult = enBTRCoreSuccess;
     stBTPairedDeviceInfo   pairedDeviceInfo;
-    stBTRCoreKnownDevice   knownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    stBTRCoreBTDevice   knownDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
     memset (&pairedDeviceInfo, 0,  sizeof(pairedDeviceInfo));
     memset (knownDevicesArr,   0,  sizeof(knownDevicesArr ));
@@ -421,7 +421,7 @@ btrCore_PopulateListOfPairedDevices (
        /* Initially stBTRCoreKnownDevice List is populated from pairedDeviceInfo(bluez i/f) directly *********/  
        if (0 == apsthBTRCore->numOfPairedDevices) { 
             apsthBTRCore->numOfPairedDevices = pairedDeviceInfo.numberOfDevices;
-            memcpy (apsthBTRCore->stKnownDevicesArr, knownDevicesArr, (sizeof(stBTRCoreKnownDevice)*apsthBTRCore->numOfPairedDevices));
+            memcpy (apsthBTRCore->stKnownDevicesArr, knownDevicesArr, (sizeof(stBTRCoreBTDevice)*apsthBTRCore->numOfPairedDevices));
 
             for (i_idx = 0; i_idx < pairedDeviceInfo.numberOfDevices; i_idx++) {
               apsthBTRCore->stKnownDevStInfoArr[i_idx].eDevicePrevState = enBTRCoreDevStInitialized;
@@ -480,7 +480,7 @@ btrCore_PopulateListOfPairedDevices (
        /*Loops through to check for the removal of Device entries from the list during Unpairing */ 
          for (i_idx=0; i_idx < numOfDevices; i_idx++) {
            if (knownDev_index_array[i_idx]) {
-               memcpy (&apsthBTRCore->stKnownDevicesArr[i_idx - count], &knownDevicesArr[i_idx], sizeof(stBTRCoreKnownDevice));
+               memcpy (&apsthBTRCore->stKnownDevicesArr[i_idx - count], &knownDevicesArr[i_idx], sizeof(stBTRCoreBTDevice));
                apsthBTRCore->stKnownDevStInfoArr[i_idx - count].eDevicePrevState = apsthBTRCore->stKnownDevStInfoArr[i_idx].eDevicePrevState;
                apsthBTRCore->stKnownDevStInfoArr[i_idx - count].eDeviceCurrState = apsthBTRCore->stKnownDevStInfoArr[i_idx].eDeviceCurrState;
            }
@@ -493,7 +493,7 @@ btrCore_PopulateListOfPairedDevices (
        /*Loops through to checks for the addition of Device entries to the list during paring     */ 
          for (i_idx=0; i_idx < pairedDeviceInfo.numberOfDevices; i_idx++) {
            if (!pairedDev_index_array[i_idx]) {
-             memcpy(&apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices], &knownDevicesArr[i_idx], sizeof(stBTRCoreKnownDevice));
+             memcpy(&apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices], &knownDevicesArr[i_idx], sizeof(stBTRCoreBTDevice));
              apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDevicePrevState = enBTRCoreDevStInitialized;
              apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDeviceCurrState = enBTRCoreDevStPaired;
              apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices].device_connected   = FALSE;
@@ -1764,7 +1764,7 @@ BTRCore_PairDevice (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreScannedDevice* pstScannedDevice = NULL;
+        stBTRCoreBTDevice* pstScannedDevice = NULL;
 
         BTRCORELOG_DEBUG ("We will pair %s\n"
                          "address %s\n",
@@ -1831,7 +1831,7 @@ BTRCore_UnPairDevice (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -1895,7 +1895,7 @@ BTRCore_FindDevice (
     tBTRCoreDevId   aBTRCoreDevId
 ) {
     stBTRCoreHdl*           pstlhBTRCore = NULL;
-    stBTRCoreScannedDevice* pstScannedDevice = NULL;
+    stBTRCoreBTDevice* pstScannedDevice = NULL;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1943,7 +1943,7 @@ BTRCore_FindService (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -1989,7 +1989,7 @@ BTRCore_GetSupportedServices (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -2055,7 +2055,7 @@ BTRCore_IsDeviceConnectable (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress  = pstKnownDevice->device_address;
     }
@@ -2115,7 +2115,7 @@ BTRCore_ConnectDevice (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress  = pstKnownDevice->bd_path;
         pDeviceName     = pstKnownDevice->device_name;
@@ -2211,7 +2211,7 @@ BTRCore_DisconnectDevice (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -2305,7 +2305,7 @@ BTRCore_GetDeviceConnected (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress  = pstKnownDevice->bd_path;
     }
@@ -2393,7 +2393,7 @@ BTRCore_GetDeviceDisconnected (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress  = pstKnownDevice->bd_path;
     }
@@ -2489,7 +2489,7 @@ BTRCore_GetDeviceMediaInfo (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice* pstKnownDevice = NULL;
+        stBTRCoreBTDevice* pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -2633,7 +2633,7 @@ BTRCore_AcquireDeviceDataPath (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice* pstKnownDevice = NULL;
+        stBTRCoreBTDevice* pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -2729,7 +2729,7 @@ BTRCore_ReleaseDeviceDataPath (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice* pstKnownDevice = NULL;
+        stBTRCoreBTDevice* pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -2810,7 +2810,7 @@ BTRCore_MediaControl (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreKnownDevice*   pstKnownDevice = NULL;
+        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceAddress = pstKnownDevice->bd_path;
     }
@@ -3489,7 +3489,7 @@ btrCore_BTDeviceStatusUpdate_cb (
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
                     if (lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB)
                     {
-                        stBTRCoreScannedDevice  stFoundDevice;
+                        stBTRCoreBTDevice  stFoundDevice;
                         memcpy (&stFoundDevice, &lpstlhBTRCore->stFoundDevice, sizeof(stFoundDevice));
                         lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB(stFoundDevice, NULL);
                     }
