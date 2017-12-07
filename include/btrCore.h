@@ -191,16 +191,16 @@ typedef struct _stBTRCoreAdapter {
 
 
 typedef struct _stBTRCoreBTDevice { 
-    tBTRCoreDevId                 deviceId;
-    BD_NAME                       device_name;
-    BD_NAME                       device_address;
-    enBTRCoreDeviceClass          device_type;
-    stBTRCoreSupportedServiceList device_profile;
-    int                           RSSI;
-    unsigned int                  vendor_id;
-    BOOLEAN                       found;
-    BOOLEAN                       device_connected;
-    BD_NAME                       bd_path;
+    tBTRCoreDevId                 tDeviceId;
+    char                          pcDeviceName[BD_NAME_LEN+1];
+    char                          pcDeviceAddress[BD_NAME_LEN+1];
+    enBTRCoreDeviceClass          enDeviceType;
+    stBTRCoreSupportedServiceList stDeviceProfile;
+    int                           i32RSSI;
+    unsigned int                  ui32VendorId;
+    BOOLEAN                       bFound;
+    BOOLEAN                       bDeviceConnected;
+    char                          pcDevicePath[BD_NAME_LEN+1];
 }stBTRCoreBTDevice;
 
 typedef struct _stBTRCoreScannedDevicesCount {
