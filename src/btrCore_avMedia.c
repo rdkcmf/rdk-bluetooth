@@ -528,25 +528,16 @@ BTRCore_AVMedia_GetCurMediaInfo (
             else
                 pstBtrCoreAVMediaSbcInfo->ui16AVMSbcBitrate  = 0;
 
-            BTRCORELOG_DEBUG ("\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui32AVMSFreq          = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui32AVMAChan          = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcAllocMethod  = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcSubbands     = %d\n"                     
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcBlockLength  = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMinBitpool   = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMaxBitpool   = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcFrameLen    = %d\n"
-                             "BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcBitrate     = %d\n",
-                             pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq,
-                             pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan,
-                             pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod,
-                             pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands,
-                             pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength,
-                             pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool,
-                             pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool,
-                             pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen,
-                             pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui32AVMSFreq          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui32AVMAChan          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcAllocMethod  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcSubbands     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcBlockLength  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMinBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMaxBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool);
+            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcFrameLen    = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen);
+            BTRCORELOG_DEBUG ("BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcBitrate     = %d\n",pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
+                             
         }
         else if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypeMPEG) {
         }
@@ -702,21 +693,14 @@ btrCore_AVMedia_NegotiateMedia_cb (
                                                                                           lstBTMediaSBCConfig.channel_mode),
                                                     apBtMediaSBCCaps->max_bitpool);
 
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: Negotiated Configuration\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: channel_mode       = %d\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: frequency          = %d\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: allocation_method  = %d\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: subbands           = %d\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: block_length       = %d\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n"
-                     "btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n",
-                     lstBTMediaSBCConfig.channel_mode,
-                     lstBTMediaSBCConfig.frequency,
-                     lstBTMediaSBCConfig.allocation_method,
-                     lstBTMediaSBCConfig.subbands,
-                     lstBTMediaSBCConfig.block_length,
-                     lstBTMediaSBCConfig.min_bitpool,
-                     lstBTMediaSBCConfig.max_bitpool);
+    BTRCORELOG_TRACE("btrCore_AVMedia_NegotiateMedia_cb: Negotiated Configuration\n");
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
+    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
     if (pstlhBTRCoreAVM) {
         if (pstlhBTRCoreAVM->pstBTMediaConfig) {
@@ -781,22 +765,14 @@ btrCore_AVMedia_TransportPath_cb (
         lstBTMediaSBCConfig.min_bitpool         =   apBtMediaSBCCaps->min_bitpool;
         lstBTMediaSBCConfig.max_bitpool         =   apBtMediaSBCCaps->max_bitpool;
 
-        BTRCORELOG_DEBUG ("\n"
-                         "btrCore_AVMedia_TransportPath_cb: Set Configuration\n"
-                         "btrCore_AVMedia_TransportPath_cb: channel_mode       = %d\n"
-                         "btrCore_AVMedia_TransportPath_cb: frequency          = %d\n"
-                         "btrCore_AVMedia_TransportPath_cb: allocation_method  = %d\n"
-                         "btrCore_AVMedia_TransportPath_cb: subbands           = %d\n"
-                         "btrCore_AVMedia_TransportPath_cb: block_length       = %d\n"
-                         "btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n"
-                         "btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n",
-                         lstBTMediaSBCConfig.channel_mode,
-                         lstBTMediaSBCConfig.frequency,
-                         lstBTMediaSBCConfig.allocation_method,
-                         lstBTMediaSBCConfig.subbands,
-                         lstBTMediaSBCConfig.block_length,
-                         lstBTMediaSBCConfig.min_bitpool,
-                         lstBTMediaSBCConfig.max_bitpool);
+        BTRCORELOG_TRACE("btrCore_AVMedia_TransportPath_cb: Set Configuration\n");
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
+        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
         if (pstlhBTRCoreAVM) {
             if (pstlhBTRCoreAVM->pstBTMediaConfig) {
@@ -928,16 +904,35 @@ BTRCore_AVMedia_MediaControl (
     }
 
     switch (aenBTRCoreAVMediaCtrl) {
-
-    case enBTRCoreAVMediaCtrlPlay        : aenBTMediaControl = enBTMediaCtrlPlay;        break;
-    case enBTRCoreAVMediaCtrlPause       : aenBTMediaControl = enBTMediaCtrlPause;       break;
-    case enBTRCoreAVMediaCtrlStop        : aenBTMediaControl = enBTMediaCtrlStop;        break;
-    case enBTRCoreAVMediaCtrlNext        : aenBTMediaControl = enBTMediaCtrlNext;        break;
-    case enBTRCoreAVMediaCtrlPrevious    : aenBTMediaControl = enBTMediaCtrlPrevious;    break;
-    case enBTRCoreAVMediaCtrlFastForward : aenBTMediaControl = enBTMediaCtrlFastForward; break;
-    case enBTRCoreAVMediaCtrlRewind      : aenBTMediaControl = enBTMediaCtrlRewind;      break;
-    case enBTRCoreAVMediaCtrlVolumeUp    : aenBTMediaControl = enBTMediaCtrlVolumeUp;    break;
-    case enBTRCoreAVMediaCtrlVolumeDown  : aenBTMediaControl = enBTMediaCtrlVolumeDown;  break;
+    case enBTRCoreAVMediaCtrlPlay:
+        aenBTMediaControl = enBTMediaCtrlPlay;
+        break;
+    case enBTRCoreAVMediaCtrlPause:
+        aenBTMediaControl = enBTMediaCtrlPause;
+        break;
+    case enBTRCoreAVMediaCtrlStop:
+        aenBTMediaControl = enBTMediaCtrlStop;
+        break;
+    case enBTRCoreAVMediaCtrlNext:
+        aenBTMediaControl = enBTMediaCtrlNext;
+        break;
+    case enBTRCoreAVMediaCtrlPrevious:
+        aenBTMediaControl = enBTMediaCtrlPrevious;
+        break;
+    case enBTRCoreAVMediaCtrlFastForward:
+        aenBTMediaControl = enBTMediaCtrlFastForward;
+        break;
+    case enBTRCoreAVMediaCtrlRewind:
+        aenBTMediaControl = enBTMediaCtrlRewind;
+        break;
+    case enBTRCoreAVMediaCtrlVolumeUp:
+        aenBTMediaControl = enBTMediaCtrlVolumeUp;
+        break;
+    case enBTRCoreAVMediaCtrlVolumeDown:
+        aenBTMediaControl = enBTMediaCtrlVolumeDown;
+        break;
+    default:
+        break;
     }
 
     if (BtrCore_BTDevMediaControl (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aenBTMediaControl)) {
@@ -1115,129 +1110,129 @@ static void*
 btrCore_AVMedia_PlaybackPositionPolling (
      void*    arg
 ) {
-    
-  if (NULL == arg) {
-     BTRCORELOG_ERROR ("Exiting.. enBTRCoreInvalidArg!!!\n");
-     return NULL;
-  }
 
-  BTRCORELOG_INFO ("Started AVMedia Position Polling thread successfully...");
-  stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
-  enBTRCoreRet positionRet=0, statusRet=0, trackRet=0;
-  char          mediaTitle[BTRCORE_MAX_STR_LEN] = "\0";
-  unsigned char isPlaying          = 0;
-  void*         apBtConn           = 0;
+    if (NULL == arg) {
+        BTRCORELOG_ERROR ("Exiting.. enBTRCoreInvalidArg!!!\n");
+        return NULL;
+    }
 
-  stBTRCoreAVMediaStatusUpdate   mediaStatus;
-  stBTRCoreAVMediaTrackInfo      mediaTrackInfo;
-  unsigned int  mediaPosition = 0;
-  char*         mediaState    = 0;
+    BTRCORELOG_INFO ("Started AVMedia Position Polling thread successfully...");
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet positionRet=0, statusRet=0, trackRet=0;
+    char          mediaTitle[BTRCORE_MAX_STR_LEN] = "\0";
+    unsigned char isPlaying          = 0;
+    void*         apBtConn           = 0;
 
-  stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = NULL;
-  BOOLEAN  threadExit = FALSE;
+    stBTRCoreAVMediaStatusUpdate   mediaStatus;
+    stBTRCoreAVMediaTrackInfo      mediaTrackInfo;
+    unsigned int  mediaPosition = 0;
+    char*         mediaState    = 0;
 
-  pstlhBTRCoreAVM      = (stBTRCoreAVMediaHdl*)arg;
-  pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData;
+    stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = NULL;
+    BOOLEAN  threadExit = FALSE;
 
-  if (!pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate || !pstlhBTRCoreAVM->pvThreadData) {
-     BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaHdl Data!!! | pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate : %p | pstlhBTRCoreAVM->pvThreadData : %p"
-                      , pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate, pstlhBTRCoreAVM->pvThreadData);
-     return NULL;
-  }
+    pstlhBTRCoreAVM      = (stBTRCoreAVMediaHdl*)arg;
+    pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData;
 
-  pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData; 
+    if (!pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate || !pstlhBTRCoreAVM->pvThreadData) {
+        BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaHdl Data!!! | pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate : %p | pstlhBTRCoreAVM->pvThreadData : %p", pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate, pstlhBTRCoreAVM->pvThreadData);
+        return NULL;
+    }
 
-  if (!pstAVMediaStUserData->apvAVMUserData || !pstAVMediaStUserData->apcAVMDevAddress) {
-     BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaStatusUserData Data!!! | pstAVMediaStUserData->apvAVMUserData : %p | pstAVMediaStUserData->apcAVMDevAddress : %s"
-                      , pstAVMediaStUserData->apvAVMUserData, pstAVMediaStUserData->apcAVMDevAddress);
-     return NULL;
-  }
+    pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData; 
 
-  apBtConn  = pstAVMediaStUserData->apvAVMUserData;
+    if (!pstAVMediaStUserData->apvAVMUserData || !pstAVMediaStUserData->apcAVMDevAddress) {
+        BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaStatusUserData Data!!! | pstAVMediaStUserData->apvAVMUserData : %p | pstAVMediaStUserData->apcAVMDevAddress : %s" , pstAVMediaStUserData->apvAVMUserData, pstAVMediaStUserData->apcAVMDevAddress);
+        return NULL;
+    }
 
-  while(1) {
+    apBtConn  = pstAVMediaStUserData->apvAVMUserData;
 
-     g_mutex_lock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+    while (1) {
+
+        g_mutex_lock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
         threadExit = pstlhBTRCoreAVM->mediaPollingThreadExit;
-     g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+        g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
 
-     if (threadExit)  break;
+        if (threadExit)
+            break;
 
-     if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {     /* a better way to synchronization has to be deviced */
-        statusRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Status",   (void*)&mediaState);
-     }
-     else {
-        mediaState = "ended";
-     }
-
-     if (!strcmp("playing",      mediaState)) {
-        isPlaying = 1;
-        mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPlaying;
-     } else
-     if (!strcmp("paused",       mediaState)) {
-        mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPaused;
-     } else
-     if (!strcmp("forward-seek", mediaState)) {
-        isPlaying = 1;
-        mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPlaying;
-     } else
-     if (!strcmp("reverse-seek", mediaState)) {
-        isPlaying = 1;
-        mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPlaying;
-     } else
-     if (!strcmp("stopped",      mediaState)) {
-        mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStopped;
-        BTRCORELOG_WARN  ("Audio StreamIn Status : %s !!!", mediaState);
-     } else
-     if (!strcmp("ended",        mediaState)) {
-        mediaStatus.eAVMediaState = eBTRCoreAVMediaPlaybackEnded;
-        BTRCORELOG_WARN  ("Audio StreamIn Status : %s !!!", mediaState);
-     } else
-     if (!strcmp("error",        mediaState)) {
-        BTRCORELOG_ERROR ("Audio StreamIn Status : %s !!!", mediaState);
-        //break;   is required?
-     }
-
-     if (isPlaying && pstlhBTRCoreAVM->pcAVMediaTransportPath) {
-
-        positionRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition);
-        trackRet    = BtrCore_BTGetTrackInformation (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (stBTMediaTrackInfo*)&mediaTrackInfo);
-
-        if (positionRet || statusRet || trackRet) {
-           BTRCORELOG_ERROR ("Failed to get media info!!!");
-           continue;        /* arrive a exit state if req. */
+        if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {     /* a better way to synchronization has to be deviced */
+            statusRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Status",   (void*)&mediaState);
+        }
+        else {
+            mediaState = "ended";
         }
 
-        mediaStatus.m_mediaPositionInfo.ui32Position = mediaPosition;
-        mediaStatus.m_mediaPositionInfo.ui32Duration = mediaTrackInfo.ui32Duration;
-                            /* can look for a better logic later */ 
-        if (strcmp(mediaTitle, mediaTrackInfo.pcTitle)) {
-           mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStarted;
-           strncpy(mediaTitle, mediaTrackInfo.pcTitle, BTRCORE_MAX_STR_LEN);
+        if (!strcmp("playing", mediaState)) {
+            isPlaying = 1;
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPlaying;
+        } 
+        else if (!strcmp("paused", mediaState)) {
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPaused;
         }
-                            /* post callback */
-        pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate ((void*)&mediaStatus, pstAVMediaStUserData->apcAVMDevAddress
-                                                                            , pstlhBTRCoreAVM->pcBMediaStatusUserData);
-     }
+        else if (!strcmp("forward-seek", mediaState)) {
+            isPlaying = 1;
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPlaying;
+        }
+        else if (!strcmp("reverse-seek", mediaState)) {
+            isPlaying = 1;
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPlaying;
+        }
+        else if (!strcmp("stopped", mediaState)) {
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStopped;
+            BTRCORELOG_WARN  ("Audio StreamIn Status : %s !!!", mediaState);
+        }
+        else if (!strcmp("ended", mediaState)) {
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaPlaybackEnded;
+            BTRCORELOG_WARN  ("Audio StreamIn Status : %s !!!", mediaState);
+        }
+        else if (!strcmp("error", mediaState)) {
+            BTRCORELOG_ERROR ("Audio StreamIn Status : %s !!!", mediaState);
+        }
 
 
-     if (eBTRCoreAVMediaTrkStStarted == mediaStatus.eAVMediaState || eBTRCoreAVMediaTrkStPlaying == mediaStatus.eAVMediaState) {
-        sleep(1);           /* polling playback position with 1 sec interval */
-     }
-     else {
-        isPlaying = 0;
-        usleep(100000);     /* sleeping 1/10th of a second to check playback status */
-     }    
-  }
+        if (isPlaying && pstlhBTRCoreAVM->pcAVMediaTransportPath) {
+            positionRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition);
+            trackRet    = BtrCore_BTGetTrackInformation(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (stBTMediaTrackInfo*)&mediaTrackInfo);
 
-  BTRCORELOG_INFO ("Exiting MediaPosition Polling Thread...");
+            if (positionRet || statusRet || trackRet) {
+                BTRCORELOG_ERROR ("Failed to get media info!!!");
+                continue;        /* arrive a exit state if req. */
+            }
 
-  free ((void*)pstAVMediaStUserData->apcAVMDevAddress);
-  free ((void*)pstAVMediaStUserData);
+            mediaStatus.m_mediaPositionInfo.ui32Position = mediaPosition;
+            mediaStatus.m_mediaPositionInfo.ui32Duration = mediaTrackInfo.ui32Duration;
+                                /* can look for a better logic later */ 
+            if (strcmp(mediaTitle, mediaTrackInfo.pcTitle)) {
+                mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStarted;
+                strncpy(mediaTitle, mediaTrackInfo.pcTitle, BTRCORE_MAX_STR_LEN);
+            }
 
-  pstlhBTRCoreAVM->pMediaPollingThread = NULL;
+            /* post callback */
+            pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate((void*)&mediaStatus,
+                                                            pstAVMediaStUserData->apcAVMDevAddress,
+                                                            pstlhBTRCoreAVM->pcBMediaStatusUserData);
+        }
 
-  return NULL;
+
+        if (eBTRCoreAVMediaTrkStStarted == mediaStatus.eAVMediaState || eBTRCoreAVMediaTrkStPlaying == mediaStatus.eAVMediaState) {
+            sleep(1);           /* polling playback position with 1 sec interval */
+        }
+        else {
+            isPlaying = 0;
+            usleep(100000);     /* sleeping 1/10th of a second to check playback status */
+        }    
+    }
+
+    BTRCORELOG_INFO ("Exiting MediaPosition Polling Thread...");
+
+    free ((void*)pstAVMediaStUserData->apcAVMDevAddress);
+    free ((void*)pstAVMediaStUserData);
+
+    pstlhBTRCoreAVM->pMediaPollingThread = NULL;
+
+    return NULL;
 }
 
 
@@ -1296,53 +1291,42 @@ btrCore_AVMedia_MediaStatusUpdate_cb (
     }
 
     stBTRCoreAVMediaStatusUpdate  mediaStatus;
-    BOOLEAN  postEvent = FALSE; 
+    BOOLEAN  postEvent = FALSE;
 
     switch (apstBtMediaStUpdate->aeBtMediaStatus) {
-   
-    case enBTMediaTransportUpdate:   
-         {
-           switch (apstBtMediaStUpdate->m_mediaTransportState) {
-
-           case enBTMTransportStIdle:
-                pstlhBTRCoreAVM->eAVMTState = enAVMTransportStDisconnected;
-                break;
-           case enBTMTransportStPending:
-                pstlhBTRCoreAVM->eAVMTState = enAVMTransportStTransition;
-                break;
-           case enBTMTransportStActive:
-                pstlhBTRCoreAVM->eAVMTState = enAVMTransportStConnected;
-                break; 
-           default:
-                break;
-           }
-         }
-         break;
+    case enBTMediaTransportUpdate:
+        switch (apstBtMediaStUpdate->m_mediaTransportState) {
+        case enBTMTransportStIdle:
+            pstlhBTRCoreAVM->eAVMTState = enAVMTransportStDisconnected;
+            break;
+        case enBTMTransportStPending:
+            pstlhBTRCoreAVM->eAVMTState = enAVMTransportStTransition;
+            break;
+        case enBTMTransportStActive:
+            pstlhBTRCoreAVM->eAVMTState = enAVMTransportStConnected;
+            break; 
+        default:
+            break;
+        }
+        break;
     case enBTMediaTrackUpdate:
-         {
-           mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStChanged;
-           memcpy(&mediaStatus.m_mediaTrackInfo, apstBtMediaStUpdate->m_mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
-           postEvent = TRUE;
-         }
-         break;
+        mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStChanged;
+        memcpy(&mediaStatus.m_mediaTrackInfo, apstBtMediaStUpdate->m_mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+        postEvent = TRUE;
+        break;
     case enBTMediaPlayerUpdate:
-         {
-         }
-         break;
+        break;
     case enBTMediaPlaylistUpdate:
-         {
-         }
-         break;
+        break;
     case enBTMediaBrowserUpdate:
-         {
-         }
-         break;
+        break;
     default:
-         break;
+        break;
     }
+
     /* post callback */
     if (postEvent)
-       pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate ((void*)&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData);
+        pstlhBTRCoreAVM->fptrBTRCoreAVMediaStatusUpdate ((void*)&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData);
  
     return 0;
 }

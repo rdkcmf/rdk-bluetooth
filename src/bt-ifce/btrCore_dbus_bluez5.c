@@ -85,8 +85,6 @@ static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusCon
 
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
 
-static void btrCore_BTConnectDeviceConfirmation_cb (DBusPendingCall* pending_call, void* data);
-
 static int btrCore_BTGetDeviceInfo (stBTDeviceInfo* apstBTDeviceInfo, const char* apcIface);
 static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
 
@@ -180,28 +178,30 @@ btrCore_DBusType2Name (
 
 
 static enBTDeviceType
-btrCore_BTMapDevClasstoDevType(
-    unsigned int    lui32Class
+btrCore_BTMapDevClasstoDevType (
+    unsigned int    aui32Class
 ) {
     enBTDeviceType lenBtDevType = enBTDevStUnknown;
 
-    if ((lui32Class & 0x200) || (lui32Class & 0x400)) {
-       unsigned int ui32DevClassID = (lui32Class & 0xFFF);
+    if ((aui32Class & 0x200u) || (aui32Class & 0x400u)) {
+        unsigned int ui32DevClassID = aui32Class & 0xFFFu;
 
-       switch (ui32DevClassID){
-         case enBTDCSmartPhone:
-                               BTRCORELOG_DEBUG ("Its a enBTDevAudioSource\n");
-                               lenBtDevType = enBTDevAudioSource;
-                               break;
-         case enBTDCWearableHeadset:
-         case enBTDCLoudspeaker:
-                               BTRCORELOG_DEBUG ("Its a enBTDevAudioSink\n");
-                               lenBtDevType = enBTDevAudioSink;
-                               break;
-         default:
-                               BTRCORELOG_DEBUG ("Its a enBTDevUnknown\n");                   
-                               lenBtDevType = enBTDevUnknown;
-       }
+        switch (ui32DevClassID){
+        case enBTDCSmartPhone:
+            BTRCORELOG_DEBUG ("Its a enBTDevAudioSource\n");
+            lenBtDevType = enBTDevAudioSource;
+            break;
+        case enBTDCWearableHeadset:
+        case enBTDCHeadphones:
+        case enBTDCLoudspeaker:
+            BTRCORELOG_DEBUG ("Its a enBTDevAudioSink\n");
+            lenBtDevType = enBTDevAudioSink;
+            break;
+        default:
+            BTRCORELOG_DEBUG ("Its a enBTDevUnknown\n");                   
+            lenBtDevType = enBTDevUnknown;
+            break;
+        }
     }
 
     return lenBtDevType;
@@ -799,7 +799,7 @@ btrCore_BTGetDefaultAdapterPath (
     }
 
     if (gpcBTDAdapterPath) {
-        BTRCORELOG_DEBUG ("\n\nDefault Adpater Path is: %s\n", gpcBTDAdapterPath);
+        BTRCORELOG_DEBUG ("Default Adpater Path is: %s\n", gpcBTDAdapterPath);
     }
     return gpcBTDAdapterPath;
 }
@@ -993,10 +993,11 @@ btrCore_BTAgentAuthorize (
     const char*     uuid        = NULL;
     int             yesNo       = 0;
     int             i32OpRet    = -1;
+    enBTDeviceType  lenBTDevType= enBTDevUnknown;
     stBTDeviceInfo  lstBTDeviceInfo;
 
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
-    enBTDeviceType  lenBTDevType = enBTDevUnknown;
+
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
@@ -1004,7 +1005,7 @@ btrCore_BTAgentAuthorize (
     }
 
     if (gfpcBConnectionAuthentication && lpcPath) {
-        i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
+        i32OpRet      = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
         lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
         BTRCORELOG_INFO ("calling ConnAuth cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
@@ -1197,6 +1198,7 @@ btrCore_BTParseDevice (
     const char*     pcAddress = NULL;
     const char*     pcAlias = NULL;
     const char*     pcIcon = NULL;
+
     if (!dbus_message_iter_init(apDBusMsg, &arg_i)) {
         BTRCORELOG_ERROR ("dbus_message_iter_init Failed\n");
         return -1;
@@ -1226,7 +1228,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAddress);
                 strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("apstBTDeviceInfo->pcAddress : %s\n", apstBTDeviceInfo->pcAddress);
+                BTRCORELOG_DEBUG ("pcAddress       = %s\n", apstBTDeviceInfo->pcAddress);
                
  #if 1
                 char lcDevVen[4] = {'\0'};
@@ -1237,7 +1239,7 @@ btrCore_BTParseDevice (
                 lcDevVen[3]='\0';
                 ui16Vendor =  strtoll(lcDevVen, NULL, 16);
                 apstBTDeviceInfo->ui16Vendor = ui16Vendor;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
+                BTRCORELOG_DEBUG ("ui16Vendor      = %d\n", apstBTDeviceInfo->ui16Vendor);
  #endif
             }
             else if (strcmp (pcKey, "Name") == 0) {
@@ -1245,7 +1247,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcName);
                 strncpy(apstBTDeviceInfo->pcName, pcName, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("apstBTDeviceInfo->pcName: %s\n", apstBTDeviceInfo->pcName);
+                BTRCORELOG_DEBUG ("pcName          = %s\n", apstBTDeviceInfo->pcName);
 
             }
             else if (strcmp (pcKey, "Vendor") == 0) {
@@ -1253,84 +1255,84 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Vendor);
                 apstBTDeviceInfo->ui16Vendor = ui16Vendor;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Vendor = %d\n", apstBTDeviceInfo->ui16Vendor);
+                BTRCORELOG_DEBUG ("ui16Vendor      = %d\n", apstBTDeviceInfo->ui16Vendor);
             }
             else if (strcmp (pcKey, "VendorSource") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16VendorSource);
                 apstBTDeviceInfo->ui16VendorSource = ui16VendorSource;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16VendorSource = %d\n", apstBTDeviceInfo->ui16VendorSource);
+                BTRCORELOG_TRACE ("ui16VendorSource= %d\n", apstBTDeviceInfo->ui16VendorSource);
             }
             else if (strcmp (pcKey, "Product") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Product);
                 apstBTDeviceInfo->ui16Product = ui16Product;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Product = %d\n", apstBTDeviceInfo->ui16Product);
+                BTRCORELOG_TRACE ("ui16Product     = %d\n", apstBTDeviceInfo->ui16Product);
             }
             else if (strcmp (pcKey, "Version") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Version);
                 apstBTDeviceInfo->ui16Version = ui16Version;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->ui16Version = %d\n", apstBTDeviceInfo->ui16Version);
+                BTRCORELOG_TRACE ("ui16Version     = %d\n", apstBTDeviceInfo->ui16Version);
             }
             else if (strcmp (pcKey, "Icon") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcIcon);
                 strncpy(apstBTDeviceInfo->pcIcon, pcIcon, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("apstBTDeviceInfo->pcIcon: %s\n", apstBTDeviceInfo->pcIcon);
+                BTRCORELOG_TRACE ("pcIcon          = %s\n", apstBTDeviceInfo->pcIcon);
             }
             else if (strcmp (pcKey, "Class") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui32Class);
                 apstBTDeviceInfo->ui32Class = ui32Class;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->ui32Class: %d\n", apstBTDeviceInfo->ui32Class);
+                BTRCORELOG_DEBUG ("ui32Class       = %d\n", apstBTDeviceInfo->ui32Class);
             }
             else if (strcmp (pcKey, "Paired") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bPaired);
                 apstBTDeviceInfo->bPaired = bPaired;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->bPaired = %d\n", apstBTDeviceInfo->bPaired);
+                BTRCORELOG_DEBUG ("bPaired         = %d\n", apstBTDeviceInfo->bPaired);
             }
             else if (strcmp (pcKey, "Connected") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bConnected);
                 apstBTDeviceInfo->bConnected = bConnected;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->bConnected = %d\n", apstBTDeviceInfo->bConnected);
+                BTRCORELOG_DEBUG ("bConnected      = %d\n", apstBTDeviceInfo->bConnected);
             }
             else if (strcmp (pcKey, "Trusted") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bTrusted);
                 apstBTDeviceInfo->bTrusted = bTrusted;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->bTrusted = %d\n", apstBTDeviceInfo->bTrusted);
+                BTRCORELOG_TRACE ("bTrusted        = %d\n", apstBTDeviceInfo->bTrusted);
             }
             else if (strcmp (pcKey, "Blocked") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &bBlocked);
                 apstBTDeviceInfo->bBlocked = bBlocked;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->bBlocked = %d\n", apstBTDeviceInfo->bBlocked);
+                BTRCORELOG_TRACE ("bBlocked        = %d\n", apstBTDeviceInfo->bBlocked);
             }
             else if (strcmp (pcKey, "Alias") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAlias);
                 strncpy(apstBTDeviceInfo->pcAlias, pcAlias, BT_MAX_STR_LEN);
-                BTRCORELOG_INFO ("apstBTDeviceInfo->pcAlias: %s\n", apstBTDeviceInfo->pcAlias);
+                BTRCORELOG_DEBUG ("pcAlias         = %s\n", apstBTDeviceInfo->pcAlias);
             }
             else if (strcmp (pcKey, "RSSI") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &i16RSSI);
                 apstBTDeviceInfo->i32RSSI = i16RSSI;
-                BTRCORELOG_INFO ("apstBTDeviceInfo->i32RSSI = %d\n", apstBTDeviceInfo->i32RSSI);
+                BTRCORELOG_DEBUG ("i32RSSI         = %d\n", apstBTDeviceInfo->i32RSSI);
             }
             else if (strcmp (pcKey, "UUIDs") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -1346,7 +1348,7 @@ btrCore_BTParseDevice (
                         if ((dbus_type == DBUS_TYPE_STRING) && (count < BT_MAX_DEVICE_PROFILE)) {
                             char *pVal = NULL;
                             dbus_message_iter_get_basic (&variant_j, &pVal);
-                            BTRCORELOG_INFO ("UUID value is %s\n", pVal);
+                            BTRCORELOG_TRACE ("UUID value is %s\n", pVal);
                             strncpy(apstBTDeviceInfo->aUUIDs[count], pVal, (BT_MAX_UUID_STR_LEN - 1));
                             count++;
                         }
@@ -1354,7 +1356,7 @@ btrCore_BTParseDevice (
                     }
                 }
                 else {
-                    BTRCORELOG_ERROR ("apstBTDeviceInfo->Services; Not an Array\n");
+                    BTRCORELOG_ERROR ("Services; Not an Array\n");
                 }
             }
         }
@@ -1362,7 +1364,7 @@ btrCore_BTParseDevice (
         if (!dbus_message_iter_next(&element_i)) {
             break;
         }
-    }         
+    }
     (void)dbus_type;
 
     if (strlen(apstBTDeviceInfo->pcAlias))
@@ -1705,28 +1707,6 @@ btrCore_BTMediaEndpointClearConfiguration (
 }
 
 
-static void 
-btrCore_BTConnectDeviceConfirmation_cb (
-     DBusPendingCall*   pending_call, 
-     void*              data
-) {
-    DBusMessage *lDBusReply = NULL;
-
-    BTRCORELOG_INFO ("Received Connect Device Confirmation\n");
-
-    lDBusReply = dbus_pending_call_steal_reply(pending_call);
-
-    dbus_pending_call_unref(pending_call);
-
-    if (dbus_message_get_type(lDBusReply) == DBUS_MESSAGE_TYPE_ERROR) {
-       BTRCORELOG_ERROR ("Connection Failure Reason : %s!!!", dbus_message_get_error_name(lDBusReply));
-    }
-
-    dbus_message_unref(lDBusReply);
-
-    /* Can try pre and post ConnectDevice Settings at BTRCore and BTRMgr level based on this confirmation */
-}
-
 
 /* Interfaces */
 void*
@@ -1848,7 +1828,7 @@ BtrCore_BTGetAgentPath (
     }
 
     gpcBTAgentPath = strdup(lDefaultBTPath);
-    BTRCORELOG_INFO ("\n\nAgent Path: %s", gpcBTAgentPath);
+    BTRCORELOG_INFO ("Agent Path: %s\n", gpcBTAgentPath);
     return gpcBTAgentPath;
 }
 
@@ -3535,10 +3515,8 @@ BtrCore_BTConnectDevice (
     const char*     apDevPath,
     enBTDeviceType  aenBTDeviceType
 ) {
-    DBusMessage*     lpDBusMsg    = NULL;
-    DBusPendingCall* pending_call = NULL;
-    DBusError        dbus_error;
-    dbus_bool_t      lDBusOp;
+    DBusMessage*    lpDBusMsg  = NULL;
+    dbus_bool_t     lDBusOp;
 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !apDevPath)
@@ -3555,13 +3533,7 @@ BtrCore_BTConnectDevice (
         return -1;
     }
 
-    dbus_error_init(&dbus_error);
-    lDBusOp = dbus_connection_send_with_reply(gpDBusConn,
-                                              lpDBusMsg,
-                                              &pending_call,
-                                              DBUS_TIMEOUT_USE_DEFAULT);
-
-    dbus_connection_flush(gpDBusConn);
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
     dbus_message_unref(lpDBusMsg);
 
     if (!lDBusOp) {
@@ -3569,15 +3541,7 @@ BtrCore_BTConnectDevice (
         return -1;
     }
 
-    lDBusOp = dbus_pending_call_set_notify(pending_call,
-                                           btrCore_BTConnectDeviceConfirmation_cb,
-                                           gpDBusConn, NULL);
-
-    if (!lDBusOp) {
-        dbus_pending_call_cancel(pending_call);
-        dbus_pending_call_unref(pending_call);
-        return -1;
-    }
+    dbus_connection_flush(gpDBusConn);
 
     return 0;
 }

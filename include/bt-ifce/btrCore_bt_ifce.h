@@ -41,24 +41,24 @@ typedef enum _enBTDeviceType {
 } enBTDeviceType;
 
 typedef enum _enBTDeviceClass {
-    enBTDCSmartPhone         = 0x20C,
-    enBTDCWearableHeadset    = 0x404,
-    enBTDCHandsfree          = 0x408,
-    enBTDCReserved           = 0x40C,
-    enBTDCMicrophone         = 0x410,
-    enBTDCLoudspeaker        = 0x414,
-    enBTDCHeadphones         = 0x418,
-    enBTDCPortableAudio      = 0x41C,
-    enBTDCCarAudio           = 0x420,
-    enBTDCSTB                = 0x424,
-    enBTDCHIFIAudioDevice    = 0x428,
-    enBTDCVCR                = 0x42C,
-    enBTDCVideoCamera        = 0x430,
-    enBTDCCamcoder           = 0x434,
-    enBTDCVideoMonitor       = 0x438,
-    enBTDCTV                 = 0x43C,
-    enBTDCVideoConference    = 0x440,
-    enBTDCUnknown            = 0x000
+    enBTDCSmartPhone         = 0x20Cu,
+    enBTDCWearableHeadset    = 0x404u,
+    enBTDCHandsfree          = 0x408u,
+    enBTDCReserved           = 0x40Cu,
+    enBTDCMicrophone         = 0x410u,
+    enBTDCLoudspeaker        = 0x414u,
+    enBTDCHeadphones         = 0x418u,
+    enBTDCPortableAudio      = 0x41Cu,
+    enBTDCCarAudio           = 0x420u,
+    enBTDCSTB                = 0x424u,
+    enBTDCHIFIAudioDevice    = 0x428u,
+    enBTDCVCR                = 0x42Cu,
+    enBTDCVideoCamera        = 0x430u,
+    enBTDCCamcoder           = 0x434u,
+    enBTDCVideoMonitor       = 0x438u,
+    enBTDCTV                 = 0x43Cu,
+    enBTDCVideoConference    = 0x440u,
+    enBTDCUnknown            = 0x000u
 } enBTDeviceClass;
 
 typedef enum _enBTOpType {

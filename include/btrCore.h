@@ -46,24 +46,24 @@ typedef enum _enBTRCoreDeviceType {
 } enBTRCoreDeviceType;
 
 typedef enum _enBTRCoreDeviceClass {
-    enBTRCore_DC_SmartPhone         = 0x20C,
-    enBTRCore_DC_WearableHeadset    = 0x404,
-    enBTRCore_DC_Handsfree          = 0x408,
-    enBTRCore_DC_Reserved           = 0x40C,
-    enBTRCore_DC_Microphone         = 0x410,
-    enBTRCore_DC_Loudspeaker        = 0x414,
-    enBTRCore_DC_Headphones         = 0x418,
-    enBTRCore_DC_PortableAudio      = 0x41C,
-    enBTRCore_DC_CarAudio           = 0x420,
-    enBTRCore_DC_STB                = 0x424,
-    enBTRCore_DC_HIFIAudioDevice    = 0x428,
-    enBTRCore_DC_VCR                = 0x42C,
-    enBTRCore_DC_VideoCamera        = 0x430,
-    enBTRCore_DC_Camcoder           = 0x434,
-    enBTRCore_DC_VideoMonitor       = 0x438,
-    enBTRCore_DC_TV                 = 0x43C,
-    enBTRCore_DC_VideoConference    = 0x440,
-    enBTRCore_DC_Unknown            = 0x000
+    enBTRCore_DC_SmartPhone         = 0x20Cu,
+    enBTRCore_DC_WearableHeadset    = 0x404u,
+    enBTRCore_DC_Handsfree          = 0x408u,
+    enBTRCore_DC_Reserved           = 0x40Cu,
+    enBTRCore_DC_Microphone         = 0x410u,
+    enBTRCore_DC_Loudspeaker        = 0x414u,
+    enBTRCore_DC_Headphones         = 0x418u,
+    enBTRCore_DC_PortableAudio      = 0x41Cu,
+    enBTRCore_DC_CarAudio           = 0x420u,
+    enBTRCore_DC_STB                = 0x424u,
+    enBTRCore_DC_HIFIAudioDevice    = 0x428u,
+    enBTRCore_DC_VCR                = 0x42Cu,
+    enBTRCore_DC_VideoCamera        = 0x430u,
+    enBTRCore_DC_Camcoder           = 0x434u,
+    enBTRCore_DC_VideoMonitor       = 0x438u,
+    enBTRCore_DC_TV                 = 0x43Cu,
+    enBTRCore_DC_VideoConference    = 0x440u,
+    enBTRCore_DC_Unknown            = 0x000u
 } enBTRCoreDeviceClass;
 
 typedef enum _enBTRCoreDeviceState {
@@ -76,7 +76,8 @@ typedef enum _enBTRCoreDeviceState {
     enBTRCoreDevStDisconnecting,
     enBTRCoreDevStDisconnected,
     enBTRCoreDevStPlaying,
-    enBTRCoreDevStLost
+    enBTRCoreDevStLost,
+    enBTRCoreDevStUnknown
 } enBTRCoreDeviceState;
 
 typedef enum _eBTRCoreDevMediaType {
