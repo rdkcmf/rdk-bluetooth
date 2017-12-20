@@ -298,8 +298,10 @@ btrCore_BTDBusConnectionFilter_cb (
                                 }
                             }
                             gpDevLost = 0;
-
-                            if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+ 
+                            if (enBTDevAudioSource != lenBTDevType || strcmp(gpcDeviceCurrState, "connected")) {
+                               if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                               }
                             }
                         }
                         else if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected) {
@@ -994,7 +996,7 @@ btrCore_BTAgentAuthorize (
     stBTDeviceInfo  lstBTDeviceInfo;
 
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
-
+    enBTDeviceType  lenBTDevType = enBTDevUnknown;
 
     if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &uuid, DBUS_TYPE_INVALID)) {
         BTRCORELOG_ERROR ("Invalid arguments for Authorize method");
@@ -1003,7 +1005,7 @@ btrCore_BTAgentAuthorize (
 
     if (gfpcBConnectionAuthentication && lpcPath) {
         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
-        enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+        lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
         BTRCORELOG_INFO ("calling ConnAuth cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
         yesNo = gfpcBConnectionAuthentication(lenBTDevType, &lstBTDeviceInfo, gpcBConnAuthUserData);
@@ -1027,6 +1029,10 @@ btrCore_BTAgentAuthorize (
     }
     else {
         BTRCORELOG_INFO ("Authorizing request for %s\n", lpcPath);
+        if (enBTDevAudioSource == lenBTDevType) {
+           strcpy(lstBTDeviceInfo.pcDeviceCurrState,"connected");
+           gfpcBDevStatusUpdate(lenBTDevType, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData);
+        }
         dbus_connection_send(apDBusConn, lpDBusReply, NULL);
         dbus_connection_flush(apDBusConn);
         dbus_message_unref(lpDBusReply);
