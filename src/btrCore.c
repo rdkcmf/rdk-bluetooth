@@ -1416,7 +1416,7 @@ BTRCore_GetAdapterDiscoverableStatus (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
     lunBtOpAdapProp.enBtAdapterProp = enBTAdPropDiscoverable;
     if (!BtrCore_BTGetProp(pstlhBTRCore->connHdl, pAdapterPath, enBTAdapter, lunBtOpAdapProp, &discoverable)) {
-        BTRCORELOG_INFO ("Get value for org.bluez.Adapter.powered = %d\n", discoverable);
+        BTRCORELOG_INFO ("Get value for org.bluez.Adapter.Discoverable = %d\n", discoverable);
         *pDiscoverable = (unsigned char) discoverable;
         return enBTRCoreSuccess;
     }
@@ -3646,27 +3646,32 @@ btrCore_BTDeviceStatusUpdate_cb (
 
                             }
                             else {
-                               bTriggerDevStatusChangeCb = TRUE;
+                                bTriggerDevStatusChangeCb = TRUE;
 
-                               if (enBTRCoreDevStDisconnected == leBTDevState) {
-                                  lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = FALSE;
-                                  BTRCore_AVMedia_ExitMediaPositionPolling (lpstlhBTRCore->avMediaHdl);
-                               }
+                                if (enBTRCoreDevStDisconnected == leBTDevState) {
+                                    lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = FALSE;
+                                    BTRCore_AVMedia_ExitMediaPositionPolling (lpstlhBTRCore->avMediaHdl);
+                                }
 
-                               if (enBTRCoreDevStInitialized != lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState) {
-                                  lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
+                                if (enBTRCoreDevStInitialized != lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState) {
+                                    lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
                                                                    lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
-                               }
-                               else {
-                                  lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = enBTRCoreDevStConnecting;
-                               }
+                                }
+                                else {
+                                    lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = enBTRCoreDevStConnecting;
+                                }
 
-                               lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
+                                lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = leBTDevState;
 
-                               BTRCORELOG_TRACE ("i32KnownDevIdx = %d\n", i32KnownDevIdx);
-                               BTRCORELOG_TRACE ("leBTDevState = %d\n", leBTDevState);
-                               BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = %d\n", lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState);
-                               BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = %d\n", lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState);
+                                //TODO: There should be no need to do this. Find out why the enDeviceType = 0;
+                                lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType = 
+                                                                btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+
+                                BTRCORELOG_TRACE ("i32KnownDevIdx = %d\n", i32KnownDevIdx);
+                                BTRCORELOG_TRACE ("leBTDevState = %d\n", leBTDevState);
+                                BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = %d\n", lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState);
+                                BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = %d\n", lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState);
+                                BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType       = %x\n", lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType);
                             }
 
                             lpstlhBTRCore->stDevStatusCbInfo.isPaired = 1;
