@@ -183,11 +183,12 @@ btrCore_BTMapDevClasstoDevType (
 ) {
     enBTDeviceType lenBtDevType = enBTDevStUnknown;
 
-    if ((aui32Class & 0x200u) || (aui32Class & 0x400u)) {
+    if ((aui32Class & 0x100u) || (aui32Class & 0x200u) || (aui32Class & 0x400u)) {
         unsigned int ui32DevClassID = aui32Class & 0xFFFu;
 
         switch (ui32DevClassID){
         case enBTDCSmartPhone:
+        case enBTDCTablet:
             BTRCORELOG_DEBUG ("Its a enBTDevAudioSource\n");
             lenBtDevType = enBTDevAudioSource;
             break;

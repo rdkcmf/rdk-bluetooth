@@ -221,11 +221,15 @@ btrCore_MapClassIDtoDeviceType (
     enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
     BTRCORELOG_DEBUG ("classID = 0x%x\n", classID);
 
-    if ((classID & 0x200u) || (classID & 0x400u)) {
+    if ((classID & 0x100u) || (classID & 0x200u) || (classID & 0x400u)) {
         unsigned int ui32DevClassID = classID & 0xFFFu;
         BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
 
-        if (ui32DevClassID == enBTRCore_DC_SmartPhone) {
+        if (ui32DevClassID == enBTRCore_DC_Tablet) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_Tablet\n");
+            rc = enBTRCore_DC_Tablet;
+        }
+        else if (ui32DevClassID == enBTRCore_DC_SmartPhone) {
             BTRCORELOG_INFO ("enBTRCore_DC_SmartPhone\n");
             rc = enBTRCore_DC_SmartPhone;
         }
@@ -3392,7 +3396,12 @@ btrCore_BTDeviceStatusUpdate_cb (
             lenBTRCoreDevType =  enBTRCoreSpeakers;
             break;
         case enBTDevAudioSource:
-            lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+            if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_SmartPhone) {
+               lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+            }
+            else if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_Tablet) {
+               lenBTRCoreDevType = enBTRCorePCAudioIn;
+            }
             break;
         case enBTDevHFPHeadset:
             lenBTRCoreDevType =  enBTRCoreHeadSet;
@@ -3595,7 +3604,7 @@ btrCore_BTDeviceStatusUpdate_cb (
                         if ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState != leBTDevState) &&
                             (lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState != enBTRCoreDevStInitialized)) {
 
-                            if (enBTRCoreMobileAudioIn != lenBTRCoreDevType) {
+                            if ((enBTRCoreMobileAudioIn != lenBTRCoreDevType) && (enBTRCorePCAudioIn != lenBTRCoreDevType)) {
 
                                 if ( !(((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected)    && (leBTDevState == enBTRCoreDevStDisconnected)) ||
                                        ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected) && 
@@ -3783,7 +3792,12 @@ btrCore_BTDeviceConnectionIntimation_cb (
             lenBTRCoreDevType =  enBTRCoreSpeakers;
             break;
         case enBTDevAudioSource:
-            lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+            if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_SmartPhone) {
+               lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+            }
+            else if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_Tablet) {
+               lenBTRCoreDevType = enBTRCorePCAudioIn;
+            }
             break;
         case enBTDevHFPHeadset:
             lenBTRCoreDevType =  enBTRCoreHeadSet;
@@ -3833,7 +3847,7 @@ btrCore_BTDeviceConnectionIntimation_cb (
             }
         }
 
-        if ((lenBTRCoreDevType == enBTRCoreMobileAudioIn) && (lpstlhBTRCore->fptrBTRCoreConnIntimCB)) {
+        if (((lenBTRCoreDevType == enBTRCoreMobileAudioIn) || (lenBTRCoreDevType == enBTRCorePCAudioIn)) && (lpstlhBTRCore->fptrBTRCoreConnIntimCB)) {
             i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo, NULL);
         }
         else if ((lenBTRCoreDevType == enBTRCoreSpeakers) || (lenBTRCoreDevType == enBTRCoreHeadSet)) {
@@ -3871,7 +3885,12 @@ btrCore_BTDeviceAuthentication_cb (
             lenBTRCoreDevType =  enBTRCoreSpeakers;
             break;
         case enBTDevAudioSource:
-            lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+            if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_SmartPhone) {
+               lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
+            }
+            else if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_Tablet) {
+               lenBTRCoreDevType = enBTRCorePCAudioIn;
+            }
             break;
         case enBTDevHFPHeadset:
             lenBTRCoreDevType =  enBTRCoreHeadSet;
@@ -3925,7 +3944,8 @@ btrCore_BTDeviceAuthentication_cb (
 
         if (lpstlhBTRCore->numOfPairedDevices && i32DevAuthRet) {
 
-            if (lenBTRCoreDevType == enBTRCoreMobileAudioIn) {
+            if ((lenBTRCoreDevType == enBTRCoreMobileAudioIn) ||
+                (lenBTRCoreDevType == enBTRCorePCAudioIn)) {
                 unsigned int i32LoopIdx = 0;
 
                 for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {

@@ -46,6 +46,7 @@ typedef enum _enBTRCoreDeviceType {
 } enBTRCoreDeviceType;
 
 typedef enum _enBTRCoreDeviceClass {
+    enBTRCore_DC_Tablet             = 0x11Cu,
     enBTRCore_DC_SmartPhone         = 0x20Cu,
     enBTRCore_DC_WearableHeadset    = 0x404u,
     enBTRCore_DC_Handsfree          = 0x408u,
