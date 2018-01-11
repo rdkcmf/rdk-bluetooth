@@ -91,7 +91,7 @@
 #define BTR_A2DP_BLOCK_LENGTH_16            SBC_BLOCK_LENGTH_16
 #endif
 
-#define BTR_SBC_HIGH_BITRATE_BITPOOL			51
+#define BTR_SBC_HIGH_BITRATE_BITPOOL	    51
 #define BTR_SBC_MED_BITRATE_BITPOOL			33
 #define BTR_SBC_LOW_BITRATE_BITPOOL			19
 
@@ -273,8 +273,14 @@ BTRCore_AVMedia_Init (
 
     lstBtA2dpCapabilities.channel_mode       = BTR_A2DP_CHANNEL_MODE_MONO | BTR_A2DP_CHANNEL_MODE_DUAL_CHANNEL |
                                                BTR_A2DP_CHANNEL_MODE_STEREO | BTR_A2DP_CHANNEL_MODE_JOINT_STEREO;
+#if 0
     lstBtA2dpCapabilities.frequency          = BTR_SBC_SAMPLING_FREQ_16000 | BTR_SBC_SAMPLING_FREQ_32000 |
                                                BTR_SBC_SAMPLING_FREQ_44100 | BTR_SBC_SAMPLING_FREQ_48000;
+#else
+    //TODO: Enable 44100 for A2DP Source
+    lstBtA2dpCapabilities.frequency          = BTR_SBC_SAMPLING_FREQ_16000 | BTR_SBC_SAMPLING_FREQ_32000 |
+                                               BTR_SBC_SAMPLING_FREQ_48000;
+#endif
     lstBtA2dpCapabilities.allocation_method  = BTR_A2DP_ALLOCATION_SNR | BTR_A2DP_ALLOCATION_LOUDNESS;
     lstBtA2dpCapabilities.subbands           = BTR_A2DP_SUBBANDS_4 | BTR_A2DP_SUBBANDS_8;
     lstBtA2dpCapabilities.block_length       = BTR_A2DP_BLOCK_LENGTH_4 | BTR_A2DP_BLOCK_LENGTH_8 |
@@ -308,6 +314,9 @@ BTRCore_AVMedia_Init (
                                                     sizeof(lstBtA2dpCapabilities),
                                                     lBtAVMediaDelayReport);
 
+#if 1
+    lstBtA2dpCapabilities.frequency |= BTR_SBC_SAMPLING_FREQ_44100;
+#endif
 
     lBtAVMediaASrcRegRet = BtrCore_BTRegisterMedia(apBtConn,
                                                    apBtAdapter,
@@ -528,15 +537,15 @@ BTRCore_AVMedia_GetCurMediaInfo (
             else
                 pstBtrCoreAVMediaSbcInfo->ui16AVMSbcBitrate  = 0;
 
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui32AVMSFreq          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui32AVMAChan          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcAllocMethod  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcSubbands     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcBlockLength  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMinBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui8AVMSbcMaxBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool);
-            BTRCORELOG_TRACE ("BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcFrameLen    = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen);
-            BTRCORELOG_DEBUG ("BTRCore_AVMedia_GetCurMediaInfo: ui16AVMSbcBitrate     = %d\n",pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
+            BTRCORELOG_TRACE ("ui32AVMSFreq          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMSFreq);
+            BTRCORELOG_TRACE ("ui32AVMAChan          = %d\n", pstBtrCoreAVMediaSbcInfo-> ui32AVMAChan);
+            BTRCORELOG_TRACE ("ui8AVMSbcAllocMethod  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcAllocMethod);
+            BTRCORELOG_TRACE ("ui8AVMSbcSubbands     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcSubbands);
+            BTRCORELOG_TRACE ("ui8AVMSbcBlockLength  = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcBlockLength);
+            BTRCORELOG_TRACE ("ui8AVMSbcMinBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMinBitpool);
+            BTRCORELOG_TRACE ("ui8AVMSbcMaxBitpool   = %d\n", pstBtrCoreAVMediaSbcInfo-> ui8AVMSbcMaxBitpool);
+            BTRCORELOG_TRACE ("ui16AVMSbcFrameLen    = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcFrameLen);
+            BTRCORELOG_DEBUG ("ui16AVMSbcBitrate     = %d\n", pstBtrCoreAVMediaSbcInfo-> ui16AVMSbcBitrate);
                              
         }
         else if (apstBtrCoreAVMediaInfo->eBtrCoreAVMType == eBTRCoreAVMTypeMPEG) {
@@ -693,14 +702,14 @@ btrCore_AVMedia_NegotiateMedia_cb (
                                                                                           lstBTMediaSBCConfig.channel_mode),
                                                     apBtMediaSBCCaps->max_bitpool);
 
-    BTRCORELOG_TRACE("btrCore_AVMedia_NegotiateMedia_cb: Negotiated Configuration\n");
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
-    BTRCORELOG_INFO ("btrCore_AVMedia_NegotiateMedia_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
+    BTRCORELOG_TRACE("Negotiated Configuration\n");
+    BTRCORELOG_INFO ("channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
+    BTRCORELOG_INFO ("frequency          = %d\n", lstBTMediaSBCConfig.frequency);
+    BTRCORELOG_INFO ("allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
+    BTRCORELOG_INFO ("subbands           = %d\n", lstBTMediaSBCConfig.subbands);
+    BTRCORELOG_INFO ("block_length       = %d\n", lstBTMediaSBCConfig.block_length);
+    BTRCORELOG_INFO ("min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
+    BTRCORELOG_INFO ("max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
     if (pstlhBTRCoreAVM) {
         if (pstlhBTRCoreAVM->pstBTMediaConfig) {
@@ -730,7 +739,7 @@ btrCore_AVMedia_TransportPath_cb (
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
 
     if (!apBtMediaTransportPath) {
-        BTRCORELOG_ERROR ("btrCore_AVMedia_TransportPath_cb: Invalid transport path\n");
+        BTRCORELOG_ERROR ("Invalid transport path\n");
         return NULL;
     }
 
@@ -739,7 +748,7 @@ btrCore_AVMedia_TransportPath_cb (
     if (pstlhBTRCoreAVM) { 
         if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
             if(!strncmp(pstlhBTRCoreAVM->pcAVMediaTransportPath, apBtMediaTransportPath, strlen(pstlhBTRCoreAVM->pcAVMediaTransportPath))) {
-                BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: Freeing 0x%p:%s\n", 
+                BTRCORELOG_INFO ("Freeing %p:%s\n", 
                             pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
              }
 
@@ -765,14 +774,14 @@ btrCore_AVMedia_TransportPath_cb (
         lstBTMediaSBCConfig.min_bitpool         =   apBtMediaSBCCaps->min_bitpool;
         lstBTMediaSBCConfig.max_bitpool         =   apBtMediaSBCCaps->max_bitpool;
 
-        BTRCORELOG_TRACE("btrCore_AVMedia_TransportPath_cb: Set Configuration\n");
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: frequency          = %d\n", lstBTMediaSBCConfig.frequency);
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: subbands           = %d\n", lstBTMediaSBCConfig.subbands);
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: block_length       = %d\n", lstBTMediaSBCConfig.block_length);
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
-        BTRCORELOG_INFO ("btrCore_AVMedia_TransportPath_cb: max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
+        BTRCORELOG_TRACE("Set Configuration\n");
+        BTRCORELOG_INFO ("channel_mode       = %d\n", lstBTMediaSBCConfig.channel_mode);
+        BTRCORELOG_INFO ("frequency          = %d\n", lstBTMediaSBCConfig.frequency);
+        BTRCORELOG_INFO ("allocation_method  = %d\n", lstBTMediaSBCConfig.allocation_method);
+        BTRCORELOG_INFO ("subbands           = %d\n", lstBTMediaSBCConfig.subbands);
+        BTRCORELOG_INFO ("block_length       = %d\n", lstBTMediaSBCConfig.block_length);
+        BTRCORELOG_INFO ("min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
+        BTRCORELOG_INFO ("max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
         if (pstlhBTRCoreAVM) {
             if (pstlhBTRCoreAVM->pstBTMediaConfig) {
@@ -802,6 +811,7 @@ btrCore_AVMedia_TransportPath_cb (
 
         if (pstlhBTRCoreAVM) {
             if (pstlhBTRCoreAVM->pstBTMediaConfig) {
+                BTRCORELOG_TRACE("Reset Media Configuration\n");
                 memcpy(pstlhBTRCoreAVM->pstBTMediaConfig, &lstBtA2dpCapabilities, sizeof(a2dp_sbc_t));
             }
         }

@@ -40,6 +40,7 @@
 int b_rdk_logger_enabled = 0;
 #endif
 
+/* Local types */
 //TODO: Move to a private header
 typedef struct _stBTRCoreDevStateInfo {
     enBTRCoreDeviceState    eDevicePrevState;
@@ -62,7 +63,7 @@ typedef struct _stBTRCoreHdl {
     char*                       curAdapterAddr;
 
     unsigned int                numOfScannedDevices;
-    stBTRCoreBTDevice            stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
+    stBTRCoreBTDevice           stScannedDevicesArr[BTRCORE_MAX_NUM_BT_DEVICES];
     stBTRCoreDevStateInfo       stScannedDevStInfoArr[BTRCORE_MAX_NUM_BT_DEVICES];
 
     unsigned int                numOfPairedDevices;
@@ -107,7 +108,7 @@ static void btrCore_ShowSignalStrength (short strength);
 static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut);
 static enBTRCoreDeviceState btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
 
-/* Callbacks */
+/* Incoming Callbacks */
 static int btrCore_BTDeviceStatusUpdate_cb(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
 static int btrCore_BTMediaStatusUpdate_cb (void* apMediaStreamStatus, const char*  apBtdevAddr, void* apUserCbData);
 static int btrCore_BTDeviceConnectionIntimation_cb(enBTDeviceType  aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
@@ -298,6 +299,7 @@ btrCore_MapClassIDtoDeviceType (
             rc = enBTRCore_DC_TV;
         }
     }
+
     return rc;
 }
 
