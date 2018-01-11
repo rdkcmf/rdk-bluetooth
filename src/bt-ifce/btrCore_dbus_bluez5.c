@@ -1164,6 +1164,7 @@ btrCore_BTGetDeviceInfo (
             return -1;
         }
         else {
+            strncpy(apstBTDeviceInfo->pcDevicePath, apcIface, BT_MAX_STR_LEN);
             dbus_message_unref(lpDBusReply);
             return 0;
         }

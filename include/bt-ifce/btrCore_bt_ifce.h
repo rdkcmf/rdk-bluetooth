@@ -169,6 +169,7 @@ typedef struct _stBTDeviceInfo {
     char            aUUIDs[BT_MAX_DEVICE_PROFILE][BT_MAX_UUID_STR_LEN];
     char            pcDevicePrevState[BT_MAX_STR_LEN];
     char            pcDeviceCurrState[BT_MAX_STR_LEN];
+    char            pcDevicePath[BT_MAX_STR_LEN];
     // TODO: Array of objects Services;
     // TODO: Array of objects Nodes;
 } stBTDeviceInfo;

@@ -454,6 +454,8 @@ printMenu (
     fprintf( stderr, "36. Deny a connection request\n");
     fprintf( stderr, "37. Check if Device is Connectable\n");
     fprintf( stderr, "38. Scan for LE Devices\n");
+    fprintf( stderr, "39. Connect to LE Device\n");
+    fprintf( stderr, "40. Disconnect to LE Device\n");
 
     fprintf( stderr, "88. debug test\n");
     fprintf( stderr, "99. Exit\n");
@@ -881,6 +883,30 @@ main (
             }
             else {
                 fprintf(stderr, "%d\t: %s - Error, no default_adapter set\n", __LINE__, __FUNCTION__);
+            }
+            break;
+        case 39:
+            {
+                stBTRCoreScannedDevicesCount lBTRCoreScannedDevList;
+                fprintf(stderr, "%d\t: %s - Pick a LE Device to Connect...\n", __LINE__, __FUNCTION__);
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfScannedDevices(lhBTRCore, &lBTRCoreScannedDevList);
+                devnum = getChoice();
+                BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreLE);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
+                fprintf(stderr, "%d\t: %s - LE device connect process completed.\n", __LINE__, __FUNCTION__);
+            }
+
+            break;
+        case 40:
+           {
+                stBTRCoreScannedDevicesCount lstBTRCoreScannedDevList;
+                fprintf(stderr, "%d\t: %s - Pick a LE Device to Disconnect...\n", __LINE__, __FUNCTION__);
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
+                devnum = getChoice();
+                BTRCore_DisconnectDevice(lhBTRCore, devnum,enBTRCoreLE);
+                fprintf(stderr, "%d\t: %s - LE device disconnect process completed.\n", __LINE__, __FUNCTION__);
             }
             break;
         case 88:
