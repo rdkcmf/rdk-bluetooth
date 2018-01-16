@@ -345,9 +345,10 @@ sendSBCFileOverBT (
 }
 
 
-int
+enBTRCoreRet
 cb_connection_intimation (
     stBTRCoreConnCBInfo* apstConnCbInfo,
+    int*                 api32ConnInIntimResp,
     void*                apvUserData
 ) {
     fprintf(stderr, "%d\t: %s - Choose 35 to verify pin-passcode or 36 to discard pin-passcode\n\n", __LINE__, __FUNCTION__);
@@ -364,19 +365,22 @@ cb_connection_intimation (
     if (acceptConnection == 1) {
         fprintf(stderr, "%d\t: %s - Pin-Passcode accepted\n", __LINE__, __FUNCTION__);
         acceptConnection = 0;//reset variabhle for the next connection
-        return 1;
+        *api32ConnInIntimResp = 1;
     }
     else {
         fprintf(stderr, "%d\t: %s - Pin-Passcode denied\n", __LINE__, __FUNCTION__);
         acceptConnection = 0;//reset variabhle for the next connection
-        return 0;
+        *api32ConnInIntimResp = 0;
     }
+
+    return enBTRCoreSuccess;
 }
 
 
-int
+enBTRCoreRet
 cb_connection_authentication (
     stBTRCoreConnCBInfo* apstConnCbInfo,
+    int*                 api32ConnInAuthResp,
     void*                apvUserData
 ) {
     fprintf(stderr, "%d\t: %s - Choose 35 to accept the connection or 36 to deny the connection\n\n", __LINE__, __FUNCTION__);
@@ -389,17 +393,19 @@ cb_connection_authentication (
     if (acceptConnection == 1) {
         fprintf(stderr, "%d\t: %s - connection accepted\n", __LINE__, __FUNCTION__);
         acceptConnection = 0;//reset variabhle for the next connection
-        return 1;
+        *api32ConnInAuthResp = 1;
     }
     else {
         fprintf(stderr, "%d\t: %s - connection denied\n", __LINE__, __FUNCTION__);
         acceptConnection = 0;//reset variabhle for the next connection
-        return 0;
+        *api32ConnInAuthResp = 0;
     }
+
+    return enBTRCoreSuccess;
 }
 
 
-void
+enBTRCoreRet
 cb_unsolicited_bluetooth_status (
     stBTRCoreDevStatusCBInfo*   p_StatusCB,
     void*                       apvUserData
@@ -413,7 +419,7 @@ cb_unsolicited_bluetooth_status (
         }
     }
 
-    return;
+    return enBTRCoreSuccess;
 }
 
 static void

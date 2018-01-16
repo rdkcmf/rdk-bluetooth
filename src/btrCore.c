@@ -78,13 +78,17 @@ typedef struct _stBTRCoreHdl {
 
     stBTRCoreConnCBInfo         stConnCbInfo;
 
-    BTRCore_DeviceDiscoveryCb   fptrBTRCoreDeviceDiscoveryCB;
-    BTRCore_StatusCb            fptrBTRCoreStatusCB;
-    BTRCore_MediaStatusCb       fptrBTRCoreMediaStatusCB;
-    BTRCore_ConnIntimCb         fptrBTRCoreConnIntimCB; 
-    BTRCore_ConnAuthCb          fptrBTRCoreConnAuthCB; 
+    BTRCore_DeviceDiscoveryCb   fpcBBTRCoreDeviceDiscovery;
+    BTRCore_StatusCb            fpcBBTRCoreStatus;
+    BTRCore_MediaStatusCb       fpcBBTRCoreMediaStatus;
+    BTRCore_ConnIntimCb         fpcBBTRCoreConnIntim; 
+    BTRCore_ConnAuthCb          fpcBBTRCoreConnAuth; 
 
-    void*                       pvCBUserData;
+    void*                       pvcBDevDiscUserData;
+    void*                       pvcBStatusUserData;
+    void*                       pvcBMediaStatusUserData;
+    void*                       pvcBConnIntimUserData;
+    void*                       pvcBConnAuthUserData;
 
     GThread*                    dispatchThread;
     GMutex                      dispatchMutex;
@@ -177,12 +181,17 @@ btrCore_InitDataSt (
 
     memset(&apsthBTRCore->stConnCbInfo, 0, sizeof(stBTRCoreConnCBInfo));
 
-    apsthBTRCore->fptrBTRCoreDeviceDiscoveryCB = NULL;
-    apsthBTRCore->fptrBTRCoreStatusCB = NULL;
-    apsthBTRCore->fptrBTRCoreConnIntimCB = NULL;
-    apsthBTRCore->fptrBTRCoreConnAuthCB = NULL;
+    apsthBTRCore->fpcBBTRCoreDeviceDiscovery= NULL;
+    apsthBTRCore->fpcBBTRCoreStatus         = NULL;
+    apsthBTRCore->fpcBBTRCoreMediaStatus    = NULL;
+    apsthBTRCore->fpcBBTRCoreConnIntim      = NULL;
+    apsthBTRCore->fpcBBTRCoreConnAuth       = NULL;
 
-    apsthBTRCore->pvCBUserData = NULL;
+    apsthBTRCore->pvcBDevDiscUserData       = NULL;
+    apsthBTRCore->pvcBStatusUserData        = NULL;
+    apsthBTRCore->pvcBMediaStatusUserData   = NULL;
+    apsthBTRCore->pvcBConnIntimUserData     = NULL;
+    apsthBTRCore->pvcBConnAuthUserData      = NULL;
     /* Always safer to initialze Global variables, init if any left or added */
 }
 
@@ -793,8 +802,10 @@ test_func (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (pstlhBTRCore->fptrBTRCoreStatusCB != NULL) {
-        pstlhBTRCore->fptrBTRCoreStatusCB(&pstlhBTRCore->stDevStatusCbInfo, NULL);
+    if (pstlhBTRCore->fpcBBTRCoreStatus != NULL) {
+        if (pstlhBTRCore->fpcBBTRCoreStatus(&pstlhBTRCore->stDevStatusCbInfo, pstlhBTRCore->pvcBStatusUserData) != enBTRCoreSuccess) {
+            //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+        }
     }
     else {
         BTRCORELOG_ERROR ("no callback installed\n");
@@ -902,7 +913,7 @@ BTRCore_Init (
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
-   if(enBTRCoreSuccess != BTRCore_AVMedia_RegisterMediaStatusUpdatecB(pstlhBTRCore->avMediaHdl, &btrCore_BTMediaStatusUpdate_cb, pstlhBTRCore)) {
+   if(BTRCore_AVMedia_RegisterMediaStatusUpdatecB(pstlhBTRCore->avMediaHdl, &btrCore_BTMediaStatusUpdate_cb, pstlhBTRCore) != enBTRCoreSuccess) {
        BTRCORELOG_ERROR ("Failed to Register Media Status CB - enBTRCoreInitFailure\n");
        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
@@ -3306,7 +3317,7 @@ BTRCore_ReportMediaPosition (
 enBTRCoreRet
 BTRCore_RegisterDiscoveryCallback (
     tBTRCoreHandle              hBTRCore, 
-    BTRCore_DeviceDiscoveryCb   afptrBTRCoreDeviceDiscoveryCB,
+    BTRCore_DeviceDiscoveryCb   afpcBBTRCoreDeviceDiscovery,
     void*                       apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
@@ -3318,8 +3329,9 @@ BTRCore_RegisterDiscoveryCallback (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB) {
-        pstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB = afptrBTRCoreDeviceDiscoveryCB;
+    if (!pstlhBTRCore->fpcBBTRCoreDeviceDiscovery) {
+        pstlhBTRCore->fpcBBTRCoreDeviceDiscovery = afpcBBTRCoreDeviceDiscovery;
+        pstlhBTRCore->pvcBDevDiscUserData        = apUserData;
         BTRCORELOG_INFO ("Device Discovery Callback Registered Successfully\n");
     }
     else {
@@ -3333,7 +3345,7 @@ BTRCore_RegisterDiscoveryCallback (
 enBTRCoreRet
 BTRCore_RegisterStatusCallback (
     tBTRCoreHandle     hBTRCore,
-    BTRCore_StatusCb   afptrBTRCoreStatusCB,
+    BTRCore_StatusCb   afpcBBTRCoreStatus,
     void*              apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
@@ -3345,9 +3357,9 @@ BTRCore_RegisterStatusCallback (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->fptrBTRCoreStatusCB) {
-        pstlhBTRCore->fptrBTRCoreStatusCB = afptrBTRCoreStatusCB;
-        pstlhBTRCore->pvCBUserData = apUserData; 
+    if (!pstlhBTRCore->fpcBBTRCoreStatus) {
+        pstlhBTRCore->fpcBBTRCoreStatus = afpcBBTRCoreStatus;
+        pstlhBTRCore->pvcBStatusUserData= apUserData; 
         BTRCORELOG_INFO ("BT Status Callback Registered Successfully\n");
     }
     else {
@@ -3361,7 +3373,7 @@ BTRCore_RegisterStatusCallback (
 enBTRCoreRet
 BTRCore_RegisterMediaStatusCallback (
     tBTRCoreHandle         hBTRCore,
-    BTRCore_MediaStatusCb  afptrBTRCoreMediaStatusCB,
+    BTRCore_MediaStatusCb  afpcBBTRCoreMediaStatus,
     void*                  apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
@@ -3373,9 +3385,10 @@ BTRCore_RegisterMediaStatusCallback (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->fptrBTRCoreMediaStatusCB) {
-       pstlhBTRCore->fptrBTRCoreMediaStatusCB = afptrBTRCoreMediaStatusCB;
-       BTRCORELOG_INFO ("BT Media Status Callback Registered Successfully\n");
+    if (!pstlhBTRCore->fpcBBTRCoreMediaStatus) {
+        pstlhBTRCore->fpcBBTRCoreMediaStatus = afpcBBTRCoreMediaStatus;
+        pstlhBTRCore->pvcBMediaStatusUserData= apUserData;
+        BTRCORELOG_INFO ("BT Media Status Callback Registered Successfully\n");
     }
     else {
        BTRCORELOG_INFO ("BT Media Status Callback Already Registered - Not Registering current CB\n");
@@ -3388,7 +3401,7 @@ BTRCore_RegisterMediaStatusCallback (
 enBTRCoreRet
 BTRCore_RegisterConnectionIntimationCallback (
     tBTRCoreHandle      hBTRCore,
-    BTRCore_ConnIntimCb afptrBTRCoreConnIntimCB,
+    BTRCore_ConnIntimCb afpcBBTRCoreConnIntim,
     void*               apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
@@ -3402,8 +3415,9 @@ BTRCore_RegisterConnectionIntimationCallback (
 
     (void)pstlhBTRCore;
 
-    if (!pstlhBTRCore->fptrBTRCoreConnIntimCB) {
-        pstlhBTRCore->fptrBTRCoreConnIntimCB = afptrBTRCoreConnIntimCB;
+    if (!pstlhBTRCore->fpcBBTRCoreConnIntim) {
+        pstlhBTRCore->fpcBBTRCoreConnIntim = afpcBBTRCoreConnIntim;
+        pstlhBTRCore->pvcBConnIntimUserData= apUserData;
         BTRCORELOG_INFO ("BT Conn In Intimation Callback Registered Successfully\n");
     }
     else {
@@ -3417,7 +3431,7 @@ BTRCore_RegisterConnectionIntimationCallback (
 enBTRCoreRet
 BTRCore_RegisterConnectionAuthenticationCallback (
     tBTRCoreHandle      hBTRCore,
-    BTRCore_ConnAuthCb  afptrBTRCoreConnAuthCB,
+    BTRCore_ConnAuthCb  afpcBBTRCoreConnAuth,
     void*               apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
@@ -3431,8 +3445,9 @@ BTRCore_RegisterConnectionAuthenticationCallback (
 
     (void)pstlhBTRCore;
 
-    if (!pstlhBTRCore->fptrBTRCoreConnAuthCB) {
-        pstlhBTRCore->fptrBTRCoreConnAuthCB = afptrBTRCoreConnAuthCB;
+    if (!pstlhBTRCore->fpcBBTRCoreConnAuth) {
+        pstlhBTRCore->fpcBBTRCoreConnAuth = afpcBBTRCoreConnAuth;
+        pstlhBTRCore->pvcBConnAuthUserData= apUserData;
         BTRCORELOG_INFO ("BT Conn Auth Callback Registered Successfully\n");
     }
     else {
@@ -3552,10 +3567,12 @@ btrCore_BTDeviceStatusUpdate_cb (
 
 
                     btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
-                    if (lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB) {
+                    if (lpstlhBTRCore->fpcBBTRCoreDeviceDiscovery) {
                         stBTRCoreBTDevice  stFoundDevice;
                         memcpy (&stFoundDevice, &lpstlhBTRCore->stFoundDevice, sizeof(stFoundDevice));
-                        lpstlhBTRCore->fptrBTRCoreDeviceDiscoveryCB(stFoundDevice, NULL);
+                        if (lpstlhBTRCore->fpcBBTRCoreDeviceDiscovery(stFoundDevice, lpstlhBTRCore->pvcBDevDiscUserData) != enBTRCoreSuccess) {
+                            //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+                        }
                     }
                 }
             }
@@ -3565,41 +3582,43 @@ btrCore_BTDeviceStatusUpdate_cb (
         case enBTDevStLost: {
             stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
-            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL) && apstBTDeviceInfo) {
+            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fpcBBTRCoreStatus != NULL) && apstBTDeviceInfo) {
                 int     i32LoopIdx      = 0;
 
                 tBTRCoreDevId   lBTRCoreDevId     = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
 
                 if (lpstlhBTRCore->numOfPairedDevices) {
-                   for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
-                      if (lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
-                          BTRCORELOG_INFO ("Device %llu power state Off or OOR", lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId);
-                          BTRCORELOG_TRACE ("i32LoopIdx = %d\n", i32LoopIdx);
-                          BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = %d\n"
-                                           , lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState);
-                          BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = %d\n"
-                                           , lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState);
+                    for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
+                        if (lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
+                            BTRCORELOG_INFO ("Device %llu power state Off or OOR", lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId);
+                            BTRCORELOG_TRACE ("i32LoopIdx = %d\n", i32LoopIdx);
+                            BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = %d\n"
+                                             , lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState);
+                            BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = %d\n"
+                                             , lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState);
 
-                          lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = 
-                                                              lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
-                          lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = enBTRCoreDevStLost;
+                            lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = 
+                                                                lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
+                            lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = enBTRCoreDevStLost;
 
 
-                          lpstlhBTRCore->stDevStatusCbInfo.deviceId         = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId;
-                          lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass     = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].enDeviceType;
-                          lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState;
-                          lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
-                          lpstlhBTRCore->stDevStatusCbInfo.eDeviceType      = lenBTRCoreDevType;
-                          lpstlhBTRCore->stDevStatusCbInfo.isPaired         = 1;
-                          strncpy(lpstlhBTRCore->stDevStatusCbInfo.deviceName,
-                                  lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].pcDeviceName, (BD_NAME_LEN-1));
+                            lpstlhBTRCore->stDevStatusCbInfo.deviceId         = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass     = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].enDeviceType;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceType      = lenBTRCoreDevType;
+                            lpstlhBTRCore->stDevStatusCbInfo.isPaired         = 1;
+                            strncpy(lpstlhBTRCore->stDevStatusCbInfo.deviceName,
+                                    lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].pcDeviceName, (BD_NAME_LEN-1));
 
-                          lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvCBUserData);
-                          break;
-                      }
-                   }
+                            if (lpstlhBTRCore->fpcBBTRCoreStatus(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvcBStatusUserData) != enBTRCoreSuccess) {
+                              //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+                            }
+                            break;
+                        }
+                    }
                 }
-             }
+            }
             break;
         }
         case enBTDevStPairingRequest: {
@@ -3626,7 +3645,7 @@ btrCore_BTDeviceStatusUpdate_cb (
         case enBTDevStPropChanged: {
             stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
 
-            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fptrBTRCoreStatusCB != NULL) && apstBTDeviceInfo) {
+            if ((lpstlhBTRCore != NULL) && (lpstlhBTRCore->fpcBBTRCoreStatus != NULL) && apstBTDeviceInfo) {
                 int     i32LoopIdx      = 0;
                 int     i32KnownDevIdx  = -1;
                 int     i32ScannedDevIdx= -1;
@@ -3775,7 +3794,9 @@ btrCore_BTDeviceStatusUpdate_cb (
                         lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass     = lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType;
                         strncpy(lpstlhBTRCore->stDevStatusCbInfo.deviceName, lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].pcDeviceName, BD_NAME_LEN - 1);
                         /* Invoke the callback */
-                        lpstlhBTRCore->fptrBTRCoreStatusCB(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvCBUserData);
+                        if (lpstlhBTRCore->fpcBBTRCoreStatus(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvcBStatusUserData) != enBTRCoreSuccess) {
+                            //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+                        }
                     }
                 }
             }
@@ -3834,9 +3855,13 @@ btrCore_BTMediaStatusUpdate_cb (
     strncpy(lpstlhBTRCore->stMediaStatusCbInfo.deviceName, lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].pcDeviceName, BD_NAME_LEN-1);
     memcpy(&lpstlhBTRCore->stMediaStatusCbInfo.m_mediaStatusUpdate, apMediaStreamStatus, sizeof(stBTRCoreMediaStatusCBInfo));
 
-    if(NULL != lpstlhBTRCore->fptrBTRCoreMediaStatusCB) {
-        lpstlhBTRCore->fptrBTRCoreMediaStatusCB(&lpstlhBTRCore->stMediaStatusCbInfo, NULL); /* Invoke the callback */
+    if (lpstlhBTRCore->fpcBBTRCoreMediaStatus != NULL) {
+        /* Invoke the callback */
+        if (lpstlhBTRCore->fpcBBTRCoreMediaStatus(&lpstlhBTRCore->stMediaStatusCbInfo, lpstlhBTRCore->pvcBMediaStatusUserData) != enBTRCoreSuccess) {
+            //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+        }
     }
+
     return 0;
 }
 
@@ -3913,8 +3938,10 @@ btrCore_BTDeviceConnectionIntimation_cb (
             }
         }
 
-        if (((lenBTRCoreDevType == enBTRCoreMobileAudioIn) || (lenBTRCoreDevType == enBTRCorePCAudioIn)) && (lpstlhBTRCore->fptrBTRCoreConnIntimCB)) {
-            i32DevConnIntimRet = lpstlhBTRCore->fptrBTRCoreConnIntimCB(&lpstlhBTRCore->stConnCbInfo, NULL);
+        if (((lenBTRCoreDevType == enBTRCoreMobileAudioIn) || (lenBTRCoreDevType == enBTRCorePCAudioIn)) && (lpstlhBTRCore->fpcBBTRCoreConnIntim)) {
+             if (lpstlhBTRCore->fpcBBTRCoreConnIntim(&lpstlhBTRCore->stConnCbInfo, &i32DevConnIntimRet, lpstlhBTRCore->pvcBConnIntimUserData) != enBTRCoreSuccess) {
+                //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+            }
         }
         else if ((lenBTRCoreDevType == enBTRCoreSpeakers) || (lenBTRCoreDevType == enBTRCoreHeadSet)) {
             if (lpstlhBTRCore->numOfPairedDevices) {
@@ -4003,8 +4030,10 @@ btrCore_BTDeviceAuthentication_cb (
             }
         }
 
-        if (lpstlhBTRCore->fptrBTRCoreConnAuthCB) {
-            i32DevAuthRet = lpstlhBTRCore->fptrBTRCoreConnAuthCB(&lpstlhBTRCore->stConnCbInfo, NULL);
+        if (lpstlhBTRCore->fpcBBTRCoreConnAuth) {
+            if (lpstlhBTRCore->fpcBBTRCoreConnAuth(&lpstlhBTRCore->stConnCbInfo, &i32DevAuthRet, lpstlhBTRCore->pvcBConnAuthUserData) != enBTRCoreSuccess) {
+                //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+            }
         }
 
 
