@@ -49,6 +49,9 @@
 #define BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH     "org.bluez.MediaPlayer1"
 #define BT_DBUS_BLUEZ_MEDIA_ITEM_PATH       "org.bluez.MediaItem1"
 #define BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH     "org.bluez.MediaFolder1"
+#define BT_DBUS_BLUEZ_GATT_SERVICE_PATH     "org.bluez.GattService1"
+#define BT_DBUS_BLUEZ_GATT_CHAR_PATH        "org.bluez.GattCharacteristic1"
+#define BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH  "org.bluez.GattDescriptor1"
 #define BT_DBUS_BLUEZ_AGENT_PATH            "org.bluez.Agent1"
 #define BT_DBUS_BLUEZ_AGENT_MGR_PATH        "org.bluez.AgentManager1"
 
@@ -114,6 +117,7 @@ static void*            gpcBTransPathMediaUserData = NULL;
 static void*            gpcBMediaPlayerPathUserData = NULL;
 static void*            gpcBConnIntimUserData = NULL;
 static void*            gpcBConnAuthUserData = NULL;
+static void*            gpcBLePathUserData = NULL;
 
 static unsigned int     gui32cBConnAuthPassKey = 0;
 static unsigned int     gui32DevLost = 0;
@@ -125,7 +129,7 @@ static fPtr_BtrCore_BTTransportPathMediaCb  gfpcBTransportPathMedia = NULL;
 static fPtr_BtrCore_BTMediaPlayerPathCb     gfpcBTMediaPlayerPath = NULL;
 static fPtr_BtrCore_BTConnIntimCb           gfpcBConnectionIntimation = NULL;
 static fPtr_BtrCore_BTConnAuthCb            gfpcBConnectionAuthentication = NULL;
-
+static fPtr_BtrCore_BTLeGattPathCb          gfpcBTLeGattPath = NULL;
 
 
 /* Incoming Callbacks Prototypes */
@@ -338,6 +342,7 @@ btrCore_BTGetDefaultAdapterPath (
 
     if (gpcBTDAdapterPath) {
         BTRCORELOG_DEBUG ("Default Adpater Path is: %s\n", gpcBTDAdapterPath);
+
     }
     return gpcBTDAdapterPath;
 }
@@ -1349,9 +1354,14 @@ BtrCore_BTInitGetConnection (
     dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
     dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_DEVICE_PATH "'", NULL);
     dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_SERVICE_PATH"'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_CHAR_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH "'", NULL);
+ 
 
     gui32cBConnAuthPassKey          = 0;
 
+    gpcBLePathUserData              = NULL;
     gpcBTransPathMediaUserData      = NULL;
     gpcBMediaPlayerPathUserData     = NULL; 
     gpcBNegMediaUserData            = NULL;
@@ -1367,6 +1377,7 @@ BtrCore_BTInitGetConnection (
     gfpcBTMediaPlayerPath           = NULL; 
     gfpcBConnectionIntimation       = NULL;
     gfpcBConnectionAuthentication   = NULL;
+    gfpcBTLeGattPath                = NULL;
 
     return (void*)gpDBusConn;
 }
@@ -1395,6 +1406,7 @@ BtrCore_BTDeInitReleaseConnection (
         gpcBTAdapterPath = NULL;
     }
 
+    gfpcBTLeGattPath                = NULL;
     gfpcBConnectionAuthentication   = NULL;
     gfpcBConnectionIntimation       = NULL;
     gfpcBTMediaPlayerPath           = NULL; 
@@ -1410,9 +1422,13 @@ BtrCore_BTDeInitReleaseConnection (
     gpcBNegMediaUserData            = NULL;
     gpcBMediaPlayerPathUserData     = NULL; 
     gpcBTransPathMediaUserData      = NULL;
+    gpcBLePathUserData              = NULL;
 
     gui32cBConnAuthPassKey          = 0;
 
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_CHAR_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_SERVICE_PATH"'", NULL);
     dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH "'", NULL);
     dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_DEVICE_PATH "'", NULL);
     dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
@@ -3981,6 +3997,36 @@ BtrCore_BTRegisterMediaPlayerPathCb (
 }
 
 
+int
+BtrCore_BTRegisterLEGattInfoCb (
+    void*                                   apBtConn,
+    const char*                             apBtAdapter,
+    fPtr_BtrCore_BTLeGattPathCb             afpcBtLeGattPath,
+    void*                                   apUserData
+) {
+    BTRCORELOG_DEBUG ("Here ......\n");
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!apBtAdapter || !afpcBtLeGattPath)
+        return -1;
+
+    gfpcBTLeGattPath = afpcBtLeGattPath;
+    gpcBLePathUserData = apUserData;
+
+    BTRCORELOG_DEBUG ("Here ......\n");
+    return 0;
+}
+
+
+//TODO: Add BtrCore_BTRegisterLEGattInfocB which can be used to register function pointer 
+//which can be called back when the following interfaces gets added or removed or the properties
+//changes on the following Interfaces
+// BT_DBUS_BLUEZ_GATT_SERVICE_PATH   
+// BT_DBUS_BLUEZ_GATT_CHAR_PATH      
+// BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH
+
+
 /* Incoming Callbacks */
 static DBusHandlerResult
 btrCore_BTDBusConnectionFilterCb (
@@ -4162,6 +4208,16 @@ btrCore_BTDBusConnectionFilterCb (
                        }
                     }
                 }
+                /* Added propert change for GATT */
+                else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_GATT_SERVICE_PATH)) {
+                    BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_GATT_SERVICE_PATH);
+                }
+                else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_GATT_CHAR_PATH )) {
+                    BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
+                }
+                else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH )) {
+                    BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH);
+                }
                 else {
                     BTRCORELOG_INFO ("Property Changed! : %s\n", lpcDBusIface);
                 }
@@ -4277,6 +4333,19 @@ btrCore_BTDBusConnectionFilterCb (
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH);
                                 }
+                                /* Add Interfaces for GATT */
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_SERVICE_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_SERVICE_PATH);
+                                   gfpcBTLeGattPath(enBTGattService, lpcDBusIface, NULL);
+                                }
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_CHAR_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
+                                    gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, NULL);
+                                }
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH);
+                                    gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, NULL);
+                                }
                                 else {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", lpcDBusIfaceInternal);
                                 }
@@ -4358,6 +4427,16 @@ btrCore_BTDBusConnectionFilterCb (
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH)) {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH);
+                    }
+                    /* Add Interfaces removed for GATT profile */ 
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_SERVICE_PATH)) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_GATT_SERVICE_PATH);
+                    }
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_CHAR_PATH  )) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
+                    }
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH)) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH);
                     }
                     else {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", lpcDBusIfaceInternal);

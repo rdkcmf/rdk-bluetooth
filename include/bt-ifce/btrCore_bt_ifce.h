@@ -66,6 +66,9 @@ typedef enum _enBTOpType {
     enBTAdapter,
     enBTDevice,
     enBTMediaTransport,
+    enBTGattService,
+    enBTGattCharacteristic,
+    enBTGattDescriptor,
     enBTUnknown
 } enBTOpIfceType;
 
@@ -113,6 +116,28 @@ typedef enum _enBTMediaTransportProp {
     enBTMedTPropUnknown
 } enBTMediaTransportProp;
 
+typedef enum _enBTGattServiceProp {
+    enBTGattSPropUUID,
+    enBTGattSPropPrimary,
+    enBTGattSPropDevice,
+    enBTGattSPropUnknown
+} enBTGattServiceProp;
+
+typedef enum _enBTGattCharProp {
+    enBTGattCPropUUID,
+    enBTGattCPropValue,
+    enBTGattCPropFlags,
+    enBTGattCPropUnknown
+} enBTGattCharProp;
+
+typedef enum _enBTGattDescProp {
+    enBTGattDPropUUID,
+    enBTGattDPropPrimary,
+    enBTGattDPropValue,
+    enBTGattDPropFlags,
+    enBTGattDPropUnknown
+} enBTGattDescProp;
+
 typedef enum _enBTMediaTransportState {
     enBTMTransportStNone,
     enBTMTransportStIdle,           /* Not Streaming and not Acquired                      */
@@ -146,6 +171,9 @@ typedef union _unBTOpIfceProp {
     enBTAdapterProp         enBtAdapterProp;
     enBTDeviceProp          enBtDeviceProp;
     enBTMediaTransportProp  enBtMediaTransportProp;
+    enBTGattServiceProp     enBtGattServiceProp;
+    enBTGattCharProp        enBtGattCharProp;
+    enBTGattDescProp        enBtGattDescProp;
     // Add other enums which define the required properties 
 } unBTOpIfceProp;
 
@@ -220,7 +248,7 @@ typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTranspor
 typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
-
+typedef const char* (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, void* apUserData);
 
 //callback to process connection requests:
 int (*p_ConnAuth_callback) ();
@@ -275,5 +303,8 @@ int   BtrCore_BTRegisterTransportPathMediaCb (void* apBtConn, const char* apBtAd
                                                 fPtr_BtrCore_BTTransportPathMediaCb afpcBTransportPathMedia, void* apUserData);
 int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTMediaPlayerPathCb afpcBTMediaPlayerPath, void* apUserData); 
-
+/******************************************
+*    LE Functions
+*******************************************/
+int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
 #endif // __BTR_CORE_BT_IFCE_H__

@@ -30,6 +30,8 @@
 
 #include "btrCore.h"
 #include "btrCore_avMedia.h"
+
+#include "btrCore_le.h"
 #include "btrCore_bt_ifce.h"
 
 #include "btrCore_service.h"
@@ -51,6 +53,7 @@ typedef struct _stBTRCoreDevStateInfo {
 typedef struct _stBTRCoreHdl {
 
     tBTRCoreAVMediaHdl              avMediaHdl;
+    tBTRCoreLeHdl                   leHdl;
 
     void*                           connHdl;
     char*                           agentPath;
@@ -933,11 +936,13 @@ BTRCore_Init (
        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
 
+    if (enBTRCoreSuccess != BTRCore_LE_Init(&pstlhBTRCore->leHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath)) {
+          BTRCORELOG_ERROR ("Failed to Init LE Subsystem - enBTRCoreInitFailure\n");
+          BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
+          return enBTRCoreInitFailure;
+    }
 
     *phBTRCore  = (tBTRCoreHandle)pstlhBTRCore;
-
-   //Initialize array of known devices so we can use it for stuff
-    btrCore_PopulateListOfPairedDevices(*phBTRCore, pstlhBTRCore->curAdapterPath);
 
     return enBTRCoreSuccess;
 }

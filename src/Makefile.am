@@ -33,7 +33,7 @@ BTRCORE_IFCE_INC = -I${top_srcdir}/include/bt-ifce
 
 AM_CPPFLAGS = -Wall -Werror -I${top_srcdir}/include $(BTRCORE_IFCE_INC) -I${top_srcdir}/include/priv
 lib_LTLIBRARIES = libbtrCore.la
-libbtrCore_la_SOURCES = btrCore.c btrCore_avMedia.c $(BTRCORE_IFCE_SRCS)
+libbtrCore_la_SOURCES = btrCore.c btrCore_avMedia.c btrCore_le.c $(BTRCORE_IFCE_SRCS)
 libbtrCore_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
 libbtrCore_la_LIBADD = $(DBUS_LIBS) $(GLIB_LIBS) -lrdkloggers
 
@@ -42,3 +42,4 @@ include_HEADERS = $(top_srcdir)/include/btrCore.h
 include_HEADERS += $(top_srcdir)/include/btrCoreTypes.h
 include_HEADERS += $(top_srcdir)/include/btrCore_service.h
 include_HEADERS += $(top_srcdir)/include/btrCore_avMedia.h
+include_HEADERS += $(top_srcdir)/include/btrCore_le.h
