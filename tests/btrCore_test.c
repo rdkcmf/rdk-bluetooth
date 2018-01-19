@@ -516,7 +516,7 @@ main (
 
     stAppData.hBTRCore = lhBTRCore;
     //register callback for unsolicted events, such as powering off a bluetooth device
-    BTRCore_RegisterStatusCallback(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
+    BTRCore_RegisterStatusCb(lhBTRCore, cb_unsolicited_bluetooth_status, &stAppData);
 
     stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo = (void*)malloc((sizeof(stBTRCoreDevMediaSbcInfo) > sizeof(stBTRCoreDevMediaMpegInfo)) ? sizeof(stBTRCoreDevMediaSbcInfo) : sizeof(stBTRCoreDevMediaMpegInfo));
 
@@ -861,11 +861,11 @@ main (
             break;
         case 33:
             fprintf(stderr, "%d\t: %s - register connection-in Intimation CB\n", __LINE__, __FUNCTION__);
-            BTRCore_RegisterConnectionIntimationCallback(lhBTRCore, cb_connection_intimation, NULL);
+            BTRCore_RegisterConnectionIntimationCb(lhBTRCore, cb_connection_intimation, NULL);
             break;
         case 34:
             fprintf(stderr, "%d\t: %s - register authentication CB\n", __LINE__, __FUNCTION__);
-            BTRCore_RegisterConnectionAuthenticationCallback(lhBTRCore, cb_connection_authentication, NULL);
+            BTRCore_RegisterConnectionAuthenticationCb(lhBTRCore, cb_connection_authentication, NULL);
             break;
         case 35:
             fprintf(stderr, "%d\t: %s - accept the connection\n", __LINE__, __FUNCTION__);

@@ -136,10 +136,10 @@ typedef struct _stBTRCoreAVMediaStatusUpdate {
 } stBTRCoreAVMediaStatusUpdate;
 
 
+/* Fptr Callbacks types */
+typedef enBTRCoreRet (*fPtr_BTRCore_AVMediaStatusUpdateCb) (void* pBTRCoreAVMediaStreamStatus, const char* apcAVMediaDevAddress, void* apvUserCbData);
 
-typedef int (*BTRCore_AVMediaStatusUpdateCb) (void* pBTRCoreAVMediaStreamStatus, const char* apcAVMediaDevAddress, void* apvUserCbData);
-
-
+/* Interfaces */
 enBTRCoreRet BTRCore_AVMedia_Init (tBTRCoreAVMediaHdl* phBTRCoreAVM, void* apBtConn, const char* apBtAdapter);
 enBTRCoreRet BTRCore_AVMedia_DeInit (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtAdapter);
 enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaInfo* apstBtrCoreAVMediaInfo);
@@ -151,6 +151,7 @@ enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, v
 enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue);
 enBTRCoreRet BTRCore_AVMedia_StartMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevPath, const char* apBtDevAddr);
 enBTRCoreRet BTRCore_AVMedia_ExitMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM);
+// Outgoing callbacks Registration Interfaces
+enBTRCoreRet BTRCore_AVMedia_RegisterMediaStatusUpdateCb (tBTRCoreAVMediaHdl hBTRCoreAVM, fPtr_BTRCore_AVMediaStatusUpdateCb afpcBBTRCoreAVMediaStatusUpdate, void* apcBMediaStatusUserData);
 
-enBTRCoreRet BTRCore_AVMedia_RegisterMediaStatusUpdatecB (tBTRCoreAVMediaHdl hBTRCoreAVM, BTRCore_AVMediaStatusUpdateCb afptrBTRCoreAVMediaStatusUpdate, void* apcBMediaStatusUserData);
 #endif // __BTR_CORE_AV_MEDIA_H__

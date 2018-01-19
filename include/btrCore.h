@@ -292,11 +292,12 @@ typedef struct _stBTRCoreMediaStatusCBInfo {
 } stBTRCoreMediaStatusCBInfo;
 
 
-typedef enBTRCoreRet (*BTRCore_DeviceDiscoveryCb) (stBTRCoreBTDevice astBTRCoreScannedDevice, void* apvUserData);
-typedef enBTRCoreRet (*BTRCore_StatusCb) (stBTRCoreDevStatusCBInfo* apstDevStatusCbInfo, void* apvUserData);
-typedef enBTRCoreRet (*BTRCore_MediaStatusCb) (stBTRCoreMediaStatusCBInfo* apstMediaStatusCbInfo, void* apvUserData);
-typedef enBTRCoreRet (*BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
-typedef enBTRCoreRet (*BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
+/* Fptr Callbacks types */
+typedef enBTRCoreRet (*fPtr_BTRCore_DeviceDiscoveryCb) (stBTRCoreBTDevice astBTRCoreScannedDevice, void* apvUserData);
+typedef enBTRCoreRet (*fPtr_BTRCore_StatusCb) (stBTRCoreDevStatusCBInfo* apstDevStatusCbInfo, void* apvUserData);
+typedef enBTRCoreRet (*fPtr_BTRCore_MediaStatusCb) (stBTRCoreMediaStatusCBInfo* apstMediaStatusCbInfo, void* apvUserData);
+typedef enBTRCoreRet (*fPtr_BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
+typedef enBTRCoreRet (*fPtr_BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
 
 
 /*
@@ -441,20 +442,21 @@ enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId a
 /* BTRCore_ReportMediaPosition */
 enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
+// Outgoing callbacks Registration Interfaces
 /* Callback to notify the application every time when a new device is found and added to discovery list */
-enBTRCoreRet BTRCore_RegisterDiscoveryCallback (tBTRCoreHandle  hBTRCore, BTRCore_DeviceDiscoveryCb afpcBBTRCoreDeviceDiscovery, void* apUserData);
+enBTRCoreRet BTRCore_RegisterDiscoveryCb (tBTRCoreHandle  hBTRCore, fPtr_BTRCore_DeviceDiscoveryCb afpcBBTRCoreDeviceDiscovery, void* apUserData);
 
 /*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
-enBTRCoreRet BTRCore_RegisterStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_StatusCb afpcBBTRCoreStatus, void* apUserData);
+enBTRCoreRet BTRCore_RegisterStatusCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_StatusCb afpcBBTRCoreStatus, void* apUserData);
 
 /*BTRCore_RegisterMediaStatusCallback - callback for media state changes*/
-enBTRCoreRet BTRCore_RegisterMediaStatusCallback (tBTRCoreHandle hBTRCore, BTRCore_MediaStatusCb afpcBBTRCoreMediaStatus, void* apUserData);
+enBTRCoreRet BTRCore_RegisterMediaStatusCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_MediaStatusCb afpcBBTRCoreMediaStatus, void* apUserData);
 
 /*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
-enBTRCoreRet BTRCore_RegisterConnectionIntimationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnIntimCb afpcBBTRCoreConnAuth, void* apUserData);
+enBTRCoreRet BTRCore_RegisterConnectionIntimationCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_ConnIntimCb afpcBBTRCoreConnAuth, void* apUserData);
 
 /*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
-enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCallback (tBTRCoreHandle hBTRCore, BTRCore_ConnAuthCb afpcBBTRCoreConnAuth, void* apUserData);
+enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_ConnAuthCb afpcBBTRCoreConnAuth, void* apUserData);
 
 
 #ifdef __cplusplus
