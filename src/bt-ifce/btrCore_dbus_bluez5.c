@@ -3773,73 +3773,74 @@ BtrCore_BTGetTrackInformation (
 
     dbus_message_iter_init(lpDBusReply, &MsgIter);                    // lpDBusMsg is pointer to dbus message received
     dbus_message_iter_recurse(&MsgIter, &arrayMsgIter);               // pointer to first element ARRAY of the dbus messge received
-      dbus_message_iter_recurse(&arrayMsgIter, &dictMsgIter);         // pointer to first element DICTIONARY of the dbus messge received
+    dbus_message_iter_recurse(&arrayMsgIter, &dictMsgIter);         // pointer to first element DICTIONARY of the dbus messge received
 
     while (DBUS_TYPE_INVALID != (dbus_type = dbus_message_iter_get_arg_type(&dictMsgIter))) {
         if (DBUS_TYPE_DICT_ENTRY == dbus_type) {
             dbus_message_iter_recurse(&dictMsgIter,&element);         // pointer to element STRING of the dbus messge received
 
             if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&element)) {
-               dbus_message_iter_get_basic(&element, &pcKey);
+                dbus_message_iter_get_basic(&element, &pcKey);
 
-               if (0==strcmp("Album", pcKey)) {        
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, &pcValue); 
-                  strncpy(lpstBTMediaTrackInfo->pcAlbum, pcValue, BT_MAX_STR_LEN);
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcAlbum : %s\n", lpstBTMediaTrackInfo->pcAlbum);
-               } else
-               if (0==strcmp("Artist", pcKey)) {
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, &pcValue);
-                  strncpy(lpstBTMediaTrackInfo->pcArtist, pcValue, BT_MAX_STR_LEN);
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcArtist : %s\n", lpstBTMediaTrackInfo->pcArtist);
-               } else
-               if (0==strcmp("Genre", pcKey)) {
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, &pcValue);
-                  strncpy(lpstBTMediaTrackInfo->pcGenre, pcValue, BT_MAX_STR_LEN);
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcGenre : %s\n", lpstBTMediaTrackInfo->pcGenre);
-               } else
-               if (0==strcmp("Title", pcKey)) {
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, &pcValue);
-                  strncpy(lpstBTMediaTrackInfo->pcTitle, pcValue, BT_MAX_STR_LEN);
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcTitle : %s\n", lpstBTMediaTrackInfo->pcTitle);
-               } else
-               if (0==strcmp("NumberOfTracks", pcKey)) {
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
-                  lpstBTMediaTrackInfo->ui32NumberOfTracks = ui32Value;
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->ui32NumberOfTracks : %d\n", lpstBTMediaTrackInfo->ui32NumberOfTracks);
-               } else
-               if (0==strcmp("TrackNumber", pcKey)) {
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
-                  lpstBTMediaTrackInfo->ui32TrackNumber = ui32Value;
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->ui32TrackNumber : %d\n", lpstBTMediaTrackInfo->ui32TrackNumber);
-               } else
-               if (0==strcmp("Duration", pcKey)) {
-                  dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
-                  dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
-                  dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
-                  lpstBTMediaTrackInfo->ui32Duration = ui32Value;
-                  BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->ui32Duration : %d\n", lpstBTMediaTrackInfo->ui32Duration);
-               }
+                if (!strcmp("Album", pcKey)) {        
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, &pcValue); 
+                    strncpy(lpstBTMediaTrackInfo->pcAlbum, pcValue, BT_MAX_STR_LEN);
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcAlbum : %s\n", lpstBTMediaTrackInfo->pcAlbum);
+                }
+                else if (!strcmp("Artist", pcKey)) {
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, &pcValue);
+                    strncpy(lpstBTMediaTrackInfo->pcArtist, pcValue, BT_MAX_STR_LEN);
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcArtist : %s\n", lpstBTMediaTrackInfo->pcArtist);
+                }
+                else if (!strcmp("Genre", pcKey)) {
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, &pcValue);
+                    strncpy(lpstBTMediaTrackInfo->pcGenre, pcValue, BT_MAX_STR_LEN);
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcGenre : %s\n", lpstBTMediaTrackInfo->pcGenre);
+                }
+                else if (!strcmp("Title", pcKey)) {
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, &pcValue);
+                    strncpy(lpstBTMediaTrackInfo->pcTitle, pcValue, BT_MAX_STR_LEN);
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->pcTitle : %s\n", lpstBTMediaTrackInfo->pcTitle);
+                }
+                else if (!strcmp("NumberOfTracks", pcKey)) {
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
+                    lpstBTMediaTrackInfo->ui32NumberOfTracks = ui32Value;
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->ui32NumberOfTracks : %d\n", lpstBTMediaTrackInfo->ui32NumberOfTracks);
+                }
+                else if (!strcmp("TrackNumber", pcKey)) {
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
+                    lpstBTMediaTrackInfo->ui32TrackNumber = ui32Value;
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->ui32TrackNumber : %d\n", lpstBTMediaTrackInfo->ui32TrackNumber);
+                }
+                else if (!strcmp("Duration", pcKey)) {
+                    dbus_message_iter_next(&element);                   // next element is VARIANT of the dbus messge received
+                    dbus_message_iter_recurse(&element, &elementBasic); // pointer to element STRING/UINT32 w.r.t dbus messge received here
+                    dbus_message_iter_get_basic(&elementBasic, (void*)&ui32Value);
+                    lpstBTMediaTrackInfo->ui32Duration = ui32Value;
+                    BTRCORELOG_DEBUG ("lpstBTMediaTrackInfo->ui32Duration : %d\n", lpstBTMediaTrackInfo->ui32Duration);
+                }
             }
-         }
-         if (!dbus_message_iter_has_next(&dictMsgIter)) {
+        }
+
+        if (!dbus_message_iter_has_next(&dictMsgIter)) {
             break;
-         }
-         else {
+        }
+        else {
             dbus_message_iter_next(&dictMsgIter);
-         }
-      }
+        }
+    }
 
     return 0;
 }
@@ -4069,7 +4070,6 @@ btrCore_BTDBusConnectionFilterCb (
     if (li32MessageType == DBUS_MESSAGE_TYPE_ERROR) {
         const char* lpcError = dbus_message_get_error_name(apDBusMsg);
         BTRCORELOG_ERROR ("Error = %s\n", lpcError ? lpcError : NULL);
-
     }
     else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.Properties", "PropertiesChanged")) {
         BTRCORELOG_DEBUG ("Property Changed!\n");
@@ -4088,9 +4088,9 @@ btrCore_BTDBusConnectionFilterCb (
                 }
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_DEVICE_PATH)) {
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_DEVICE_PATH);
-                     i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, dbus_message_get_path(apDBusMsg));
+                    i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, dbus_message_get_path(apDBusMsg));
                     
-                     if (gfpcBDevStatusUpdate && !i32OpRet) {
+                    if (gfpcBDevStatusUpdate && !i32OpRet) {
                         enBTDeviceState lenBtDevState = enBTDevStUnknown; 
                         enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
@@ -4130,27 +4130,26 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                         }
                     }
-
                 }
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH)) {
-                    const char* apcMediaTransIface = dbus_message_get_path(apDBusMsg);
-                    char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
-                    unsigned int ui32DeviceIfceLen = strstr(apcMediaTransIface, "/fd") - apcMediaTransIface;
+                    const char*     apcMediaTransIface = dbus_message_get_path(apDBusMsg);
+                    char            apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
+                    unsigned int    ui32DeviceIfceLen = strstr(apcMediaTransIface, "/fd") - apcMediaTransIface;
                     enBTDeviceType  lenBTDevType = enBTDevUnknown;
-                    char* apcDevAddr   = 0;
+                    char*           apcDevAddr   = 0;
 
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH);
                     
                     i32OpRet = btrCore_BTGetMediaInfo(&lstBTMediaInfo, apcMediaTransIface);
  
                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
-                       strncpy(apcDeviceIfce, apcMediaTransIface, ui32DeviceIfceLen);
-                       i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
-                       if (!i32OpRet) {
-                          lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                          apcDevAddr    = lstBTDeviceInfo.pcAddress;
-                       }
-                   }
+                        strncpy(apcDeviceIfce, apcMediaTransIface, ui32DeviceIfceLen);
+                        i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
+                        if (!i32OpRet) {
+                            lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+                            apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                        }
+                    }
 
                     if ((!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "pending"))) {
                         strcpy(gpcMediaCurrState, lstBTMediaInfo.pcState);
@@ -4165,47 +4164,63 @@ btrCore_BTDBusConnectionFilterCb (
 
                             if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
                             }
-                          //if () {} t avmedia wiht device address info. from which id can be computed 
+                            //if () {} t avmedia wiht device address info. from which id can be computed 
                         }
                     }
-                    else 
-                    if (enBTDevAudioSource == lenBTDevType) { //Lets handle AudioIn case for media events for now
-                       char*  apcDevTransportPath = (char*)apcMediaTransIface;
+                    else if (lenBTDevType == enBTDevAudioSource) { //Lets handle AudioIn case for media events for now
+                        char*  apcDevTransportPath = (char*)apcMediaTransIface;
 
-                       // TODO: Obtain this data path reAcquire call from BTRCore - do as part of next commit
-                       if (strcmp(gpcMediaCurrState, "none") && !strcmp(lstBTMediaInfo.pcState, "pending")) {
-                          int    dataPathFd   = 0;
-                          int    dataReadMTU  = 0;
-                          int    dataWriteMTU = 0;
+                        // TODO: Obtain this data path reAcquire call from BTRCore - do as part of next commit
+                        if (strcmp(gpcMediaCurrState, "none") && !strcmp(lstBTMediaInfo.pcState, "pending")) {
+                            int    dataPathFd   = 0;
+                            int    dataReadMTU  = 0;
+                            int    dataWriteMTU = 0;
 
-                          if (BtrCore_BTAcquireDevDataPath (gpDBusConn, apcDevTransportPath, &dataPathFd, &dataReadMTU, &dataWriteMTU)) {
-                             BTRCORELOG_ERROR ("Failed to ReAcquire transport path %s", apcMediaTransIface);
-                          } else {
-                             BTRCORELOG_INFO  ("Successfully ReAcquired transport path %s", apcMediaTransIface);
-                          }
-                       }
-                
-                       if (gfpcBMediaStatusUpdate) {
-                          enBTMediaTransportState  lenBtMTransportSt = enBTMTransportStNone;
-                          stBTMediaStatusUpdate    mediaStatusUpdate; 
+                            if (BtrCore_BTAcquireDevDataPath (gpDBusConn, apcDevTransportPath, &dataPathFd, &dataReadMTU, &dataWriteMTU)) {
+                                 BTRCORELOG_ERROR ("Failed to ReAcquire transport path %s", apcMediaTransIface);
+                            }
+                            else {
+                                 BTRCORELOG_INFO  ("Successfully ReAcquired transport path %s", apcMediaTransIface);
+                            }
+                        }
 
-                          if (!strcmp(lstBTMediaInfo.pcState, "idle"))
-                             lenBtMTransportSt = enBTMTransportStIdle;
-                          else
-                          if (!strcmp(lstBTMediaInfo.pcState, "pending"))
-                             lenBtMTransportSt = enBTMTransportStPending;
-                          else
-                          if (!strcmp(lstBTMediaInfo.pcState, "active"))
-                             lenBtMTransportSt = enBTMTransportStActive;
+                        if (gfpcBMediaStatusUpdate) {
+                            enBTMediaTransportState  lenBtMTransportSt = enBTMTransportStNone;
+                            stBTMediaStatusUpdate    mediaStatusUpdate; 
 
-                          mediaStatusUpdate.aeBtMediaStatus       = enBTMediaTransportUpdate;
-                          mediaStatusUpdate.m_mediaTransportState = lenBtMTransportSt;
+                            if (!strcmp(lstBTMediaInfo.pcState, "idle")) {
+                               lenBtMTransportSt = enBTMTransportStIdle;
+                            }
+                            else if (!strcmp(lstBTMediaInfo.pcState, "pending")) {
+                               lenBtMTransportSt = enBTMTransportStPending;
+                            }
+                            else if (!strcmp(lstBTMediaInfo.pcState, "active")) {
+                               lenBtMTransportSt = enBTMTransportStActive;
+                            }
 
-                          //if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
-                          //}
-                          (void)mediaStatusUpdate;
-                          (void)apcDevAddr;
-                       }
+                            mediaStatusUpdate.aeBtMediaStatus       = enBTMediaTransportUpdate;
+                            mediaStatusUpdate.m_mediaTransportState = lenBtMTransportSt;
+
+                            //if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
+                            //}
+                            (void)mediaStatusUpdate;
+                            (void)apcDevAddr;
+                        }
+                    }
+                    else if (lenBTDevType == enBTDevAudioSink) {    // Lets handle AudioOut case for media events for a Paired device which connects at Pairing
+                        if (!i32OpRet && lstBTDeviceInfo.bConnected && lstBTDeviceInfo.bPaired &&
+                            (!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "idle"))) {
+                            const char* value = "connected";
+                            enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
+
+                            strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                            strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                            strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+                            if (gfpcBDevStatusUpdate && 
+                                gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                            }
+                        }
                     }
                 }
                 /* Added propert change for GATT */
@@ -4279,9 +4294,9 @@ btrCore_BTDBusConnectionFilterCb (
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
 
                                     if (lpcDBusIface && gfpcBTMediaPlayerPath) {
-                                       if (gfpcBTMediaPlayerPath(lpcDBusIface, gpcBMediaPlayerPathUserData)) {
-                                          BTRCORELOG_ERROR ("Media Player Path callBack Failed!!!\n");
-                                       } 
+                                        if (gfpcBTMediaPlayerPath(lpcDBusIface, gpcBMediaPlayerPathUserData)) {
+                                           BTRCORELOG_ERROR ("Media Player Path callBack Failed!!!\n");
+                                        } 
                                     }   
                                 }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH)) {
@@ -4292,35 +4307,35 @@ btrCore_BTDBusConnectionFilterCb (
                                     char* apcDevAddr                   = 0;
 
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
-                                       strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
-                                       i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
-                                       if (!i32OpRet) {
-                                          lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                                          apcDevAddr    = lstBTDeviceInfo.pcAddress;
-                                       }
+                                        strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
+                                        i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
+                                        if (!i32OpRet) {
+                                            lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+                                            apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                                        }
                                     }
 
                                     if (strstr(lpcDBusIface, "item")) {
                                        BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "item"));
 
                                        if (gfpcBMediaStatusUpdate) {
-                                          stBTMediaTrackInfo mediaTrackInfo;
-                                          char apcMediaIfce[BT_MAX_STR_LEN] = {'\0'};
-                                          unsigned int ui32MediaIfceLen     = strstr(lpcDBusIface, "/NowPlaying") - lpcDBusIface;
+                                           stBTMediaTrackInfo mediaTrackInfo;
+                                           char apcMediaIfce[BT_MAX_STR_LEN] = {'\0'};
+                                           unsigned int ui32MediaIfceLen     = strstr(lpcDBusIface, "/NowPlaying") - lpcDBusIface;
 
-                                          if ((ui32MediaIfceLen > 0) && (ui32MediaIfceLen < (BT_MAX_STR_LEN - 1))) {
-                                             strncpy(apcMediaIfce, lpcDBusIface, ui32MediaIfceLen);
-                                          }
+                                           if ((ui32MediaIfceLen > 0) && (ui32MediaIfceLen < (BT_MAX_STR_LEN - 1))) {
+                                               strncpy(apcMediaIfce, lpcDBusIface, ui32MediaIfceLen);
+                                           }
 
-                                          if (!BtrCore_BTGetTrackInformation (gpDBusConn, apcMediaIfce, &mediaTrackInfo)) {
-                                             stBTMediaStatusUpdate mediaStatusUpdate;
+                                           if (!BtrCore_BTGetTrackInformation (gpDBusConn, apcMediaIfce, &mediaTrackInfo)) {
+                                               stBTMediaStatusUpdate mediaStatusUpdate;
 
-                                             mediaStatusUpdate.aeBtMediaStatus  = enBTMediaTrackUpdate;
-                                             mediaStatusUpdate.m_mediaTrackInfo = &mediaTrackInfo;
+                                               mediaStatusUpdate.aeBtMediaStatus  = enBTMediaTrackUpdate;
+                                               mediaStatusUpdate.m_mediaTrackInfo = &mediaTrackInfo;
 
-                                             if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
-                                             }
-                                          }
+                                               if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
+                                               }
+                                           }
                                        }    
                                     }
                                     else if (strstr(lpcDBusIface, "NowPlaying")) {
@@ -4407,22 +4422,22 @@ btrCore_BTDBusConnectionFilterCb (
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
                         // To free the player Path
                         if (lpcDBusIface && gfpcBTMediaPlayerPath) {
-                           //if (!gfpcBTMediaPlayerPath(lpcDBusIface, gpcBMediaPlayerPathUserData)) {
-                           //   BTRCORELOG_ERROR ("Media Player Path callBack Failed!!!\n");
-                           //}
+                            //if (!gfpcBTMediaPlayerPath(lpcDBusIface, gpcBMediaPlayerPathUserData)) {
+                            //   BTRCORELOG_ERROR ("Media Player Path callBack Failed!!!\n");
+                            //}
                         }  
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH)) {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_ITEM_PATH);
 
                         if (strstr(lpcDBusIface, "item")) {
-                           BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "item"));
+                            BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "item"));
                         }
                         else if (strstr(lpcDBusIface, "NowPlaying")) {
-                           BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "NowPlaying"));
+                            BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "NowPlaying"));
                         }
                         else if (strstr(lpcDBusIface, "FileSystem")) {
-                           BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "FileSystem"));
+                            BTRCORELOG_INFO ("MediaItem InterfacesRemoved : %s\n", strstr(lpcDBusIface, "FileSystem"));
                         }
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH)) {

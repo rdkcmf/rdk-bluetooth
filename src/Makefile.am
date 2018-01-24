@@ -38,8 +38,6 @@ libbtrCore_la_CFLAGS = $(INCLUDE_FILES) $(GLIB_CFLAGS)
 libbtrCore_la_LIBADD = $(DBUS_LIBS) $(GLIB_LIBS) -lrdkloggers
 
 # Explicitly declare the header file U want to expose out of libbtrCore.so her
-include_HEADERS = $(top_srcdir)/include/btrCore.h
-include_HEADERS += $(top_srcdir)/include/btrCoreTypes.h
+include_HEADERS = $(top_srcdir)/include/btrCoreTypes.h
+include_HEADERS += $(top_srcdir)/include/btrCore.h
 include_HEADERS += $(top_srcdir)/include/btrCore_service.h
-include_HEADERS += $(top_srcdir)/include/btrCore_avMedia.h
-include_HEADERS += $(top_srcdir)/include/btrCore_le.h

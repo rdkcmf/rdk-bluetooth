@@ -124,15 +124,10 @@ typedef enum _eBTRCoreMediaStatusUpdate {
 } eBTRCoreMediaStatusUpdate;
 
 
-/*platform specific data lengths */
-typedef unsigned char   U8;
-typedef unsigned short  U16;
-typedef unsigned int    U32;
-   
 /* bd addr length and type */
 #ifndef BD_ADDR_LEN
 #define BD_ADDR_LEN     6
-typedef U8 BD_ADDR[BD_ADDR_LEN];
+typedef unsigned char BD_ADDR[BD_ADDR_LEN];
 #endif
 
 
@@ -145,13 +140,13 @@ typedef char UUID[UUID_LEN+1];
       
 /*BT getAdapters*/
 typedef struct _stBTRCoreGetAdapters {
-    U8  number_of_adapters;
+    unsigned char  number_of_adapters;
 } stBTRCoreGetAdapters;
 
 typedef struct _stBTRCoreListAdapters {
-   U8       number_of_adapters;
-   BD_NAME  adapter_path[BTRCORE_MAX_NUM_BT_ADAPTERS];
-   BD_NAME  adapterAddr[BTRCORE_MAX_NUM_BT_ADAPTERS];
+   unsigned char    number_of_adapters;
+   BD_NAME          adapter_path[BTRCORE_MAX_NUM_BT_ADAPTERS];
+   BD_NAME          adapterAddr[BTRCORE_MAX_NUM_BT_ADAPTERS];
 } stBTRCoreListAdapters;
 
 typedef struct _stBTRCoreFilterMode {
@@ -167,7 +162,7 @@ typedef struct _stBTRCoreDevStatusCBInfo {
     enBTRCoreDeviceClass    eDeviceClass;
     enBTRCoreDeviceState    eDevicePrevState;
     enBTRCoreDeviceState    eDeviceCurrState;
-    U8                      isPaired;
+    unsigned char           isPaired;
 } stBTRCoreDevStatusCBInfo;
 
 typedef struct _stBTRCoreSupportedService {
@@ -182,13 +177,13 @@ typedef struct _stBTRCoreSupportedServiceList {
 
 /*BT Adapter*/
 typedef struct _stBTRCoreAdapter {
-    U8      adapter_number;
-    char*   pcAdapterPath;
-    char*   pcAdapterDevName;
-    BOOLEAN enable;
-    BOOLEAN discoverable;
-    BOOLEAN bFirstAvailable; /*search for first available BT adapater*/
-    U32     DiscoverableTimeout;
+    unsigned char   adapter_number;
+    char*           pcAdapterPath;
+    char*           pcAdapterDevName;
+    BOOLEAN         enable;
+    BOOLEAN         discoverable;
+    BOOLEAN         bFirstAvailable; /*search for first available BT adapater*/
+    unsigned int    DiscoverableTimeout;
 } stBTRCoreAdapter;
 
 
