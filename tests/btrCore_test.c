@@ -290,6 +290,16 @@ getEncodedSBCFile (
     return strdup(sbcEncodedFile);
 }
 
+static char*
+getLeUuidString (
+    void
+) {
+    char leUuidString[64];
+    fprintf(stderr, "%d\t: %s - Enter the UUID for Le device...\n", __LINE__, __FUNCTION__);
+    scanf("%s",leUuidString );
+        getchar();//suck up a newline?
+    return strdup(leUuidString);
+}
 
 static void 
 sendSBCFileOverBT (
@@ -462,6 +472,8 @@ printMenu (
     fprintf( stderr, "38. Scan for LE Devices\n");
     fprintf( stderr, "39. Connect to LE Device\n");
     fprintf( stderr, "40. Disconnect to LE Device\n");
+    fprintf( stderr, "41. Get Gatt Properties of connected LE device.\n");
+    fprintf( stderr, "42. Perform Operation on connected LE device.\n");
 
     fprintf( stderr, "88. debug test\n");
     fprintf( stderr, "99. Exit\n");
@@ -913,6 +925,73 @@ main (
                 devnum = getChoice();
                 BTRCore_DisconnectDevice(lhBTRCore, devnum,enBTRCoreLE);
                 fprintf(stderr, "%d\t: %s - LE device disconnect process completed.\n", __LINE__, __FUNCTION__);
+            }
+            break;
+        case 41:
+           {
+                fprintf(stderr, "%d\t: %s - Pick a connected LE Device to Show Gatt Properties.\n", __LINE__, __FUNCTION__);
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                devnum = getChoice();
+                char *leUuidString = getLeUuidString();
+
+                if (leUuidString) {
+
+                   fprintf(stderr, "%d\t: %s - select the property you want to query for.\n",  __LINE__, __FUNCTION__);
+                   fprintf(stderr, "\t- Service        : Uuid - 0 | Primary - 1 | Device - 2\n"
+                                   "\t- Characteristic : Uuid - 3 | Service - 4 | Value - 5  | Notifying - 6 | Flags - 7\n"
+                                   "\t- Descriptor     : Uuid - 8 | Charact - 9 | Value - 10 | Flags - 11\n");
+                   int propSelection = getChoice();
+            
+                   if (propSelection == 1 || propSelection == 6) {
+                      unsigned char val = 0;
+                      BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
+                      fprintf(stderr, "--Val : %d\n", val);
+                   } else
+                   if (propSelection == 0 || propSelection == 2 || propSelection == 3 ||
+                       propSelection == 4 || propSelection == 8 || propSelection == 9 ){
+                      char val[BTRCORE_MAX_STR_LEN] = "\0";
+                      BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
+                      fprintf(stderr, "--Val : %s\n", val);
+                   } else
+                   if (propSelection == 5 || propSelection == 7 || propSelection == 10 || propSelection == 11) {
+                      char val[15][64]; int i=0;
+                      memset (val, 0, sizeof(val));
+                      BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
+                      fprintf(stderr, "--Val :\n");
+                      for (; i < 15 && val[i]; i++) {
+                          fprintf(stderr, "\t%s\n", val[i]);
+                      }
+                   }  
+                   free(leUuidString);
+                   leUuidString = NULL;
+                }
+            }
+            break;
+        case 42:
+           {
+                fprintf(stderr, "%d\t: %s - Pick a connected LE Device to Perform Operation.\n", __LINE__, __FUNCTION__);
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                devnum = getChoice();
+                char *leUuidString = getLeUuidString(); 
+
+                fprintf(stderr, "%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "Characteristic Ops\n");
+                fprintf(stderr, "\t- ReadValue   : 0 \n"); 
+                fprintf(stderr, "\t- WriteValue  : 1 \n");
+                fprintf(stderr, "\t- StartNotify : 2 \n"); 
+                fprintf(stderr, "\t- StopNotify  : 3 \n");
+                fprintf(stderr, "Descriptor Ops\n");
+                fprintf(stderr, "\t- ReadValue   : 4 \n"); 
+                fprintf(stderr, "\t- WriteValue  : 5 \n");
+
+                enBTRCoreGattOp aenBTRCoreGattOp = getChoice();
+
+                if (leUuidString) {
+
+                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreGattOp, NULL);
+                   free(leUuidString);
+                   leUuidString = NULL; 
+                }
             }
             break;
         case 88:

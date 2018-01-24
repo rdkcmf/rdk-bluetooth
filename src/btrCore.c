@@ -1902,7 +1902,6 @@ BTRCore_PairDevice (
     const char*             pDeviceAddress      = NULL;
     stBTRCoreBTDevice*      pstScannedDev       = NULL;
     int                     i32LoopIdx          = 0;
-    int                     i32ScannedDevIdx    = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -1924,13 +1923,10 @@ BTRCore_PairDevice (
     else {
         for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
             if (aBTRCoreDevId == pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId) {
-                i32ScannedDevIdx = i32LoopIdx;
+                pstScannedDev   = &pstlhBTRCore->stScannedDevicesArr[i32LoopIdx];
                 break;
             }
         }
-
-        pstScannedDev   = &pstlhBTRCore->stScannedDevicesArr[i32ScannedDevIdx];
-
         if (pstScannedDev)
             pDeviceAddress  = pstScannedDev->pcDeviceAddress;
     }
@@ -4232,4 +4228,201 @@ btrCore_BTMediaStatusUpdateCb (
     return enBTRCoreSuccess;
 }
 
+enBTRCoreRet
+BTRCore_GetLEProperty (
+    tBTRCoreHandle     hBTRCore,
+    tBTRCoreDevId      aBTRCoreDevId,
+    const char*        apcBTRCoreLEUuid,
+    enBTRCoreGattProp  aenBTRCoreGattProp,
+    void*              apvBTRCorePropValue
+) {
+
+    if (!hBTRCore || !apcBTRCoreLEUuid || aBTRCoreDevId < 0) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
+    }
+
+    stBTRCoreHdl*         pstlhBTRCore   = (stBTRCoreHdl*)hBTRCore;
+    stBTRCoreBTDevice*    pstScannedDev  = NULL;
+    const char*           pDevicePath    = NULL;
+    int                   i32LoopIdx     = 0;
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+       pstScannedDev  = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
+
+       if (pstScannedDev)
+          pDevicePath = pstScannedDev->pcDevicePath;
+    }
+    else {
+       for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
+           if (aBTRCoreDevId == pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId) {
+              pstScannedDev  = &pstlhBTRCore->stScannedDevicesArr[i32LoopIdx];
+              break;
+           }
+       }
+       if (pstScannedDev) {
+          pDevicePath = pstScannedDev->pcDevicePath;
+       }
+    }
+
+    if (!pstScannedDev || !pDevicePath) {
+       BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
+       return enBTRCoreDeviceNotFound;
+    }
+
+    /*if (pstScannedDev->bFound && pstScannedDev->bDeviceConnected) {
+        BTRCORELOG_ERROR ("Le Device is not connected, Please connect and perform LE method operation\n");
+        return enBTRCoreDeviceNotFound;
+    } else {*/
+       BTRCORELOG_DEBUG ("Get LE Property for Device : %s\n", pstScannedDev->pcDeviceName);
+       BTRCORELOG_DEBUG ("LE Device Address  %s\n", pDevicePath);
+    //}
+
+    enBTRCoreLEGattProp  lenBTRCoreLEGattProp = enBTRCoreLEGPropUnknown;
+
+    switch (aenBTRCoreGattProp) {
+
+    case enBTRCoreGSPropUUID:
+        lenBTRCoreLEGattProp = enBTRCoreLEGSPropUUID;
+        break;
+    case enBTRCoreGSPropPrimary:
+        lenBTRCoreLEGattProp = enBTRCoreLEGSPropPrimary;
+        break;
+    case enBTRCoreGSPropDevice:
+        lenBTRCoreLEGattProp = enBTRCoreLEGSPropDevice;
+        break;
+    case enBTRCoreGCPropUUID:
+        lenBTRCoreLEGattProp = enBTRCoreLEGCPropUUID;
+        break;
+    case enBTRCoreGCPropService:
+        lenBTRCoreLEGattProp = enBTRCoreLEGCPropService;
+        break;
+    case enBTRCoreGCPropValue:
+        lenBTRCoreLEGattProp = enBTRCoreLEGCPropValue;
+        break;
+    case enBTRCoreGCPropNotifying:
+        lenBTRCoreLEGattProp = enBTRCoreLEGCPropNotifying;
+        break;
+    case enBTRCoreGCPropFlags:
+        lenBTRCoreLEGattProp = enBTRCoreLEGCPropFlags;
+        break;
+    case enBTRCoreGDPropUUID:
+        lenBTRCoreLEGattProp = enBTRCoreLEGDPropUUID;
+        break;
+    case enBTRCoreGDPropChar:
+        lenBTRCoreLEGattProp = enBTRCoreLEGDPropChar;
+        break;
+    case enBTRCoreGDPropValue:
+        lenBTRCoreLEGattProp = enBTRCoreLEGDPropValue;
+        break;
+    case enBTRCoreGDPropFlags:
+        lenBTRCoreLEGattProp = enBTRCoreLEGDPropFlags;
+        break;
+    case enBTRCoreGPropUnknown:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropUnknown;
+    }
+
+    if (lenBTRCoreLEGattProp == enBTRCoreLEGPropUnknown || BTRCore_LE_GetGattProperty (pstlhBTRCore->leHdl,
+                                                                                      pstlhBTRCore->connHdl,
+                                                                                      pDevicePath,
+                                                                                      apcBTRCoreLEUuid,
+                                                                                      lenBTRCoreLEGattProp,
+                                                                                      apvBTRCorePropValue) != enBTRCoreSuccess) {
+       BTRCORELOG_ERROR ("Failed to get Gatt Property %d!!!\n", lenBTRCoreLEGattProp);
+      return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+ 
+   
+enBTRCoreRet 
+BTRCore_PerformLEOp (
+    tBTRCoreHandle    hBTRCore,
+    tBTRCoreDevId     aBTRCoreDevId,
+    const char*       apBtUuid,
+    enBTRCoreGattOp   aenBTRCoreGattOp,
+    void*             apUserData
+) {
+
+    if (!hBTRCore || !apBtUuid || aBTRCoreDevId < 0) {
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
+    }
+
+    stBTRCoreHdl*       pstlhBTRCore  = (stBTRCoreHdl*)hBTRCore;
+    stBTRCoreBTDevice*  pstScannedDev = NULL;
+    const char*         pDevicePath   = NULL;
+    int                 i32LoopIdx    = 0;
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+       pstScannedDev  = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
+
+       if (pstScannedDev)
+          pDevicePath = pstScannedDev->pcDevicePath;
+    }
+    else {
+       for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
+           if (aBTRCoreDevId == pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId) {
+              pstScannedDev  = &pstlhBTRCore->stScannedDevicesArr[i32LoopIdx];
+              break;
+           }
+       }
+       if (pstScannedDev) {
+          pDevicePath = pstScannedDev->pcDevicePath;
+       }
+    }
+
+    if (!pstScannedDev || !pDevicePath) {
+       BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
+       return enBTRCoreDeviceNotFound;
+    }
+
+    /*if (pstScannedDev->bFound && pstScannedDev->bDeviceConnected) {
+        BTRCORELOG_ERROR ("Le Device is not connected, Please connect and perform LE method operation\n");
+        return enBTRCoreDeviceNotFound;
+    } else {*/
+       BTRCORELOG_DEBUG ("Perform LE Op for Device : %s\n", pstScannedDev->pcDeviceName);
+       BTRCORELOG_DEBUG ("LE Device Address  %s\n", pDevicePath);
+    //}
+
+    enBTRCoreLEGattOp  lenBTRCoreLEGattOp = enBTRCoreGOpUnknown;
+
+    switch (aenBTRCoreGattOp) {
+   
+    case enBTRCoreGCOpReadValue:
+         lenBTRCoreLEGattOp = enBTRCoreLEGCOpReadValue;
+         break;
+    case enBTRCoreGCOpWriteValue:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGCOpWriteValue;
+         break;
+    case enBTRCoreGCOpStartNotify:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGCOpStartNotify; 
+         break;
+    case enBTRCoreGCOpStopNotify:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGCOpStopNotify;
+         break;
+    case enBTRCoreGDOpReadValue:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGDOpReadValue;
+         break;
+    case enBTRCoreGDOpWriteValue:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGDOpWriteValue;
+         break;
+    case enBTRCoreGOpUnknown:
+    default : 
+         lenBTRCoreLEGattOp = enBTRCoreLEGOpUnknown;
+    }
+
+    if (lenBTRCoreLEGattOp == enBTRCoreLEGOpUnknown || BtrCore_LE_PerformGattMethodOp (pstlhBTRCore->leHdl,
+                                                                                       pstlhBTRCore->connHdl,
+                                                                                       pDevicePath,
+                                                                                       apBtUuid,
+                                                                                       lenBTRCoreLEGattOp) != enBTRCoreSuccess) {
+       BTRCORELOG_ERROR ("Failed to Perform LE Method Op %d!!!\n", aenBTRCoreGattOp);
+       return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+
+}
 /* End of File */

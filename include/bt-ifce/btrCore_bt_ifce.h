@@ -95,6 +95,17 @@ typedef enum _enBTAdapterOp {
     enBTAdpOpUnknown
 } enBTAdapterOp;
 
+typedef enum _enBTLeGattOp {
+    enBTLeGattCharOpReadValue,
+    enBTLeGattCharOpWriteValue,
+    enBTLeGattCharOpStartNotify,
+    enBTLeGattCharOpStopNotify,
+    enBTLeGattDescOpReadValue,
+    enBTLeGattDescOpWriteValue,
+    enBTLeGattOpUnknown
+} enBTLeGattOp;
+
+
 typedef enum _enBTAdapterProp {
     enBTAdPropName,
     enBTAdPropAddress,
@@ -125,14 +136,16 @@ typedef enum _enBTGattServiceProp {
 
 typedef enum _enBTGattCharProp {
     enBTGattCPropUUID,
+    enBTGattCPropService,
     enBTGattCPropValue,
+    enBTGattCPropNotifying,
     enBTGattCPropFlags,
     enBTGattCPropUnknown
 } enBTGattCharProp;
 
 typedef enum _enBTGattDescProp {
     enBTGattDPropUUID,
-    enBTGattDPropPrimary,
+    enBTGattDPropCharacteristic,
     enBTGattDPropValue,
     enBTGattDPropFlags,
     enBTGattDPropUnknown
@@ -165,6 +178,11 @@ typedef enum _enBTMediaControl {
     enBTMediaCtrlVolumeDown
 } enBTMediaControl;
 
+typedef enum _enBTDataMode {
+    enBTDMStore,
+    enBTDMRelease,
+    enBTDMUnknown
+} enBTDataMode;
 
 /* Union Types */
 typedef union _unBTOpIfceProp {
@@ -239,6 +257,28 @@ typedef struct _stBTMediaStatusUpdate {
     };
 } stBTMediaStatusUpdate;
 
+typedef struct _stBTGattServiceInfo {
+    char           uuid[BT_MAX_UUID_STR_LEN];            /* 128-bit service UUID */
+    char           gattDevicePath[BT_MAX_STR_LEN];       /* Device Path */
+    unsigned short ui16Primary;                          /* boolean Primary [read-only] [0/1] */
+} stBTGattServiceInfo;
+
+typedef struct _stBTGattCharInfo {
+    char           uuid[BT_MAX_UUID_STR_LEN];            /* 128-bit service UUID */
+    char           gattServicePath[BT_MAX_STR_LEN];      /* Service Path */
+    char           flags[16][BT_MAX_STR_LEN];            /* array{strings} Flags [read-only, optional]*/
+    unsigned short ui16Notifying;                        /* boolean Notifying [read-only] [0/1] */
+    //unsigned char  value[BT_MAX_STR_LEN];              /* array{byte} Value [read-only, optional] */
+} stBTGattCharInfo;
+
+typedef struct _stBTGattDescInfo {
+    char          uuid[BT_MAX_UUID_STR_LEN];             /* 128-bit service UUID */
+    char          gattCharPath[BT_MAX_STR_LEN];          /* charateristic Path */
+    char          flags[8][BT_MAX_STR_LEN];              /* array{strings} Flags [read-only, optional]*/
+    //unsigned char  value[BT_MAX_STR_LEN];              /* array{byte} Value [read-only, optional] */
+} stBTGattDescInfo;
+ 
+
 
 /* Fptr Callbacks types */
 typedef int (*fPtr_BtrCore_BTDevStatusUpdateCb)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
@@ -248,7 +288,7 @@ typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTranspor
 typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
-typedef const char* (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, void* apUserData);
+typedef const char* (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, enBTDataMode  aenBTDataMode, void* apConnHdl, void* apUserData);
 
 //callback to process connection requests:
 int (*p_ConnAuth_callback) ();
@@ -306,5 +346,6 @@ int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapt
 /******************************************
 *    LE Functions
 *******************************************/
+int   BtrCore_BTPerformLeGattMethodOp (void* apBtConn, const char* apBtLePath, enBTLeGattOp aenBTLeGattOp, void* apUserdata);
 int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
 #endif // __BTR_CORE_BT_IFCE_H__

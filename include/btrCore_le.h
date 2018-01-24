@@ -31,10 +31,49 @@
 
 typedef void* tBTRCoreLeHdl;
 
+
+/* Enum Types */
+typedef enum _enBTRCoreLEGattProp {
+    enBTRCoreLEGSPropUUID,
+    enBTRCoreLEGSPropPrimary,
+    enBTRCoreLEGSPropDevice,
+    enBTRCoreLEGCPropUUID,
+    enBTRCoreLEGCPropService,
+    enBTRCoreLEGCPropValue,
+    enBTRCoreLEGCPropNotifying,
+    enBTRCoreLEGCPropFlags,
+    enBTRCoreLEGDPropUUID,
+    enBTRCoreLEGDPropChar,
+    enBTRCoreLEGDPropValue,
+    enBTRCoreLEGDPropFlags,
+    enBTRCoreLEGPropUnknown
+} enBTRCoreLEGattProp;
+
+typedef enum _enBTRCoreLEGattOp {
+    enBTRCoreLEGCOpReadValue,
+    enBTRCoreLEGCOpWriteValue,
+    enBTRCoreLEGCOpStartNotify,
+    enBTRCoreLEGCOpStopNotify,
+    enBTRCoreLEGDOpReadValue,
+    enBTRCoreLEGDOpWriteValue,
+    enBTRCoreLEGOpUnknown
+} enBTRCoreLEGattOp;
+
+
 enBTRCoreRet BTRCore_LE_Init (tBTRCoreLeHdl* phBTRCoreLe, void* apBtConn, const char* apBtAdapter);
 enBTRCoreRet BTRCore_LE_DeInit (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtAdapter);
+
+/* Should be called by BTRCore_GetSupportedServices */
 enBTRCoreRet BTRCore_LE_GetAvailableServicesGatt (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* lePropertyKey, void* lePropertyValue); // Maps to Gatt service
 enBTRCoreRet BTRCore_LE_GetAvailablePropertiesGatt (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* lePropertyKey, void* lePropertyValue); // Maps to Gatt Characteristic/Descriptor i.e if argument is Service then give back available characteristics, if argument is characteristics give back available descriptors
-enBTRCoreRet BTRCore_LE_GetPropertyValueGatt (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* lePropertyKey, void* lePropertyValue); // Maps to the value of the Descritpor (May be we can use for different properties on Service/Characteristic/Descriptor)
+/* Should be called by BTRCore_GetLEProperty */
+enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevPath, const char* apBtUuid, enBTRCoreLEGattProp aenBTRCoreLEGattProp, void* apBtPropValue);
+
+enBTRCoreRet BtrCore_LE_PerformGattMethodOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevPath, const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp);
+//enBTRCoreRet BTRCore_LE_GetPropertyValueGatt (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* lePropertyKey, void* lePropertyValue); // Maps to the value of the Descritpor (May be we can use for different properties on Service/Characteristic/Descriptor)
+
+//enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, char* uuid, eBTRCoreDevLeOp  aeBTRCoreDevLeOp)
+/* Will call BtrCore_BTPerformLeGattMethodOp (*/
+/* Should be called by BTRCore_PerformLEOp */
 
 #endif // __BTR_CORE_LE_H__
