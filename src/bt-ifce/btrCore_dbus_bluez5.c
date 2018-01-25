@@ -491,12 +491,14 @@ btrCore_BTAgentRequestConfirmation (
 
     BTRCORELOG_INFO ("btrCore_BTAgentRequestConfirmation: PASS Code for %s is %6d\n", lpcPath, ui32PassCode);
 
-    if (gfpcBConnectionIntimation && lpcPath) {
+    if (lpcPath) {
         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
         enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
-        BTRCORELOG_INFO ("calling ConnIntimation cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
-        yesNo = gfpcBConnectionIntimation(lenBTDevType, &lstBTDeviceInfo, ui32PassCode, gpcBConnIntimUserData);
+        if (gfpcBConnectionIntimation) {
+            BTRCORELOG_INFO ("calling ConnIntimation cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
+            yesNo = gfpcBConnectionIntimation(lenBTDevType, &lstBTDeviceInfo, ui32PassCode, gpcBConnIntimUserData);
+        }
     }
 
     gui32cBConnAuthPassKey = ui32PassCode;
@@ -547,12 +549,14 @@ btrCore_BTAgentAuthorize (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    if (gfpcBConnectionAuthentication && lpcPath) {
+    if (lpcPath) {
         i32OpRet      = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcPath);
         lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
-        BTRCORELOG_INFO ("calling ConnAuth cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
-        yesNo = gfpcBConnectionAuthentication(lenBTDevType, &lstBTDeviceInfo, gpcBConnAuthUserData);
+        if (gfpcBConnectionAuthentication) {
+            BTRCORELOG_INFO ("calling ConnAuth cb for %s - OpRet = %d\n", lpcPath, i32OpRet);
+            yesNo = gfpcBConnectionAuthentication(lenBTDevType, &lstBTDeviceInfo, gpcBConnAuthUserData);
+        }
     }
 
     gui32cBConnAuthPassKey = 0;
@@ -574,9 +578,13 @@ btrCore_BTAgentAuthorize (
     else {
         BTRCORELOG_INFO ("Authorizing request for %s\n", lpcPath);
         if (enBTDevAudioSource == lenBTDevType) {
-           strcpy(lstBTDeviceInfo.pcDeviceCurrState,"connected");
-           gfpcBDevStatusUpdate(lenBTDevType, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData);
+            strcpy(lstBTDeviceInfo.pcDeviceCurrState,"connected");
+
+            if (gfpcBDevStatusUpdate) {
+                gfpcBDevStatusUpdate(lenBTDevType, enBTDevStPropChanged, &lstBTDeviceInfo, gpcBDevStatusUserData);
+            }
         }
+
         dbus_connection_send(apDBusConn, lpDBusReply, NULL);
         dbus_connection_flush(apDBusConn);
         dbus_message_unref(lpDBusReply);
@@ -4090,7 +4098,7 @@ btrCore_BTDBusConnectionFilterCb (
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_DEVICE_PATH);
                     i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, dbus_message_get_path(apDBusMsg));
                     
-                    if (gfpcBDevStatusUpdate && !i32OpRet) {
+                    if (!i32OpRet) {
                         enBTDeviceState lenBtDevState = enBTDevStUnknown; 
                         enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
@@ -4120,13 +4128,19 @@ btrCore_BTDBusConnectionFilterCb (
                             gui32DevLost = 0;
  
                             if (enBTDevAudioSource != lenBTDevType || strcmp(gpcDeviceCurrState, "connected")) {
-                               if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
-                               }
+
+                                if (gfpcBDevStatusUpdate) {
+                                    if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                    }
+                                }
                             }
                         }
                         else if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected) {
                             lenBtDevState = enBTDevStFound;
-                            if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+
+                            if (gfpcBDevStatusUpdate) {
+                                if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                }
                             }
                         }
                     }
@@ -4154,7 +4168,7 @@ btrCore_BTDBusConnectionFilterCb (
                     if ((!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "pending"))) {
                         strcpy(gpcMediaCurrState, lstBTMediaInfo.pcState);
 
-                        if (gfpcBDevStatusUpdate && !i32OpRet && lstBTDeviceInfo.bConnected) {
+                        if (!i32OpRet && lstBTDeviceInfo.bConnected) {
                             const char* value = "playing";
                             enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
@@ -4162,7 +4176,9 @@ btrCore_BTDBusConnectionFilterCb (
                             strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                             strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                            if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                            if (gfpcBDevStatusUpdate) {
+                                if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                }
                             }
                             //if () {} t avmedia wiht device address info. from which id can be computed 
                         }
@@ -4184,28 +4200,29 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                         }
 
+                        enBTMediaTransportState  lenBtMTransportSt = enBTMTransportStNone;
+                        stBTMediaStatusUpdate    mediaStatusUpdate; 
+
+                        if (!strcmp(lstBTMediaInfo.pcState, "idle")) {
+                           lenBtMTransportSt = enBTMTransportStIdle;
+                        }
+                        else if (!strcmp(lstBTMediaInfo.pcState, "pending")) {
+                           lenBtMTransportSt = enBTMTransportStPending;
+                        }
+                        else if (!strcmp(lstBTMediaInfo.pcState, "active")) {
+                           lenBtMTransportSt = enBTMTransportStActive;
+                        }
+
+                        mediaStatusUpdate.aeBtMediaStatus       = enBTMediaTransportUpdate;
+                        mediaStatusUpdate.m_mediaTransportState = lenBtMTransportSt;
+
                         if (gfpcBMediaStatusUpdate) {
-                            enBTMediaTransportState  lenBtMTransportSt = enBTMTransportStNone;
-                            stBTMediaStatusUpdate    mediaStatusUpdate; 
-
-                            if (!strcmp(lstBTMediaInfo.pcState, "idle")) {
-                               lenBtMTransportSt = enBTMTransportStIdle;
-                            }
-                            else if (!strcmp(lstBTMediaInfo.pcState, "pending")) {
-                               lenBtMTransportSt = enBTMTransportStPending;
-                            }
-                            else if (!strcmp(lstBTMediaInfo.pcState, "active")) {
-                               lenBtMTransportSt = enBTMTransportStActive;
-                            }
-
-                            mediaStatusUpdate.aeBtMediaStatus       = enBTMediaTransportUpdate;
-                            mediaStatusUpdate.m_mediaTransportState = lenBtMTransportSt;
-
                             //if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
                             //}
-                            (void)mediaStatusUpdate;
-                            (void)apcDevAddr;
                         }
+
+                        (void)mediaStatusUpdate;
+                        (void)apcDevAddr;
                     }
                     else if (lenBTDevType == enBTDevAudioSink) {    // Lets handle AudioOut case for media events for a Paired device which connects at Pairing
                         if (!i32OpRet && lstBTDeviceInfo.bConnected && lstBTDeviceInfo.bPaired &&
@@ -4217,8 +4234,9 @@ btrCore_BTDBusConnectionFilterCb (
                             strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                             strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                            if (gfpcBDevStatusUpdate && 
-                                gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                            if (gfpcBDevStatusUpdate) {
+                                if (gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                }
                             }
                         }
                     }
@@ -4275,13 +4293,16 @@ btrCore_BTDBusConnectionFilterCb (
 
                                     if (lpcDBusIface) {
                                         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcDBusIface);
-                                         if (gfpcBDevStatusUpdate && !i32OpRet) {
+                                         if (!i32OpRet) {
                                             enBTDeviceState lenBtDevState = enBTDevStUnknown;
                                             enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
                                             if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected) {
                                                 lenBtDevState = enBTDevStFound;
-                                                if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+
+                                                if (gfpcBDevStatusUpdate) {
+                                                    if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                                    }
                                                 }
                                             }
                                         }
@@ -4316,27 +4337,27 @@ btrCore_BTDBusConnectionFilterCb (
                                     }
 
                                     if (strstr(lpcDBusIface, "item")) {
-                                       BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "item"));
+                                        BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "item"));
 
-                                       if (gfpcBMediaStatusUpdate) {
-                                           stBTMediaTrackInfo mediaTrackInfo;
-                                           char apcMediaIfce[BT_MAX_STR_LEN] = {'\0'};
-                                           unsigned int ui32MediaIfceLen     = strstr(lpcDBusIface, "/NowPlaying") - lpcDBusIface;
+                                        stBTMediaTrackInfo mediaTrackInfo;
+                                        char apcMediaIfce[BT_MAX_STR_LEN] = {'\0'};
+                                        unsigned int ui32MediaIfceLen     = strstr(lpcDBusIface, "/NowPlaying") - lpcDBusIface;
 
-                                           if ((ui32MediaIfceLen > 0) && (ui32MediaIfceLen < (BT_MAX_STR_LEN - 1))) {
-                                               strncpy(apcMediaIfce, lpcDBusIface, ui32MediaIfceLen);
-                                           }
+                                        if ((ui32MediaIfceLen > 0) && (ui32MediaIfceLen < (BT_MAX_STR_LEN - 1))) {
+                                            strncpy(apcMediaIfce, lpcDBusIface, ui32MediaIfceLen);
+                                        }
 
-                                           if (!BtrCore_BTGetTrackInformation (gpDBusConn, apcMediaIfce, &mediaTrackInfo)) {
-                                               stBTMediaStatusUpdate mediaStatusUpdate;
+                                       if (!BtrCore_BTGetTrackInformation (gpDBusConn, apcMediaIfce, &mediaTrackInfo)) {
+                                            stBTMediaStatusUpdate mediaStatusUpdate;
 
-                                               mediaStatusUpdate.aeBtMediaStatus  = enBTMediaTrackUpdate;
-                                               mediaStatusUpdate.m_mediaTrackInfo = &mediaTrackInfo;
+                                            mediaStatusUpdate.aeBtMediaStatus  = enBTMediaTrackUpdate;
+                                            mediaStatusUpdate.m_mediaTrackInfo = &mediaTrackInfo;
 
-                                               if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
-                                               }
-                                           }
-                                       }    
+                                            if (gfpcBMediaStatusUpdate) {
+                                                if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
+                                                }
+                                            }         
+                                       }
                                     }
                                     else if (strstr(lpcDBusIface, "NowPlaying")) {
                                         BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "NowPlaying"));
@@ -4351,15 +4372,21 @@ btrCore_BTDBusConnectionFilterCb (
                                 /* Add Interfaces for GATT */
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_SERVICE_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_SERVICE_PATH);
-                                   gfpcBTLeGattPath(enBTGattService, lpcDBusIface, NULL);
+                                    if (gfpcBTLeGattPath) {
+                                        gfpcBTLeGattPath(enBTGattService, lpcDBusIface, NULL);
+                                    }
                                 }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_CHAR_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
-                                    gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, NULL);
+                                    if (gfpcBTLeGattPath) {
+                                        gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, NULL);
+                                    }
                                 }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH);
-                                    gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, NULL);
+                                    if (gfpcBTLeGattPath) {
+                                        gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, NULL);
+                                    }
                                 }
                                 else {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", lpcDBusIfaceInternal);
@@ -4403,9 +4430,12 @@ btrCore_BTDBusConnectionFilterCb (
                         
                         if (lpcDBusIface) {
                             i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcDBusIface);
-                            if (gfpcBDevStatusUpdate && !i32OpRet) {
+                            if (!i32OpRet) {
                                 enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                                if(gfpcBDevStatusUpdate(lenBTDevType, enBTDevStUnPaired, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+
+                                if (gfpcBDevStatusUpdate) {
+                                    if(gfpcBDevStatusUpdate(lenBTDevType, enBTDevStUnPaired, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                    }
                                 }
                             }
                         }
