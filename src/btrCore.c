@@ -1030,7 +1030,12 @@ BTRCore_Init (
        BTRCORELOG_ERROR ("Failed to Register Media Status CB - enBTRCoreInitFailure\n");
        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
     }
-
+/*
+    if(BTRCore_LE_RegisterDevStatusUpdateCb(pstlhBTRCore->leHdl, btrCore_LeDevStatusUpdateCb, pstlhBTRCore) != enBTRCoreSuccess) {
+       BTRCORELOG_ERROR ("Failed to Register LE Dev Status CB - enBTRCoreInitFailure\n");
+       BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
+    }
+*/
     *phBTRCore  = (tBTRCoreHandle)pstlhBTRCore;
 
     //Initialize array of known devices so we can use it for stuff
@@ -4233,7 +4238,7 @@ BTRCore_GetLEProperty (
     tBTRCoreHandle     hBTRCore,
     tBTRCoreDevId      aBTRCoreDevId,
     const char*        apcBTRCoreLEUuid,
-    enBTRCoreGattProp  aenBTRCoreGattProp,
+    enBTRCoreLeProp    aenBTRCoreLeProp,
     void*              apvBTRCorePropValue
 ) {
 
@@ -4280,45 +4285,34 @@ BTRCore_GetLEProperty (
 
     enBTRCoreLEGattProp  lenBTRCoreLEGattProp = enBTRCoreLEGPropUnknown;
 
-    switch (aenBTRCoreGattProp) {
+    switch (aenBTRCoreLeProp) {
 
-    case enBTRCoreGSPropUUID:
-        lenBTRCoreLEGattProp = enBTRCoreLEGSPropUUID;
+    case enBTRCoreLePropGUUID:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropUUID;
         break;
-    case enBTRCoreGSPropPrimary:
-        lenBTRCoreLEGattProp = enBTRCoreLEGSPropPrimary;
+    case enBTRCoreLePropGPrimary:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropPrimary;
         break;
-    case enBTRCoreGSPropDevice:
-        lenBTRCoreLEGattProp = enBTRCoreLEGSPropDevice;
+    case enBTRCoreLePropGDevice:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropDevice;
         break;
-    case enBTRCoreGCPropUUID:
-        lenBTRCoreLEGattProp = enBTRCoreLEGCPropUUID;
+    case enBTRCoreLePropGService:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropService;
         break;
-    case enBTRCoreGCPropService:
-        lenBTRCoreLEGattProp = enBTRCoreLEGCPropService;
+    case enBTRCoreLePropGValue:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropValue;
         break;
-    case enBTRCoreGCPropValue:
-        lenBTRCoreLEGattProp = enBTRCoreLEGCPropValue;
+    case enBTRCoreLePropGNotifying:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropNotifying;
         break;
-    case enBTRCoreGCPropNotifying:
-        lenBTRCoreLEGattProp = enBTRCoreLEGCPropNotifying;
+    case enBTRCoreLePropGFlags:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropFlags;
         break;
-    case enBTRCoreGCPropFlags:
-        lenBTRCoreLEGattProp = enBTRCoreLEGCPropFlags;
+    case enBTRCoreLePropGChar:
+        lenBTRCoreLEGattProp = enBTRCoreLEGPropChar;
         break;
-    case enBTRCoreGDPropUUID:
-        lenBTRCoreLEGattProp = enBTRCoreLEGDPropUUID;
-        break;
-    case enBTRCoreGDPropChar:
-        lenBTRCoreLEGattProp = enBTRCoreLEGDPropChar;
-        break;
-    case enBTRCoreGDPropValue:
-        lenBTRCoreLEGattProp = enBTRCoreLEGDPropValue;
-        break;
-    case enBTRCoreGDPropFlags:
-        lenBTRCoreLEGattProp = enBTRCoreLEGDPropFlags;
-        break;
-    case enBTRCoreGPropUnknown:
+    case enBTRCoreLePropUnknown:
+    default:
         lenBTRCoreLEGattProp = enBTRCoreLEGPropUnknown;
     }
 
@@ -4341,7 +4335,7 @@ BTRCore_PerformLEOp (
     tBTRCoreHandle    hBTRCore,
     tBTRCoreDevId     aBTRCoreDevId,
     const char*       apBtUuid,
-    enBTRCoreGattOp   aenBTRCoreGattOp,
+    enBTRCoreLeOp     aenBTRCoreLeOp,
     void*             apUserData
 ) {
 
@@ -4386,39 +4380,33 @@ BTRCore_PerformLEOp (
        BTRCORELOG_DEBUG ("LE Device Address  %s\n", pDevicePath);
     //}
 
-    enBTRCoreLEGattOp  lenBTRCoreLEGattOp = enBTRCoreGOpUnknown;
+    enBTRCoreLEGattOp  lenBTRCoreLEGattOp = enBTRCoreLEGOpUnknown;
 
-    switch (aenBTRCoreGattOp) {
+    switch (aenBTRCoreLeOp) {
    
-    case enBTRCoreGCOpReadValue:
-         lenBTRCoreLEGattOp = enBTRCoreLEGCOpReadValue;
+    case enBTRCoreLeOpGReadValue:
+         lenBTRCoreLEGattOp = enBTRCoreLEGOpReadValue;
          break;
-    case enBTRCoreGCOpWriteValue:
-         lenBTRCoreLEGattOp =  enBTRCoreLEGCOpWriteValue;
+    case enBTRCoreLeOpGWriteValue:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGOpWriteValue;
          break;
-    case enBTRCoreGCOpStartNotify:
-         lenBTRCoreLEGattOp =  enBTRCoreLEGCOpStartNotify; 
+    case enBTRCoreLeOpGStartNotify:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGOpStartNotify; 
          break;
-    case enBTRCoreGCOpStopNotify:
-         lenBTRCoreLEGattOp =  enBTRCoreLEGCOpStopNotify;
+    case enBTRCoreLeOpGStopNotify:
+         lenBTRCoreLEGattOp =  enBTRCoreLEGOpStopNotify;
          break;
-    case enBTRCoreGDOpReadValue:
-         lenBTRCoreLEGattOp =  enBTRCoreLEGDOpReadValue;
-         break;
-    case enBTRCoreGDOpWriteValue:
-         lenBTRCoreLEGattOp =  enBTRCoreLEGDOpWriteValue;
-         break;
-    case enBTRCoreGOpUnknown:
+    case enBTRCoreLeOpUnknown:
     default : 
          lenBTRCoreLEGattOp = enBTRCoreLEGOpUnknown;
     }
 
-    if (lenBTRCoreLEGattOp == enBTRCoreLEGOpUnknown || BtrCore_LE_PerformGattMethodOp (pstlhBTRCore->leHdl,
-                                                                                       pstlhBTRCore->connHdl,
-                                                                                       pDevicePath,
-                                                                                       apBtUuid,
-                                                                                       lenBTRCoreLEGattOp) != enBTRCoreSuccess) {
-       BTRCORELOG_ERROR ("Failed to Perform LE Method Op %d!!!\n", aenBTRCoreGattOp);
+    if (lenBTRCoreLEGattOp == enBTRCoreLEGOpUnknown || BtrCore_LE_PerformGattOp (pstlhBTRCore->leHdl,
+                                                                                 pstlhBTRCore->connHdl,
+                                                                                 pDevicePath,
+                                                                                 apBtUuid,
+                                                                                 lenBTRCoreLEGattOp) != enBTRCoreSuccess) {
+       BTRCORELOG_ERROR ("Failed to Perform LE Method Op %d!!!\n", aenBTRCoreLeOp);
        return enBTRCoreFailure;
     }
 

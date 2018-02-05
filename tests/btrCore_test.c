@@ -937,23 +937,22 @@ main (
                 if (leUuidString) {
 
                    fprintf(stderr, "%d\t: %s - select the property you want to query for.\n",  __LINE__, __FUNCTION__);
-                   fprintf(stderr, "\t- Service        : Uuid - 0 | Primary - 1 | Device - 2\n"
-                                   "\t- Characteristic : Uuid - 3 | Service - 4 | Value - 5  | Notifying - 6 | Flags - 7\n"
-                                   "\t- Descriptor     : Uuid - 8 | Charact - 9 | Value - 10 | Flags - 11\n");
+                   fprintf(stderr, "Uuid - 0 | Primary - 1 | Device - 2 | Service - 3 | Value - 4 |"
+                                   "Notifying - 5 | Flags - 6 | Charact - 7\n");
                    int propSelection = getChoice();
             
-                   if (propSelection == 1 || propSelection == 6) {
+                   if (propSelection == 1 || propSelection == 5) {
                       unsigned char val = 0;
                       BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
                       fprintf(stderr, "--Val : %d\n", val);
                    } else
-                   if (propSelection == 0 || propSelection == 2 || propSelection == 3 ||
-                       propSelection == 4 || propSelection == 8 || propSelection == 9 ){
+                   if (propSelection == 0 || propSelection == 2 ||
+                       propSelection == 3 || propSelection == 7 ){
                       char val[BTRCORE_MAX_STR_LEN] = "\0";
                       BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
                       fprintf(stderr, "--Val : %s\n", val);
                    } else
-                   if (propSelection == 5 || propSelection == 7 || propSelection == 10 || propSelection == 11) {
+                   if (propSelection == 4 || propSelection == 6) {
                       char val[15][64]; int i=0;
                       memset (val, 0, sizeof(val));
                       BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
@@ -975,20 +974,16 @@ main (
                 char *leUuidString = getLeUuidString(); 
 
                 fprintf(stderr, "%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
-                fprintf(stderr, "Characteristic Ops\n");
                 fprintf(stderr, "\t- ReadValue   : 0 \n"); 
                 fprintf(stderr, "\t- WriteValue  : 1 \n");
                 fprintf(stderr, "\t- StartNotify : 2 \n"); 
                 fprintf(stderr, "\t- StopNotify  : 3 \n");
-                fprintf(stderr, "Descriptor Ops\n");
-                fprintf(stderr, "\t- ReadValue   : 4 \n"); 
-                fprintf(stderr, "\t- WriteValue  : 5 \n");
 
-                enBTRCoreGattOp aenBTRCoreGattOp = getChoice();
+                enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
 
                 if (leUuidString) {
 
-                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreGattOp, NULL);
+                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, NULL);
                    free(leUuidString);
                    leUuidString = NULL; 
                 }

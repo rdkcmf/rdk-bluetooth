@@ -123,31 +123,25 @@ typedef enum _eBTRCoreMediaStatusUpdate {
     eBTRCoreMediaBrowserUpdate
 } eBTRCoreMediaStatusUpdate;
 
-typedef enum _enBTRCoreGattOp {
-    enBTRCoreGCOpReadValue,
-    enBTRCoreGCOpWriteValue,
-    enBTRCoreGCOpStartNotify,
-    enBTRCoreGCOpStopNotify,
-    enBTRCoreGDOpReadValue,
-    enBTRCoreGDOpWriteValue,
-    enBTRCoreGOpUnknown
-} enBTRCoreGattOp;
+typedef enum _enBTRCoreLeOp {
+    enBTRCoreLeOpGReadValue,    // G Referring to Gatt
+    enBTRCoreLeOpGWriteValue,
+    enBTRCoreLeOpGStartNotify,
+    enBTRCoreLeOpGStopNotify,
+    enBTRCoreLeOpUnknown       // Add enBTRCoreLeOpXXXXX Later if needed
+} enBTRCoreLeOp;
 
-typedef enum _enBTRCoreGattProp {
-    enBTRCoreGSPropUUID,
-    enBTRCoreGSPropPrimary,
-    enBTRCoreGSPropDevice,
-    enBTRCoreGCPropUUID,
-    enBTRCoreGCPropService,
-    enBTRCoreGCPropValue,
-    enBTRCoreGCPropNotifying,
-    enBTRCoreGCPropFlags,
-    enBTRCoreGDPropUUID,
-    enBTRCoreGDPropChar,
-    enBTRCoreGDPropValue,
-    enBTRCoreGDPropFlags,
-    enBTRCoreGPropUnknown
-} enBTRCoreGattProp;
+typedef enum _enBTRCoreLeProp {
+    enBTRCoreLePropGUUID,
+    enBTRCoreLePropGPrimary,
+    enBTRCoreLePropGDevice,
+    enBTRCoreLePropGService,
+    enBTRCoreLePropGValue,
+    enBTRCoreLePropGNotifying,
+    enBTRCoreLePropGFlags,
+    enBTRCoreLePropGChar,
+    enBTRCoreLePropUnknown
+} enBTRCoreLeProp;
 
 
 /* bd addr length and type */
@@ -464,9 +458,9 @@ enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId a
 enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
 //enBTRCoreRet BTRCore_GetLEProperty();
-enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreGattProp aenBTRCoreGattProp, void* apvBTRCorePropVal);
+enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeProp aenBTRCoreLeProp, void* apvBTRCorePropVal);
 //enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, UUID string, enum of Supported LE operations i.e. _eBTRCoreDevLeOp)
-enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreGattOp aenBTRCoreGattOp, void *apUserData);
+enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void *apUserData);
 
 // Outgoing callbacks Registration Interfaces
 /* Callback to notify the application every time when a new device is found and added to discovery list */
