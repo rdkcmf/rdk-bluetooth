@@ -51,6 +51,7 @@ PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.32.0])
 
 BTR_CORE_SRC="src"
 BTR_CORE_TEST="tests"
+BTR_CORE_LOGGER_LIBS=" "
 BTR_IFCE_DBUS_BLUEZ4=" "
 BTR_IFCE_DBUS_BLUEZ5=" "
 
@@ -110,6 +111,7 @@ AS_IF([test "x$rdk_logger_ok" = "xyes"], [
        AC_MSG_RESULT($enable_rdk_logger)
        if test "x$enable_rdk_logger" = "xyes"; then
          AC_DEFINE(RDK_LOGGER_ENABLED, 1, [Enabled RDK Logger]) 
+         BTR_CORE_LOGGER_LIBS="-lrdkloggers"
        else
           AC_MSG_ERROR([RDK_LOGGER library (librdkloggers) not found])
        fi
@@ -119,6 +121,7 @@ AS_IF([test "x$rdk_logger_ok" = "xyes"], [
 
 AC_SUBST(BTR_CORE_SRC)
 AC_SUBST(BTR_CORE_TEST)
+AC_SUBST(BTR_CORE_LOGGER_LIBS)
 
 # Checks for library functions.
 

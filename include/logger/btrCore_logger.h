@@ -16,14 +16,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#ifndef __BTRCORE_PRIV_H__
-#define __BTRCORE_PRIV_H__
+#ifndef __BTRCORE_LOGGER_H__
+#define __BTRCORE_LOGGER_H__
 
-#include "rdk_debug.h"
 
 #define PREFIX(format)  "%d\t: %s - " format
 
+
 #ifdef RDK_LOGGER_ENABLED
+
+#include "rdk_debug.h"
 
 extern int b_rdk_logger_enabled;
 
@@ -70,5 +72,4 @@ extern int b_rdk_logger_enabled;
 #define BTRCORELOG_TRACE(format, ...)       LOG_TRACE(PREFIX(format), __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 
-
-#endif /* __BTRCORE_PRIV_H__ */
+#endif /* __BTRCORE_LOGGER_H__ */

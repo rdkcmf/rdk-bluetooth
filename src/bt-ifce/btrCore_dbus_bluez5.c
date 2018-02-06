@@ -32,9 +32,11 @@
 /* External Library Headers */
 #include <dbus/dbus.h>
 
+/* Interface lib Headers */
+#include "btrCore_logger.h"
+
 /* Local Headers */
 #include "btrCore_bt_ifce.h"
-#include "btrCore_priv.h"
 
 
 #define BD_NAME_LEN                         248
@@ -3496,8 +3498,8 @@ BtrCore_BTIsDeviceConnectable (
 ) {
     FILE*   lfpL2Ping = NULL;
     int     i32OpRet = -1;
-    char    lcpL2PingIp[64] = {'\0'};
-    char    lcpL2PingOp[512] = {'\0'};
+    char    lcpL2PingIp[128] = {'\0'};
+    char    lcpL2PingOp[256] = {'\0'};
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -3712,7 +3714,7 @@ BtrCore_BTRegisterMedia (
         int     type = DBUS_TYPE_BYTE;
 
         char array_type[5] = "a";
-        strncat (array_type, (char*)&type, sizeof(array_type));
+        strncat (array_type, (char*)&type, sizeof(array_type) - sizeof(type));
 
         dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
             dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);

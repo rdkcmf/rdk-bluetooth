@@ -34,7 +34,7 @@
 
 /* Local Headers */
 #include "btrCore_bt_ifce.h"
-#include "btrCore_priv.h"
+#include "btrCore_logger.h"
 
 #define BD_NAME_LEN                     248
 

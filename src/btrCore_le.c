@@ -41,13 +41,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <glib.h>
 
 /* External Library Headers */
+#include <glib.h>
+
+/* Interface lib Headers */
+#include "btrCore_logger.h"
 
 /* Local Headers */
-#include "btrCore_priv.h"
 #include "btrCore_le.h"
+
 #include "btrCore_bt_ifce.h"
 
 

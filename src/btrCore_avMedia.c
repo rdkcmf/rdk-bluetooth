@@ -37,11 +37,14 @@
 #include <bluetooth/audio/ipc.h>
 #endif
 
+/* Interface lib Headers */
+#include "btrCore_logger.h"
+
 /* Local Headers */
 #include "btrCore_avMedia.h"
+
 #include "btrCore_bt_ifce.h"
 
-#include "btrCore_priv.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -773,8 +776,8 @@ BTRCore_AVMedia_MediaControl (
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
-    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -838,8 +841,8 @@ BTRCore_AVMedia_GetTrackInfo (
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
-    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -872,8 +875,8 @@ BTRCore_AVMedia_GetPositionInfo (
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
-    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -902,11 +905,11 @@ BTRCore_AVMedia_GetPositionInfo (
 //Combine TrackInfo, PositionInfo and basic info in GetMediaProperty handling with enums and switch?
 enBTRCoreRet
 BTRCore_AVMedia_GetMediaProperty (
-                   tBTRCoreAVMediaHdl  hBTRCoreAVM,
-                   void*               apBtConn,
-                   const char*         apBtDevAddr,
-                   const char*         mediaPropertyKey,
-                   void*               mediaPropertyValue
+    tBTRCoreAVMediaHdl      hBTRCoreAVM,
+    void*                   apBtConn,
+    const char*             apBtDevAddr,
+    const char*             mediaPropertyKey,
+    void*                   mediaPropertyValue
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
     enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
@@ -918,8 +921,8 @@ BTRCore_AVMedia_GetMediaProperty (
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
-    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -951,8 +954,8 @@ BTRCore_AVMedia_StartMediaPositionPolling (
 
     pstlhBTRCoreAVM     =  (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
-    if (NULL == pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (NULL == (pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevPath))) {
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevPath))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }

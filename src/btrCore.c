@@ -18,6 +18,7 @@
 */
 //btrCore.c
 
+/* System Headers */
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>     //for malloc
@@ -26,17 +27,21 @@
 #include <string.h>     //for strcnp
 #include <errno.h>      //for error numbers
 
+/* Ext lib Headers */
 #include <glib.h>
 
+/* Interface lib Headers */
+#include "btrCore_logger.h"
+
+/* Local Headers */
 #include "btrCore.h"
-#include "btrCore_avMedia.h"
-
-#include "btrCore_le.h"
-#include "btrCore_bt_ifce.h"
-
 #include "btrCore_service.h"
 
-#include "btrCore_priv.h"
+#include "btrCore_avMedia.h"
+#include "btrCore_le.h"
+
+#include "btrCore_bt_ifce.h"
+
 
 #ifdef RDK_LOGGER_ENABLED
 int b_rdk_logger_enabled = 0;
@@ -44,6 +49,25 @@ int b_rdk_logger_enabled = 0;
 
 /* Local types */
 //TODO: Move to a private header
+typedef enum _enBTRCoreTaskOp {
+    enBTRCoreTaskOpStart,
+    enBTRCoreTaskOpStop,
+    enBTRCoreTaskOpResume,
+    enBTRCoreTaskOpPause,
+    enBTRCoreTaskOpProcess,
+    enBTRCoreTaskOpExit,
+    enBTRCoreTaskOpUnknown
+} enBTRCoreTaskOp;
+
+typedef enum _enBTRCorecBType {
+   enBTRCorecBDeviceDisc,
+   enBTRCorecBStatus,
+   enBTRCorecBMediaStatus,
+   enBTRCorecBConnIntim,
+   enBTRCorecBConnAuth,
+} enBTRCorecBType;
+
+
 typedef struct _stBTRCoreDevStateInfo {
     enBTRCoreDeviceState    eDevicePrevState;
     enBTRCoreDeviceState    eDeviceCurrState;
@@ -81,7 +105,7 @@ typedef struct _stBTRCoreHdl {
 
     stBTRCoreConnCBInfo             stConnCbInfo;
 
-    fPtr_BTRCore_DeviceDiscoveryCb  fpcBBTRCoreDeviceDiscovery;
+    fPtr_BTRCore_DeviceDiscCb       fpcBBTRCoreDeviceDisc;
     fPtr_BTRCore_StatusCb           fpcBBTRCoreStatus;
     fPtr_BTRCore_MediaStatusCb      fpcBBTRCoreMediaStatus;
     fPtr_BTRCore_ConnIntimCb        fpcBBTRCoreConnIntim; 
@@ -93,9 +117,11 @@ typedef struct _stBTRCoreHdl {
     void*                           pvcBConnIntimUserData;
     void*                           pvcBConnAuthUserData;
 
-    GThread*                        dispatchThread;
-    GMutex                          dispatchMutex;
-    BOOLEAN                         dispatchThreadQuit;
+    GThread*                        pThreadRunTask;
+    GAsyncQueue*                    pGAQueueRunTask;
+
+    GThread*                        pThreadOutTask;
+    GAsyncQueue*                    pGAQueueOutTask;
 
 } stBTRCoreHdl;
 
@@ -119,7 +145,8 @@ static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pSe
 static enBTRCoreDeviceState btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
 
 /* Local Op Threads Prototypes */
-void* DoDispatch (void* ptr); 
+static gpointer btrCore_RunTask (gpointer apsthBTRCore);
+static gpointer btrCore_OutTask (gpointer apsthBTRCore);
 
 /* Incoming Callbacks Prototypes */
 static int btrCore_BTDeviceStatusUpdateCb (enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo,  void* apUserData);
@@ -190,7 +217,7 @@ btrCore_InitDataSt (
 
     memset(&apsthBTRCore->stConnCbInfo, 0, sizeof(stBTRCoreConnCBInfo));
 
-    apsthBTRCore->fpcBBTRCoreDeviceDiscovery= NULL;
+    apsthBTRCore->fpcBBTRCoreDeviceDisc     = NULL;
     apsthBTRCore->fpcBBTRCoreStatus         = NULL;
     apsthBTRCore->fpcBBTRCoreMediaStatus    = NULL;
     apsthBTRCore->fpcBBTRCoreConnIntim      = NULL;
@@ -201,6 +228,13 @@ btrCore_InitDataSt (
     apsthBTRCore->pvcBMediaStatusUserData   = NULL;
     apsthBTRCore->pvcBConnIntimUserData     = NULL;
     apsthBTRCore->pvcBConnAuthUserData      = NULL;
+
+    apsthBTRCore->pThreadRunTask            = NULL;
+    apsthBTRCore->pGAQueueRunTask           = NULL;
+                     
+    apsthBTRCore->pThreadOutTask            = NULL;
+    apsthBTRCore->pGAQueueOutTask           = NULL;
+
     /* Always safer to initialze Global variables, init if any left or added */
 }
 
@@ -840,44 +874,223 @@ btrCore_BTParseDeviceConnectionState (
 
 
 /*  Local Op Threads */
-void*
-DoDispatch (
-    void* ptr
+static gpointer
+btrCore_RunTask (
+    gpointer        apsthBTRCore
 ) {
-    tBTRCoreHandle  hBTRCore = NULL;
-    BOOLEAN         ldispatchThreadQuit = FALSE;
-    enBTRCoreRet*   penDispThreadExitStatus = malloc(sizeof(enBTRCoreRet));
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
+    enBTRCoreRet*   penExitStatusRunTask = NULL;
 
-    hBTRCore = (stBTRCoreHdl*) ptr;
-    BTRCORELOG_DEBUG ("%s \n", "Dispatch Thread Started");
+    gint64          li64usTimeout       = 0;
+    guint16         lui16msTimeout      = 20;
+    enBTRCoreTaskOp lenRunTskOpPrv      = enBTRCoreTaskOpUnknown;
+    enBTRCoreTaskOp lenRunTskOpCur      = enBTRCoreTaskOpUnknown;
+    gpointer        lpenRunTskOpIncoming= NULL;
 
 
-    if (!((stBTRCoreHdl*)hBTRCore) || !((stBTRCoreHdl*)hBTRCore)->connHdl) {
-        BTRCORELOG_ERROR ("Dispatch thread failure - BTRCore not initialized\n");
-        *penDispThreadExitStatus = enBTRCoreNotInitialized;
-        return (void*)penDispThreadExitStatus;
-    }
+    pstlhBTRCore = (stBTRCoreHdl*)apsthBTRCore;
     
-    while (1) {
-        g_mutex_lock (&((stBTRCoreHdl*)hBTRCore)->dispatchMutex);
-        ldispatchThreadQuit = ((stBTRCoreHdl*)hBTRCore)->dispatchThreadQuit;
-        g_mutex_unlock (&((stBTRCoreHdl*)hBTRCore)->dispatchMutex);
-
-        if (ldispatchThreadQuit == TRUE)
-            break;
-
-#if 1
-        usleep(25000); // 25ms
-#else
-        sched_yield(); // Would like to use some form of yield rather than sleep sometime in the future
-#endif
-
-        if (BtrCore_BTSendReceiveMessages(((stBTRCoreHdl*)hBTRCore)->connHdl) != 0)
-            break;
+    if (!(penExitStatusRunTask = malloc(sizeof(enBTRCoreRet)))) {
+        BTRCORELOG_ERROR ("RunTask failure - No Memory\n");
+        return NULL;
     }
 
-    *penDispThreadExitStatus = enBTRCoreSuccess;
-    return (void*)penDispThreadExitStatus;
+    if (!pstlhBTRCore || !pstlhBTRCore->connHdl) {
+        BTRCORELOG_ERROR ("RunTask failure - BTRCore not initialized\n");
+        *penExitStatusRunTask = enBTRCoreNotInitialized;
+        return (gpointer)penExitStatusRunTask;
+    }
+
+
+    BTRCORELOG_DEBUG ("%s \n", "RunTask Started");
+
+    do {
+        /* Process incoming task-ops */
+        {
+            li64usTimeout = lui16msTimeout * G_TIME_SPAN_MILLISECOND;
+            if ((lpenRunTskOpIncoming = g_async_queue_timeout_pop(pstlhBTRCore->pGAQueueRunTask, li64usTimeout))) {
+                lenRunTskOpCur = *((enBTRCoreTaskOp*)lpenRunTskOpIncoming);
+                g_free(lpenRunTskOpIncoming);
+                BTRCORELOG_INFO ("g_async_queue_timeout_pop %d\n", lenRunTskOpCur);
+            }
+        }
+
+        /* Set up operation - Schedule state changes for next interation */
+        if (lenRunTskOpPrv != lenRunTskOpCur) {
+            lenRunTskOpPrv = lenRunTskOpCur;
+
+            if (lenRunTskOpCur == enBTRCoreTaskOpStart) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpStart\n");
+                gpointer    lpenBTRCoreRunTaskOp = NULL;
+                if ((lpenBTRCoreRunTaskOp = g_malloc0(sizeof(enBTRCoreTaskOp)))) {
+                    *((enBTRCoreTaskOp*)lpenBTRCoreRunTaskOp) = enBTRCoreTaskOpProcess;
+                    g_async_queue_push(pstlhBTRCore->pGAQueueRunTask, lpenBTRCoreRunTaskOp);
+                    BTRCORELOG_INFO ("g_async_queue_push: enBTRCoreTaskOpProcess\n");
+                }
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpStop) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpStop\n");
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpResume) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpResume\n");
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpPause) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpPause\n");
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpProcess) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpProcess\n");
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpExit) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpExit\n");
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpUnknown) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpUnknown\n");
+            }
+        }
+
+        /* Process Operations */
+        {
+            if (lenRunTskOpCur == enBTRCoreTaskOpStart) {
+                g_thread_yield();
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpStop) {
+                g_thread_yield();
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpResume) {
+                g_thread_yield();
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpPause) {
+                g_thread_yield();
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpProcess) {
+                if (BtrCore_BTSendReceiveMessages(pstlhBTRCore->connHdl) != 0) {
+                    *penExitStatusRunTask = enBTRCoreFailure;
+                    break;
+                }
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpExit) {
+                break;
+            }
+            else if (lenRunTskOpCur == enBTRCoreTaskOpUnknown) {
+                g_thread_yield();
+            }
+        }
+
+    } while (1);
+
+    BTRCORELOG_DEBUG ("RunTask Exiting\n");
+
+
+    return (gpointer)penExitStatusRunTask;
+}
+
+
+static gpointer
+btrCore_OutTask (
+    gpointer        apsthBTRCore
+) {
+    stBTRCoreHdl*   pstlhBTRCore        = NULL;
+    enBTRCoreRet*   penExitStatusOutTask= NULL;
+
+    gint64          li64usTimeout       = 0;
+    guint16         lui16msTimeout      = 200;
+    enBTRCoreTaskOp lenOutTskOpPrv      = enBTRCoreTaskOpUnknown;
+    enBTRCoreTaskOp lenOutTskOpCur      = enBTRCoreTaskOpUnknown;
+    gpointer        lpenOutTskOpIncoming= NULL;
+
+
+    pstlhBTRCore = (stBTRCoreHdl*)apsthBTRCore;
+
+    if (!(penExitStatusOutTask = malloc(sizeof(enBTRCoreRet)))) {
+        BTRCORELOG_ERROR ("OutTask failure - No Memory\n");
+        return NULL;
+    }
+
+    if (!pstlhBTRCore || !pstlhBTRCore->connHdl) {
+        BTRCORELOG_ERROR ("OutTask failure - BTRCore not initialized\n");
+        *penExitStatusOutTask = enBTRCoreNotInitialized;
+        return (gpointer)penExitStatusOutTask;
+    }
+
+
+    BTRCORELOG_DEBUG ("OutTask Started\n");
+
+    do {
+        /* Process incoming task-ops */
+        {
+            li64usTimeout = lui16msTimeout * G_TIME_SPAN_MILLISECOND;
+            if ((lpenOutTskOpIncoming = g_async_queue_timeout_pop(pstlhBTRCore->pGAQueueOutTask, li64usTimeout))) {
+                lenOutTskOpCur = *((enBTRCoreTaskOp*)lpenOutTskOpIncoming);
+                g_free(lpenOutTskOpIncoming);
+                BTRCORELOG_INFO ("g_async_queue_timeout_pop %d\n", lenOutTskOpCur);
+            }
+        }
+
+        /* Set up operation - Schedule state changes for next interation */
+        if (lenOutTskOpPrv != lenOutTskOpCur) {
+            lenOutTskOpPrv = lenOutTskOpCur;
+
+            if (lenOutTskOpCur == enBTRCoreTaskOpStart) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpStart\n");
+                gpointer    lpenBTRCoreOutTaskOp = NULL;
+                if ((lpenBTRCoreOutTaskOp = g_malloc0(sizeof(enBTRCoreTaskOp)))) {
+                    *((enBTRCoreTaskOp*)lpenBTRCoreOutTaskOp) = enBTRCoreTaskOpProcess;
+                    g_async_queue_push(pstlhBTRCore->pGAQueueOutTask, lpenBTRCoreOutTaskOp);
+                    BTRCORELOG_INFO ("g_async_queue_push: enBTRCoreTaskOpProcess\n");
+                }
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpStop) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpStop\n");
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpResume) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpResume\n");
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpPause) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpPause\n");
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpProcess) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpProcess\n");
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpExit) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpExit\n");
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpUnknown) {
+                BTRCORELOG_INFO ("enBTRCoreTaskOpUnknown\n");
+            }
+        }
+
+        /* Process Operations */
+        {
+            if (lenOutTskOpCur == enBTRCoreTaskOpStart) {
+                g_thread_yield();
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpStop) {
+                g_thread_yield();
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpResume) {
+                g_thread_yield();
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpPause) {
+                g_thread_yield();
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpProcess) {
+                g_thread_yield();
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpExit) {
+                break;
+            }
+            else if (lenOutTskOpCur == enBTRCoreTaskOpUnknown) {
+                g_thread_yield();
+            }
+        }
+
+    } while (1);
+
+    BTRCORELOG_DEBUG ("OutTask Exiting\n");
+
+
+    *penExitStatusOutTask = enBTRCoreSuccess;
+    return (gpointer)penExitStatusOutTask;
 }
 
 
@@ -967,13 +1180,39 @@ BTRCore_Init (
         return enBTRCoreInitFailure;
     }
 
-    pstlhBTRCore->dispatchThreadQuit = FALSE;
-    g_mutex_init(&pstlhBTRCore->dispatchMutex);
-    if((pstlhBTRCore->dispatchThread = g_thread_new("BTRCoreTaskThread", DoDispatch, (void*)pstlhBTRCore)) == NULL) {
-        BTRCORELOG_ERROR ("Failed to create Dispatch Thread - enBTRCoreInitFailure\n");
+
+    if (!(pstlhBTRCore->pGAQueueOutTask = g_async_queue_new()) ||
+        !(pstlhBTRCore->pThreadOutTask  = g_thread_new("btrCore_OutTask", btrCore_OutTask, (gpointer)pstlhBTRCore))) {
+        BTRCORELOG_ERROR ("Failed to create btrCore_OutTask Thread - enBTRCoreInitFailure\n");
         BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
         return enBTRCoreInitFailure;
     }
+
+    if (!(pstlhBTRCore->pGAQueueRunTask = g_async_queue_new()) ||
+        !(pstlhBTRCore->pThreadRunTask  = g_thread_new("btrCore_RunTask", btrCore_RunTask, (gpointer)pstlhBTRCore))) {
+        BTRCORELOG_ERROR ("Failed to create btrCore_RunTask Thread - enBTRCoreInitFailure\n");
+        BTRCore_DeInit((tBTRCoreHandle)pstlhBTRCore);
+        return enBTRCoreInitFailure;
+    }
+    
+    if (pstlhBTRCore->pGAQueueOutTask) {
+        gpointer    lpenBTRCoreOutTaskOp = NULL;
+        if ((lpenBTRCoreOutTaskOp = g_malloc0(sizeof(enBTRCoreTaskOp)))) {
+            *((enBTRCoreTaskOp*)lpenBTRCoreOutTaskOp) = enBTRCoreTaskOpStart;
+            g_async_queue_push(pstlhBTRCore->pGAQueueOutTask, lpenBTRCoreOutTaskOp);
+            BTRCORELOG_INFO ("g_async_queue_push: enBTRCoreTaskOpStart\n");
+        }
+    }
+
+    if (pstlhBTRCore->pGAQueueRunTask) {
+        gpointer    lpenBTRCoreRunTaskOp = NULL;
+        if ((lpenBTRCoreRunTaskOp = g_malloc0(sizeof(enBTRCoreTaskOp)))) {
+            *((enBTRCoreTaskOp*)lpenBTRCoreRunTaskOp) = enBTRCoreTaskOpStart;
+            g_async_queue_push(pstlhBTRCore->pGAQueueRunTask, lpenBTRCoreRunTaskOp);
+            BTRCORELOG_INFO ("g_async_queue_push: enBTRCoreTaskOpStart\n");
+        }
+    }
+
 
     pstlhBTRCore->curAdapterPath = BtrCore_BTGetAdapterPath(pstlhBTRCore->connHdl, NULL); //mikek hard code to default adapter for now
     if (!pstlhBTRCore->curAdapterPath) {
@@ -1050,8 +1289,14 @@ enBTRCoreRet
 BTRCore_DeInit (
     tBTRCoreHandle  hBTRCore
 ) {
-    void*           penDispThreadExitStatus = NULL;
-    enBTRCoreRet    enDispThreadExitStatus = enBTRCoreFailure;
+    gpointer        penExitStatusRunTask = NULL;
+    enBTRCoreRet    lenExitStatusRunTask = enBTRCoreSuccess;
+
+    gpointer        penExitStatusOutTask = NULL;
+    enBTRCoreRet    lenExitStatusOutTask = enBTRCoreSuccess;
+
+    enBTRCoreRet    lenBTRCoreRet = enBTRCoreSuccess;
+
     stBTRCoreHdl*   pstlhBTRCore = NULL;
     int             i;
 
@@ -1062,31 +1307,77 @@ BTRCore_DeInit (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    BTRCORELOG_INFO ("hBTRCore   =   0x%8p\n", hBTRCore);
+    BTRCORELOG_INFO ("hBTRCore   =   %8p\n", hBTRCore);
 
     /* Free any memory allotted for use in BTRCore */
     
     /* DeInitialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
-
     if (BTRCore_AVMedia_DeInit(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("Failed to DeInit AV Media Subsystem\n");
-        enDispThreadExitStatus = enBTRCoreFailure;
+        lenExitStatusRunTask = enBTRCoreFailure;
     }
 
-    g_mutex_lock(&pstlhBTRCore->dispatchMutex);
-    pstlhBTRCore->dispatchThreadQuit = TRUE;
-    g_mutex_unlock(&pstlhBTRCore->dispatchMutex);
 
-    penDispThreadExitStatus = g_thread_join(pstlhBTRCore->dispatchThread);
-    g_mutex_clear(&pstlhBTRCore->dispatchMutex);
-    
-    BTRCORELOG_INFO ("BTRCore_DeInit - Exiting BTRCore - %d\n", *((enBTRCoreRet*)penDispThreadExitStatus));
-    enDispThreadExitStatus = *((enBTRCoreRet*)penDispThreadExitStatus);
-    free(penDispThreadExitStatus);
+    /* Stop BTRCore Task Threads */
+    if (pstlhBTRCore->pThreadRunTask) {
+
+       if (pstlhBTRCore->pGAQueueRunTask) {
+            gpointer    lpenBTRCoreTaskOp = NULL;
+            if ((lpenBTRCoreTaskOp = g_malloc0(sizeof(enBTRCoreTaskOp)))) {
+                *((enBTRCoreTaskOp*)lpenBTRCoreTaskOp) = enBTRCoreTaskOpExit;
+                g_async_queue_push(pstlhBTRCore->pGAQueueRunTask, lpenBTRCoreTaskOp);
+                BTRCORELOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCExit\n");
+            }
+        }
+
+        penExitStatusRunTask = g_thread_join(pstlhBTRCore->pThreadRunTask);
+        pstlhBTRCore->pThreadRunTask = NULL;
+    }
+
+    if (penExitStatusRunTask) {
+        BTRCORELOG_INFO ("BTRCore_DeInit - RunTask Exiting BTRCore - %d\n", *((enBTRCoreRet*)penExitStatusRunTask));
+        lenExitStatusRunTask = *((enBTRCoreRet*)penExitStatusRunTask);
+        free(penExitStatusRunTask);
+        penExitStatusRunTask = NULL;
+    }
+
+    if (pstlhBTRCore->pGAQueueRunTask) {
+        g_async_queue_unref(pstlhBTRCore->pGAQueueRunTask);
+        pstlhBTRCore->pGAQueueRunTask = NULL;
+    }
+
+
+    if (pstlhBTRCore->pThreadOutTask) {
+
+        if (pstlhBTRCore->pGAQueueOutTask) {
+            gpointer    lpenBTRCoreTaskOp = NULL;
+            if ((lpenBTRCoreTaskOp = g_malloc0(sizeof(enBTRCoreTaskOp)))) {
+                *((enBTRCoreTaskOp*)lpenBTRCoreTaskOp) = enBTRCoreTaskOpExit;
+                g_async_queue_push(pstlhBTRCore->pGAQueueOutTask, lpenBTRCoreTaskOp);
+                BTRCORELOG_INFO ("g_async_queue_push: eBTRMgrACAcmDCExit\n");
+            }
+        }
+
+        penExitStatusOutTask = g_thread_join(pstlhBTRCore->pThreadOutTask);
+        pstlhBTRCore->pThreadOutTask = NULL;
+    }
+
+    if (penExitStatusOutTask) {
+        BTRCORELOG_INFO ("BTRCore_DeInit - OutTask Exiting BTRCore - %d\n", *((enBTRCoreRet*)penExitStatusOutTask));
+        lenExitStatusOutTask = *((enBTRCoreRet*)penExitStatusOutTask);
+        free(penExitStatusOutTask);
+        penExitStatusOutTask = NULL;
+    }
+
+    if (pstlhBTRCore->pGAQueueOutTask) {
+        g_async_queue_unref(pstlhBTRCore->pGAQueueOutTask);
+        pstlhBTRCore->pGAQueueOutTask = NULL;
+    }
 
     if (pstlhBTRCore->curAdapterPath) {
         if (BtrCore_BTReleaseAdapterPath(pstlhBTRCore->connHdl, NULL)) {
             BTRCORELOG_ERROR ("Failure BtrCore_BTReleaseAdapterPath\n");
+            lenBTRCoreRet = enBTRCoreFailure;
         }
         pstlhBTRCore->curAdapterPath = NULL;
     }
@@ -1112,6 +1403,7 @@ BTRCore_DeInit (
     if (pstlhBTRCore->agentPath) {
         if (BtrCore_BTReleaseAgentPath(pstlhBTRCore->connHdl)) {
             BTRCORELOG_ERROR ("Failure BtrCore_BTReleaseAgentPath\n");
+            lenBTRCoreRet = enBTRCoreFailure;
         }
         pstlhBTRCore->agentPath = NULL;
     }
@@ -1119,6 +1411,7 @@ BTRCore_DeInit (
     if (pstlhBTRCore->connHdl) {
         if (BtrCore_BTDeInitReleaseConnection(pstlhBTRCore->connHdl)) {
             BTRCORELOG_ERROR ("Failure BtrCore_BTDeInitReleaseConnection\n");
+            lenBTRCoreRet = enBTRCoreFailure;
         }
         pstlhBTRCore->connHdl = NULL;
     }
@@ -1128,7 +1421,20 @@ BTRCore_DeInit (
         hBTRCore = NULL;
     }
 
-    return  enDispThreadExitStatus;
+    lenBTRCoreRet = ((lenExitStatusRunTask == enBTRCoreFailure) ||
+                     (lenExitStatusOutTask == enBTRCoreFailure) ||
+                     (lenBTRCoreRet == enBTRCoreFailure)) ? enBTRCoreFailure : enBTRCoreSuccess;
+    BTRCORELOG_DEBUG ("Exit Status = %d\n", lenBTRCoreRet);
+
+#ifdef RDK_LOGGER_ENABLED
+    /* De-Init the logger */
+    if (b_rdk_logger_enabled == 1) {
+       rdk_logger_deinit(); 
+    }
+#endif
+
+
+    return lenBTRCoreRet;
 }
 
 
@@ -3454,9 +3760,9 @@ BTRCore_ReportMediaPosition (
 // Outgoing callbacks Registration Interfaces
 enBTRCoreRet
 BTRCore_RegisterDiscoveryCb (
-    tBTRCoreHandle                  hBTRCore, 
-    fPtr_BTRCore_DeviceDiscoveryCb  afpcBBTRCoreDeviceDiscovery,
-    void*                           apUserData
+    tBTRCoreHandle              hBTRCore, 
+    fPtr_BTRCore_DeviceDiscCb   afpcBBTRCoreDeviceDisc,
+    void*                       apUserData
 ) {
     stBTRCoreHdl*   pstlhBTRCore = NULL;
 
@@ -3467,9 +3773,9 @@ BTRCore_RegisterDiscoveryCb (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->fpcBBTRCoreDeviceDiscovery) {
-        pstlhBTRCore->fpcBBTRCoreDeviceDiscovery = afpcBBTRCoreDeviceDiscovery;
-        pstlhBTRCore->pvcBDevDiscUserData        = apUserData;
+    if (!pstlhBTRCore->fpcBBTRCoreDeviceDisc) {
+        pstlhBTRCore->fpcBBTRCoreDeviceDisc = afpcBBTRCoreDeviceDisc;
+        pstlhBTRCore->pvcBDevDiscUserData   = apUserData;
         BTRCORELOG_INFO ("Device Discovery Callback Registered Successfully\n");
     }
     else {
@@ -3706,10 +4012,10 @@ btrCore_BTDeviceStatusUpdateCb (
 
 
                 btrCore_SetScannedDeviceInfo(lpstlhBTRCore);
-                if (lpstlhBTRCore->fpcBBTRCoreDeviceDiscovery) {
+                if (lpstlhBTRCore->fpcBBTRCoreDeviceDisc) {
                     stBTRCoreBTDevice  stFoundDevice;
                     memcpy (&stFoundDevice, &lpstlhBTRCore->stFoundDevice, sizeof(stFoundDevice));
-                    if (lpstlhBTRCore->fpcBBTRCoreDeviceDiscovery(stFoundDevice, lpstlhBTRCore->pvcBDevDiscUserData) != enBTRCoreSuccess) {
+                    if (lpstlhBTRCore->fpcBBTRCoreDeviceDisc(stFoundDevice, lpstlhBTRCore->pvcBDevDiscUserData) != enBTRCoreSuccess) {
                         //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
                     }
                 }
