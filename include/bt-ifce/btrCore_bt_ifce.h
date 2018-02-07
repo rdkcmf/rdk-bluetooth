@@ -318,6 +318,6 @@ int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapt
 /******************************************
 *    LE Functions
 *******************************************/
-int   BtrCore_BTPerformLeGattOp (void* apBtConn, const char* apBtLePath, enBTOpIfceType aenBTOpIfceType, enBTLeGattOp aenBTLeGattOp, void* apUserdata);
+int   BtrCore_BTPerformLeGattOp (void* apBtConn, const char* apBtLePath, enBTOpIfceType aenBTOpIfceType, enBTLeGattOp aenBTLeGattOp, void* apUserdata, void* rpLeOpRes);
 int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
 #endif // __BTR_CORE_BT_IFCE_H__

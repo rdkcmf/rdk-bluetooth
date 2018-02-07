@@ -140,6 +140,7 @@ typedef enum _enBTRCoreLeProp {
     enBTRCoreLePropGNotifying,
     enBTRCoreLePropGFlags,
     enBTRCoreLePropGChar,
+    enBTRCoreLePropGCharList,
     enBTRCoreLePropUnknown
 } enBTRCoreLeProp;
 
@@ -461,8 +462,9 @@ enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId
 enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeProp aenBTRCoreLeProp, void* apvBTRCorePropVal);
 
 //enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, UUID string, enum of Supported LE operations i.e. _eBTRCoreDevLeOp)
-enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void *apUserData);
+enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void *apUserData, void* rpLeOpRes);
 
+enBTRCoreRet  BTRCore_GetLeCharacteristicUUID(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, char* apBtrCharUuidList);
 // Outgoing callbacks Registration Interfaces
 /* Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCb (tBTRCoreHandle  hBTRCore, fPtr_BTRCore_DeviceDiscCb afpcBBTRCoreDeviceDiscovery, void* apUserData);

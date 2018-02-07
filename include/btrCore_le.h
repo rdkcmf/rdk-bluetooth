@@ -42,6 +42,7 @@ typedef enum _enBTRCoreLEGattProp {
     enBTRCoreLEGPropNotifying,
     enBTRCoreLEGPropFlags,
     enBTRCoreLEGPropChar,
+    enBTRCoreLEGPropCharList,
     enBTRCoreLEGPropUnknown
 } enBTRCoreLEGattProp;
 
@@ -69,7 +70,7 @@ enBTRCoreRet BTRCore_LE_GetAvailablePropertiesGatt (tBTRCoreLeHdl hBTRCoreLe, vo
 /* Should be called by BTRCore_GetLEProperty */
 enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevPath, const char* apBtUuid, enBTRCoreLEGattProp aenBTRCoreLEGattProp, void* apBtPropValue);
 
-enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevPath, const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp);
+enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevPath, const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp, void* rpLeOpRes);
 //enBTRCoreRet BTRCore_LE_GetPropertyValueGatt (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* lePropertyKey, void* lePropertyValue); // Maps to the value of the Descritpor (May be we can use for different properties on Service/Characteristic/Descriptor)
 
 //enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, char* uuid, eBTRCoreDevLeOp  aeBTRCoreDevLeOp)

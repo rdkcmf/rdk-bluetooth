@@ -5058,7 +5058,8 @@ BtrCore_BTPerformLeGattOp (
     const char*     apBtGattPath,
     enBTOpIfceType  aenBTOpIfceType,
     enBTLeGattOp    aenBTLeGattOp,
-    void*           apLeGatOparg
+    void*           apLeGatOparg,
+    void*           rpLeOpRes
 ) {
     DBusMessage*    lpDBusMsg   = NULL;
     DBusMessage*    lpDBusReply = NULL;
@@ -5172,11 +5173,12 @@ BtrCore_BTPerformLeGattOp (
        }
 
        int dbus_type = DBUS_TYPE_INVALID;
-       char tileID[BT_MAX_STR_LEN] = "\0";
+       char byteValue[BT_MAX_STR_LEN] = "\0";
+       char hexValue[] = "0123456789abcdef";
        unsigned short u16idx = 0;
        char ch = '\0';
 
-       memset (tileID, 0, sizeof(tileID));
+       memset (byteValue, 0, sizeof(byteValue));
 
        dbus_message_iter_recurse(&arg_i, &element_i);
 
@@ -5184,9 +5186,8 @@ BtrCore_BTPerformLeGattOp (
 
             if (dbus_type == DBUS_TYPE_BYTE) {
                dbus_message_iter_get_basic(&element_i, &ch);
-               tileID[u16idx++] = ch >> 4;
-               tileID[u16idx++] = ch &  0x0F;
-               BTRCORELOG_ERROR ("READVALUE ----> DBUS_TYPE_BYTE : %x%x", ch >> 4, ch & 0x0F);
+               byteValue[u16idx++] = hexValue[ch >> 4];
+               byteValue[u16idx++] = hexValue[ch &  0x0F];
             }
             if (!dbus_message_iter_has_next(&element_i)) {
                break;
@@ -5194,7 +5195,9 @@ BtrCore_BTPerformLeGattOp (
                dbus_message_iter_next(&element_i);
             }
        }
-       tileID[u16idx] = '\0';
+       byteValue[u16idx] = '\0';
+       strncpy ((char*)rpLeOpRes, byteValue, BT_MAX_STR_LEN-1);
+       BTRCORELOG_DEBUG ("rpLeOpRes : %s\n", (char*)rpLeOpRes);
        dbus_message_unref(lpDBusReply);
 
     } else {

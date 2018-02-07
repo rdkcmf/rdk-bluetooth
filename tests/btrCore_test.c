@@ -982,10 +982,13 @@ main (
                 enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
 
                 if (leUuidString) {
-
-                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, NULL);
+                   char val[BTRCORE_MAX_STR_LEN] = "\0";
+                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, NULL, (void*)&val);
                    free(leUuidString);
                    leUuidString = NULL; 
+                   if (aenBTRCoreLeOp == 0) {
+                      fprintf(stderr, "%d\t: %s - ReadValue [%s]\n", __LINE__, __FUNCTION__, val  );
+                   }
                 }
             }
             break;

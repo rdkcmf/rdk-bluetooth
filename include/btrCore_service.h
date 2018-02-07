@@ -72,4 +72,12 @@ includes information for query of available services
 #define BTR_CORE_GEN_ATRIB_TEXT "Generic Attribute"
 #define BTR_CORE_GEN_ATRIB      "0x1801"
 
+/* Below are Member UUIDs Registered for GATT Service as per
+ * https://www.bluetooth.com/specifications/assigned-numbers/16-bit-uuids-for-members
+ */
+
+#define BTR_CORE_GATT_TILE_TEXT "Tile"
+#define BTR_CORE_GATT_TILE_1    "0xfeed"
+#define BTR_CORE_GATT_TILE_2    "0xfeec"
+
 #endif // __BTR_CORE_SERVICE_H__
