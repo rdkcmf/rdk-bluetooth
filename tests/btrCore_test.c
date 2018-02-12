@@ -672,13 +672,13 @@ main (
             fprintf(stderr, "%d\t: %s - Enter discoverable timeout in seconds.  Zero seconds = FOREVER \n", __LINE__, __FUNCTION__);
             lstBTRCoreAdapter.DiscoverableTimeout = getChoice();
             fprintf(stderr, "%d\t: %s - setting DiscoverableTimeout to %d\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.DiscoverableTimeout);
-            BTRCore_SetDiscoverableTimeout(lhBTRCore, &lstBTRCoreAdapter);
+            BTRCore_SetAdapterDiscoverableTimeout(lhBTRCore, lstBTRCoreAdapter.pcAdapterPath, lstBTRCoreAdapter.DiscoverableTimeout);
             break;
         case 15:
             fprintf(stderr, "%d\t: %s - Set discoverable.  Zero = Not Discoverable, One = Discoverable \n", __LINE__, __FUNCTION__);
             lstBTRCoreAdapter.discoverable = getChoice();
             fprintf(stderr, "%d\t: %s - setting discoverable to %d\n", __LINE__, __FUNCTION__, lstBTRCoreAdapter.discoverable);
-            BTRCore_SetDiscoverable(lhBTRCore, &lstBTRCoreAdapter);
+            BTRCore_SetAdapterDiscoverable(lhBTRCore, lstBTRCoreAdapter.pcAdapterPath, lstBTRCoreAdapter.discoverable);
             break;
         case 16:
             {

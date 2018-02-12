@@ -210,16 +210,16 @@ typedef struct _stBTRCoreAdapter {
 
 typedef struct _stBTRCoreBTDevice { 
     tBTRCoreDevId                 tDeviceId;
-    char                          pcDeviceName[BD_NAME_LEN+1];
-    char                          pcDeviceAddress[BD_NAME_LEN+1];
     enBTRCoreDeviceClass          enDeviceType;
-    stBTRCoreSupportedServiceList stDeviceProfile;
-    int                           i32RSSI;
-    unsigned int                  ui32VendorId;
     BOOLEAN                       bFound;
     BOOLEAN                       bDeviceConnected;
+    int                           i32RSSI;
+    unsigned int                  ui32VendorId;
+    char                          pcDeviceName[BD_NAME_LEN+1];
+    char                          pcDeviceAddress[BD_NAME_LEN+1];
     char                          pcDevicePath[BD_NAME_LEN+1];
-}stBTRCoreBTDevice;
+    stBTRCoreSupportedServiceList stDeviceProfile;
+} stBTRCoreBTDevice;
 
 typedef struct _stBTRCoreScannedDevicesCount {
     int                     numberOfDevices;
@@ -361,14 +361,8 @@ enBTRCoreRet BTRCore_DisableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* 
 /* BTRCore_GetAdapterAddr Get Address of BT Adapter */
 enBTRCoreRet BTRCore_GetAdapterAddr (tBTRCoreHandle hBTRCore, unsigned char aui8adapterIdx, char* apui8adapterAddr);
 
-/* BTRCore_SetDiscoverable set adapter as discoverable or not discoverable*/
-enBTRCoreRet BTRCore_SetDiscoverable (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
-
 /* BTRCore_SetAdapterDiscoverable set adapter as discoverable or not discoverable*/
 enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char discoverable);
-
-/* BTRCore_SetDiscoverableTimeout set how long the adapter is discoverable*/
-enBTRCoreRet BTRCore_SetDiscoverableTimeout (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
 /* BTRCore_SetAdapterDiscoverableTimeout set how long the adapter is discoverable*/
 enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned short timeout);
@@ -464,7 +458,8 @@ enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCo
 //enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, UUID string, enum of Supported LE operations i.e. _eBTRCoreDevLeOp)
 enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void *apUserData, void* rpLeOpRes);
 
-enBTRCoreRet  BTRCore_GetLeCharacteristicUUID(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, char* apBtrCharUuidList);
+enBTRCoreRet BTRCore_GetLeCharacteristicUUID(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, char* apBtrCharUuidList);
+
 // Outgoing callbacks Registration Interfaces
 /* Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCb (tBTRCoreHandle  hBTRCore, fPtr_BTRCore_DeviceDiscCb afpcBBTRCoreDeviceDiscovery, void* apUserData);
