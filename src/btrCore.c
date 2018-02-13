@@ -4335,8 +4335,9 @@ btrCore_BTDeviceStatusUpdateCb (
     stBTDeviceInfo* apstBTDeviceInfo,
     void*           apUserData
 ) {
-    enBTRCoreRet        lenBTRCoreRet   = enBTRCoreFailure;
-    enBTRCoreDeviceType lenBTRCoreDevType = enBTRCoreUnknown;
+    enBTRCoreRet         lenBTRCoreRet      = enBTRCoreFailure;
+    enBTRCoreDeviceType  lenBTRCoreDevType  = enBTRCoreUnknown;
+    enBTRCoreDeviceClass lenBTRCoreDevCl    = enBTRCore_DC_Unknown;
 
 
     BTRCORELOG_INFO ("enBTDeviceType = %d enBTDeviceState = %d apstBTDeviceInfo = %p\n", aeBtDeviceType, aeBtDeviceState, apstBTDeviceInfo);
@@ -4346,10 +4347,11 @@ btrCore_BTDeviceStatusUpdateCb (
         lenBTRCoreDevType =  enBTRCoreSpeakers;
         break;
     case enBTDevAudioSource:
-        if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_SmartPhone) {
+        lenBTRCoreDevCl = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        if (lenBTRCoreDevCl == enBTRCore_DC_SmartPhone) {
            lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
         }
-        else if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_Tablet) {
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Tablet) {
            lenBTRCoreDevType = enBTRCorePCAudioIn;
         }
         break;
@@ -4679,20 +4681,22 @@ btrCore_BTDeviceConnectionIntimationCb (
     unsigned int    aui32devPassKey,
     void*           apUserData
 ) {
-    int                 i32DevConnIntimRet = 0;
-    int                 j = 0;
-    stBTRCoreHdl*       lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
-    enBTRCoreDeviceType lenBTRCoreDevType = enBTRCoreUnknown;
+    int                  i32DevConnIntimRet = 0;
+    int                  j = 0;
+    stBTRCoreHdl*        lpstlhBTRCore      = (stBTRCoreHdl*)apUserData;
+    enBTRCoreDeviceType  lenBTRCoreDevType  = enBTRCoreUnknown;
+    enBTRCoreDeviceClass lenBTRCoreDevCl    = enBTRCore_DC_Unknown;
 
     switch (aeBtDeviceType) {
     case enBTDevAudioSink:
         lenBTRCoreDevType =  enBTRCoreSpeakers;
         break;
     case enBTDevAudioSource:
-        if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_SmartPhone) {
+        lenBTRCoreDevCl = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        if (lenBTRCoreDevCl == enBTRCore_DC_SmartPhone) {
            lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
         }
-        else if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_Tablet) {
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Tablet) {
            lenBTRCoreDevType = enBTRCorePCAudioIn;
         }
         break;
@@ -4778,18 +4782,32 @@ btrCore_BTDeviceAuthenticationCb (
 ) {
     int i32DevAuthRet = 0;
     int j = 0;
-    stBTRCoreHdl*   lpstlhBTRCore = (stBTRCoreHdl*)apUserData;
-    enBTRCoreDeviceType lenBTRCoreDevType = enBTRCoreUnknown;
+    stBTRCoreHdl*        lpstlhBTRCore      = (stBTRCoreHdl*)apUserData;
+    enBTRCoreDeviceType  lenBTRCoreDevType  = enBTRCoreUnknown;
+    enBTRCoreDeviceClass lenBTRCoreDevCl    = enBTRCore_DC_Unknown;
 
     switch (aeBtDeviceType) {
     case enBTDevAudioSink:
-        lenBTRCoreDevType =  enBTRCoreSpeakers;
+        lenBTRCoreDevCl = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        if (lenBTRCoreDevCl == enBTRCore_DC_WearableHeadset) {
+           lenBTRCoreDevType =  enBTRCoreHeadSet;
+        }
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Headphones) {
+           lenBTRCoreDevType = enBTRCoreHeadSet;
+        }
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Loudspeaker) {
+           lenBTRCoreDevType = enBTRCoreSpeakers;
+        }
+        else if (lenBTRCoreDevCl == enBTRCore_DC_HIFIAudioDevice) {
+           lenBTRCoreDevType = enBTRCoreSpeakers;
+        }
         break;
     case enBTDevAudioSource:
-        if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_SmartPhone) {
+        lenBTRCoreDevCl = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        if (lenBTRCoreDevCl == enBTRCore_DC_SmartPhone) {
            lenBTRCoreDevType =  enBTRCoreMobileAudioIn;
         }
-        else if (btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class) == enBTRCore_DC_Tablet) {
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Tablet) {
            lenBTRCoreDevType = enBTRCorePCAudioIn;
         }
         break;

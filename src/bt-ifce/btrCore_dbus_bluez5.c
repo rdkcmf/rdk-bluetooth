@@ -205,6 +205,7 @@ btrCore_BTMapDevClasstoDevType (
         case enBTDCWearableHeadset:
         case enBTDCHeadphones:
         case enBTDCLoudspeaker:
+        case enBTDCHIFIAudioDevice:
             BTRCORELOG_DEBUG ("Its a enBTDevAudioSink\n");
             lenBtDevType = enBTDevAudioSink;
             break;
