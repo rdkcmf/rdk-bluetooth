@@ -1206,6 +1206,16 @@ btrCore_AVMedia_TransportPathCb (
         BTRCORELOG_INFO ("min_bitpool        = %d\n", lstBTMediaSBCConfig.min_bitpool);
         BTRCORELOG_INFO ("max_bitpool        = %d\n", lstBTMediaSBCConfig.max_bitpool);
 
+        //TODO: Best possible Generic solution for DELIA-23555 at this moment
+        // Async nature of lower layer bt-ifce stack i.e. bluez session call enters an invalid 
+        // state as the reference to the session with the device is completely unreffered when we
+        // return too quickly from the callback which results in the crash at bluez is an open is still
+        // pending at bluez from the device
+        // Delaying the return to bluez results in the session being unreffed with delay and the 
+        // incoming open from the device on avdtp to be processed as we have not returrned and there
+        // is a valid ref in bluez
+        sleep(1);
+
         if (pstlhBTRCoreAVM) {
             if (pstlhBTRCoreAVM->pstBTMediaConfig) {
                 pstlhBTRCoreAVM->pstBTMediaConfig->channel_mode        =  lstBTMediaSBCConfig.channel_mode;

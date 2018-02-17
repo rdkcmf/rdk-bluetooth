@@ -1682,13 +1682,6 @@ BTRCore_DeInit (
                      (lenBTRCoreRet == enBTRCoreSuccess)) ? enBTRCoreSuccess : enBTRCoreFailure;
     BTRCORELOG_DEBUG ("Exit Status = %d\n", lenBTRCoreRet);
 
-#ifdef RDK_LOGGER_ENABLED
-    /* De-Init the logger */
-    if (b_rdk_logger_enabled == 1) {
-       rdk_logger_deinit(); 
-    }
-#endif
-
 
     return lenBTRCoreRet;
 }
