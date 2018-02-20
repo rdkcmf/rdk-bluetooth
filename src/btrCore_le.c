@@ -54,27 +54,29 @@
 #include "btrCore_bt_ifce.h"
 
 
-#define MAX_NUMBER_GATT_SERVICES    2
-#define MAX_GATT_SERVICE_ID_ARRAY   4
-#define MAX_GATT_CHAR_ARRAY         4
-#define MAX_GATT_DESC_ARRAY         4
-#define MAX_UUID_SIZE               64
-#define GATT_CHAR_FLAGS             16
-#define GATT_DESC_FLAGS             8
+#define BTRCORE_MAX_NUMBER_GATT_SERVICES    10
+#define BTRCORE_MAX_GATT_CHAR_ARRAY         6
+#define BTRCORE_MAX_GATT_DESC_ARRAY         2
+#define BTRCORE_MAX_UUID_SIZE               64
+#define BTRCORE_GATT_CHAR_FLAGS             16
+#define BTRCORE_GATT_DESC_FLAGS             8
+
+#define BTRCORE_GATT_TILE_UUID_1            "feed"
+#define BTRCORE_GATT_TILE_UUID_2            "feec"
 
 /* GattDescriptor1 Properties */
 typedef struct _stBTRGattDesc {
     char           dPath[BTRCORE_MAX_STR_LEN];                          /* Descriptor Path */
-    char           descUuid[MAX_UUID_SIZE];                             /* 128-bit service UUID */
+    char           descUuid[BTRCORE_MAX_UUID_SIZE];                     /* 128-bit service UUID */
     char           gattCharPath[BTRCORE_MAX_STR_LEN];                   /* Object Path */
 }stBTRGattDesc;
 
 /* GattCharacteristic1 Path and Properties */
 typedef struct _stBTRGattChar {
     char           cPath[BTRCORE_MAX_STR_LEN];                          /* Characteristic Path */
-    char           charUuid[MAX_UUID_SIZE];                             /* 128-bit service UUID */
+    char           charUuid[BTRCORE_MAX_UUID_SIZE];                     /* 128-bit service UUID */
     char           gattServicePath[BTRCORE_MAX_STR_LEN];                /* Object Path */
-    stBTRGattDesc  astBTRGattDesc[MAX_GATT_DESC_ARRAY];                 /* Max of 4 Gatt Descriptor array */
+    stBTRGattDesc  astBTRGattDesc[BTRCORE_MAX_GATT_DESC_ARRAY];         /* Max of 4 Gatt Descriptor array */
     unsigned short ui16NumberofGattDesc;                                /* Number of Gatt Service ID */
 }stBTRGattChar;
 
@@ -83,15 +85,15 @@ typedef struct _stBTRGattChar {
 typedef struct _stBTRGattService {
     tBTRCoreDevId  deviceID;
     char           sPath[BTRCORE_MAX_STR_LEN];                          /* Service Path */
-    char           serviceUuid[MAX_UUID_SIZE];                          /* 128-bit service UUID */
+    char           serviceUuid[BTRCORE_MAX_UUID_SIZE];                  /* 128-bit service UUID */
     char           gattDevicePath[BTRCORE_MAX_STR_LEN];                 /* Object Path */
-    stBTRGattChar  astBTRGattChar[MAX_GATT_CHAR_ARRAY];                 /* Max of 4 Gatt Charactristic array */
+    stBTRGattChar  astBTRGattChar[BTRCORE_MAX_GATT_CHAR_ARRAY];         /* Max of 4 Gatt Charactristic array */
     unsigned short ui16NumberofGattChar;                                /* Number of Gatt Charactristics */
 }stBTRGattService;
 
 
 typedef struct _stBTRCoreGattProfile {
-    stBTRGattService    astBTRGattService[MAX_NUMBER_GATT_SERVICES];
+    stBTRGattService    astBTRGattService[BTRCORE_MAX_NUMBER_GATT_SERVICES];
     unsigned short      ui16NumberofGattService;                        /* Number of Gatt Service ID */
 } stBTRCoreGattProfile;
 
@@ -361,8 +363,7 @@ btrCore_LE_GetDataPath (
            }
            else {
               if (pService->ui16NumberofGattChar == 0) {
-                 BTRCORELOG_ERROR ("No match found for UUID : %s !!!", apBtLeUuid);
-                 return enBTRCoreFailure;
+                 continue;  /* Service has no Char to loop through */
               }
               unsigned short ui16CLoopindex = 0;
               stBTRGattChar *pChar          = NULL;
@@ -393,15 +394,15 @@ btrCore_LE_GetDataPath (
                             retLeDataPath = pDesc->dPath;
                             *renBTOpIfceType = enBTGattDescriptor;
                             BTRCORELOG_DEBUG ("UUID matched Descriptor : %s", pDesc->dPath);
-                            break;
+                            break; // desc loop
                          }
                      }
                      if (ui16DLoopindex != pChar->ui16NumberofGattDesc) {
-                        break; // outer loop
+                        break; // char loop
                      }
                  }
               } else {
-                 break;  // outer loop
+                 break;  // service loop
               }
            }
         }
@@ -635,19 +636,19 @@ btrCore_LE_GattInfoCb (
           retDPath = BtrCore_BTGetProp(apConnHdl, apBtGattPath, aenBtOpIfceType, aunBTOpIfceProp, (void*)&lBtDevPath);
 
           if (!retUuid && !retDPath) {
-             if (pGattProfile->ui16NumberofGattService < MAX_NUMBER_GATT_SERVICES) {
-                if (!pService) {
+             if (pGattProfile->ui16NumberofGattService < BTRCORE_MAX_NUMBER_GATT_SERVICES) {
+                if (!pService && (strstr(lBtUuid, BTRCORE_GATT_TILE_UUID_1) || strstr(lBtUuid, BTRCORE_GATT_TILE_UUID_2))) {  //TODO api which checks for the allowed UUIDs
                    pService = &pGattProfile->astBTRGattService[pGattProfile->ui16NumberofGattService];
                    pService->deviceID = aBtdevId;
-                   strncpy(pService->serviceUuid, lBtUuid, MAX_UUID_SIZE - 1);
+                   strncpy(pService->serviceUuid, lBtUuid, BTRCORE_MAX_UUID_SIZE - 1);
                    strncpy(pService->sPath, apBtGattPath, BTRCORE_MAX_STR_LEN - 1);
                    strncpy(pService->gattDevicePath, lBtDevPath, BTRCORE_MAX_STR_LEN - 1);
                    pGattProfile->ui16NumberofGattService++;
                    BTRCORELOG_DEBUG ("Added Service %s Successfully.", lBtUuid);
                 } else {
-                   BTRCORELOG_WARN ("Gatt Service %s already exists...", apBtGattPath);                    }
+                   BTRCORELOG_WARN ("Gatt Service %s already exists/or unknown UUID : %s...", apBtGattPath, lBtUuid); }
              } else {
-                BTRCORELOG_WARN ("MAX_NUMBER_GATT_SERVICES Added. Couldn't add anymore...");               }
+                BTRCORELOG_WARN ("BTRCORE_MAX_NUMBER_GATT_SERVICES Added. Couldn't add anymore...");               }
           } else {
              BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retDPath : %d",retUuid, retDPath); }
        } else 
@@ -667,10 +668,10 @@ btrCore_LE_GattInfoCb (
              stBTRGattChar    *pChar = btrCore_LE_FindGattCharacteristic(pGattProfile, aBtdevId, apBtGattPath);
 
              if (pService) {
-                if (pService->ui16NumberofGattChar < MAX_GATT_CHAR_ARRAY) {
+                if (pService->ui16NumberofGattChar < BTRCORE_MAX_GATT_CHAR_ARRAY) {
                    if (!pChar) {
                       pChar = &pService->astBTRGattChar[pService->ui16NumberofGattChar];
-                      strncpy(pChar->charUuid, lBtUuid, MAX_UUID_SIZE - 1 );
+                      strncpy(pChar->charUuid, lBtUuid, BTRCORE_MAX_UUID_SIZE - 1 );
                       strncpy(pChar->cPath, apBtGattPath, BTRCORE_MAX_STR_LEN - 1);
                       strncpy(pChar->gattServicePath, lBtSerivcePath, BTRCORE_MAX_STR_LEN - 1);
                       pService->ui16NumberofGattChar++;
@@ -678,7 +679,7 @@ btrCore_LE_GattInfoCb (
                    } else {
                       BTRCORELOG_WARN ("Gatt Characteristic %s already exists...", apBtGattPath);          }
                 } else {
-                   BTRCORELOG_WARN ("MAX_GATT_CHAR_ARRAY Addedd. Couldn't add anymore...");                }
+                   BTRCORELOG_WARN ("BTRCORE_MAX_GATT_CHAR_ARRAY Addedd. Couldn't add anymore...");                }
              } else {
                 BTRCORELOG_WARN ("Gatt Service %s not found...", lBtSerivcePath);                          }
           } else {
@@ -699,10 +700,10 @@ btrCore_LE_GattInfoCb (
              stBTRGattChar  *pChar = btrCore_LE_FindGattCharacteristic(pGattProfile, aBtdevId, lBtCharPath);
              stBTRGattDesc  *pDesc = btrCore_LE_FindGattDescriptor(pGattProfile, aBtdevId, apBtGattPath);
              if (pChar) {
-                if (pChar->ui16NumberofGattDesc < MAX_GATT_DESC_ARRAY) {
+                if (pChar->ui16NumberofGattDesc < BTRCORE_MAX_GATT_DESC_ARRAY) {
                    if (!pDesc) {
                       pDesc = &(pChar->astBTRGattDesc[pChar->ui16NumberofGattDesc]);
-                      strncpy (pDesc->descUuid, lBtUuid, MAX_UUID_SIZE - 1);
+                      strncpy (pDesc->descUuid, lBtUuid, BTRCORE_MAX_UUID_SIZE - 1);
                       strncpy(pDesc->dPath, apBtGattPath, BTRCORE_MAX_STR_LEN - 1);
                       strncpy(pDesc->gattCharPath, lBtCharPath, BTRCORE_MAX_STR_LEN - 1);
                       pChar->ui16NumberofGattDesc++;
@@ -710,7 +711,7 @@ btrCore_LE_GattInfoCb (
                    } else {
                       BTRCORELOG_WARN ("Gatt Descriptor %s already exists...", apBtGattPath);     }
                 } else {
-                   BTRCORELOG_WARN ("MAX_GATT_DESC_ARRAY Added. Couldn't add anymore...");        }
+                   BTRCORELOG_WARN ("BTRCORE_MAX_GATT_DESC_ARRAY Added. Couldn't add anymore...");        }
              } else {
                 BTRCORELOG_WARN ("Gatt Characteristic not found for Desc %s", apBtGattPath);      }
           } else {
