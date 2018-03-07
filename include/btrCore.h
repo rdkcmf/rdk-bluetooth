@@ -328,10 +328,10 @@ enBTRCoreRet BTRCore_Init (tBTRCoreHandle* phBTRCore);
 /* Deinitialze and free BTRCore */
 enBTRCoreRet BTRCore_DeInit (tBTRCoreHandle hBTRCore);
 
-//Register Agent to accept connection requests
+/* Register Agent to accept connection requests */
 enBTRCoreRet BTRCore_RegisterAgent (tBTRCoreHandle hBTRCore, int iBTRCapMode);
 
-//unregister agent to support pairing initiated from settop
+/* unregister agent to support pairing initiated from settop */
 enBTRCoreRet BTRCore_UnregisterAgent (tBTRCoreHandle hBTRCore);
 
 /* BTRCore_GetListOfAdapters call to determine the number of BT radio interfaces... typically one, but could be more*/
@@ -343,13 +343,13 @@ enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdap
 /* BTRCore_GetAdapterPower call to gets BT radio power status as ON or OFF ... */
 enBTRCoreRet BTRCore_GetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char* pAdapterPower);
 
-/*BTRCore_GetAdapters  call to determine the number of BT radio interfaces... typically one, but could be more*/
+/* BTRCore_GetAdapters  call to determine the number of BT radio interfaces... typically one, but could be more*/
 enBTRCoreRet BTRCore_GetAdapters (tBTRCoreHandle hBTRCore, stBTRCoreGetAdapters* pstGetAdapters);
 
-/*BTRCore_GetAdapter get info about a specific adatper*/
+/* BTRCore_GetAdapter get info about a specific adatper*/
 enBTRCoreRet BTRCore_GetAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
-/*BTRCore_SetAdapter Set Current Bluetotth Adapter to use*/
+/* BTRCore_SetAdapter Set Current Bluetotth Adapter to use*/
 enBTRCoreRet BTRCore_SetAdapter (tBTRCoreHandle hBTRCore, int adapter_number);
 
 /* BTRCore_EnableAdapter enable specific adapter*/
@@ -403,7 +403,7 @@ enBTRCoreRet BTRCore_UnPairDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCo
 /* BTRCore_GetListOfPairedDevices - gets the paired devices list */
 enBTRCoreRet BTRCore_GetListOfPairedDevices (tBTRCoreHandle hBTRCore, stBTRCorePairedDevicesCount *pListOfDevices);
 
-/*BTRCore_FindDevice*/
+/* BTRCore_FindDevice */
 enBTRCoreRet BTRCore_FindDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
 /*BTRCore_FindServiceByIndex - confirm if a given service exists on a device*/
@@ -430,11 +430,11 @@ enBTRCoreRet BTRCore_GetDeviceDisconnected (tBTRCoreHandle hBTRCore, tBTRCoreDev
 /* BTRCore_GetDeviceMediaInfo */
 enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo);
 
-/*BTRCore_AcquireDeviceDataPath*/
+/* BTRCore_AcquireDeviceDataPath */
 enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
                                             int* aidataReadMTU, int* aidataWriteMTU); //TODO: Change to a unique device Identifier
 
-/*BTRCore_ReleaseDeviceDataPath*/
+/* BTRCore_ReleaseDeviceDataPath */
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
 /* BTRCore_MediaControl */
@@ -452,28 +452,29 @@ enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId a
 /* BTRCore_ReportMediaPosition */
 enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-//enBTRCoreRet BTRCore_GetLEProperty();
+/* BTRCore_GetLEProperty() */
 enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeProp aenBTRCoreLeProp, void* apvBTRCorePropVal);
 
-//enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, UUID string, enum of Supported LE operations i.e. _eBTRCoreDevLeOp)
+/* BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, UUID string, enum of Supported LE operations i.e. _eBTRCoreDevLeOp) */
 enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void *apUserData, void* rpLeOpRes);
 
-enBTRCoreRet BTRCore_GetLeCharacteristicUUID(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, char* apBtrCharUuidList);
+/* BTRCore_GetLeCharacteristicUUID */
+enBTRCoreRet BTRCore_GetLeCharacteristicUUID (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, char* apBtrCharUuidList);
 
 // Outgoing callbacks Registration Interfaces
-/* Callback to notify the application every time when a new device is found and added to discovery list */
+/* BTRCore_RegisterDiscoveryCb - Callback to notify the application every time when a new device is found and added to discovery list */
 enBTRCoreRet BTRCore_RegisterDiscoveryCb (tBTRCoreHandle  hBTRCore, fPtr_BTRCore_DeviceDiscCb afpcBBTRCoreDeviceDiscovery, void* apUserData);
 
-/*BTRCore_RegisterStatusCallback - callback for unsolicited status changes*/
+/* BTRCore_RegisterStatusCallback - callback for unsolicited status changes */
 enBTRCoreRet BTRCore_RegisterStatusCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_StatusCb afpcBBTRCoreStatus, void* apUserData);
 
-/*BTRCore_RegisterMediaStatusCallback - callback for media state changes*/
+/* BTRCore_RegisterMediaStatusCallback - callback for media state changes */
 enBTRCoreRet BTRCore_RegisterMediaStatusCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_MediaStatusCb afpcBBTRCoreMediaStatus, void* apUserData);
 
-/*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
+/* BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device */
 enBTRCoreRet BTRCore_RegisterConnectionIntimationCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_ConnIntimCb afpcBBTRCoreConnAuth, void* apUserData);
 
-/*BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device*/
+/* BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device */
 enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_ConnAuthCb afpcBBTRCoreConnAuth, void* apUserData);
 
 
