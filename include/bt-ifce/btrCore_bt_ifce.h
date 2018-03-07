@@ -260,7 +260,7 @@ typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTranspor
 typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
-typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, enBTDeviceState aenBTDeviceState, void* apConnHdl, unsigned long long int aBtdevId, void* apUserData);
+typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* apcBtDevAddr, enBTDeviceState aenBTDeviceState, void* apConnHdl, void* apUserData);
 
 //callback to process connection requests:
 int (*p_ConnAuth_callback) ();
@@ -318,6 +318,6 @@ int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapt
 /******************************************
 *    LE Functions
 *******************************************/
-int   BtrCore_BTPerformLeGattOp (void* apBtConn, const char* apBtLePath, enBTOpIfceType aenBTOpIfceType, enBTLeGattOp aenBTLeGattOp, void* apUserdata, void* rpLeOpRes);
+int   BtrCore_BTPerformLeGattOp (void* apBtConn, const char* apBtLePath, enBTOpIfceType aenBTOpIfceType, enBTLeGattOp aenBTLeGattOp, void* apLeGatOparg, void* rpLeOpRes);
 int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
 #endif // __BTR_CORE_BT_IFCE_H__

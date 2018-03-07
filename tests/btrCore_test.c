@@ -273,7 +273,7 @@ getChoice (
     void
 ) {
     int mychoice;
-    fprintf(stderr, "Enter a choice...\n");
+    fprintf(stderr, "\nEnter a choice...\n");
     scanf("%d", &mychoice);
         getchar();//suck up a newline?
     return mychoice;
@@ -299,6 +299,18 @@ getLeUuidString (
     scanf("%s",leUuidString );
         getchar();//suck up a newline?
     return strdup(leUuidString);
+}
+
+static int
+getBitsToString (
+    unsigned short  flagBits
+) {
+    unsigned char i = 0;
+    for (; i<16; i++) {
+        fprintf(stderr, "%d", (flagBits >> i) & 1);
+    }
+
+    return 0;
 }
 
 static void 
@@ -937,28 +949,58 @@ main (
                 if (leUuidString) {
 
                    fprintf(stderr, "%d\t: %s - select the property you want to query for.\n",  __LINE__, __FUNCTION__);
-                   fprintf(stderr, "Uuid - 0 | Primary - 1 | Device - 2 | Service - 3 | Value - 4 |"
-                                   "Notifying - 5 | Flags - 6 | Charact - 7\n");
+                   fprintf(stderr, "[0 - Uuid | 1 - Primary | 2 - Device | 3 - Service | 4 - Value |"
+                                   " 5 - Notifying | 6 - Flags | 7 -Character]\n");
                    int propSelection = getChoice();
-            
+        
+                   if (!propSelection) {
+                      stBTRCoreUUIDList lstBTRCoreUUIDList;
+                      unsigned char i = 0;
+                      BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&lstBTRCoreUUIDList);
+                      if (lstBTRCoreUUIDList.numberOfUUID) {
+                          fprintf(stderr, "\n\nObtained 'Flag' indices are based on the below mapping..\n"
+                                          "0  - read\n"
+                                          "1  - write\n"
+                                          "2  - encrypt-read\n"
+                                          "3  - encrypt-write\n"
+                                          "4  - encrypt-authenticated-read\n"
+                                          "5  - encrypt-authenticated-write\n"
+                                          "6  - secure-read (Server only)\n"
+                                          "7  - secure-write (Server only)\n"
+                                          "8  - notify\n"
+                                          "9  - indicate\n"
+                                          "10 - broadcast\n"
+                                          "11 - write-without-response\n"
+                                          "12 - authenticated-signed-writes\n"
+                                          "13 - reliable-write\n"
+                                          "14 - writable-auxiliaries\n");
+                          fprintf(stderr, "\n\t%-40s Flag\n", "UUID List");
+                          for (; i<lstBTRCoreUUIDList.numberOfUUID; i++) {
+                              fprintf(stderr, "\n\t%-40s ", lstBTRCoreUUIDList.uuidList[i].uuid);
+                              getBitsToString(lstBTRCoreUUIDList.uuidList[i].flags);
+                          }
+                      } else {
+                          fprintf (stderr, "\n\n\tNo UUIDs Found...\n");
+                      }
+                   } else
                    if (propSelection == 1 || propSelection == 5) {
                       unsigned char val = 0;
                       BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
-                      fprintf(stderr, "--Val : %d\n", val);
+                      fprintf(stderr, "\n\tResult : %d\n", val);
                    } else
-                   if (propSelection == 0 || propSelection == 2 ||
+                   if (propSelection == 4 || propSelection == 2 ||
                        propSelection == 3 || propSelection == 7 ){
                       char val[BTRCORE_MAX_STR_LEN] = "\0";
                       BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
-                      fprintf(stderr, "--Val : %s\n", val);
+                      fprintf(stderr, "\n\tResult : %s\n", val);
                    } else
-                   if (propSelection == 4 || propSelection == 6) {
+                   if (propSelection == 6) {
                       char val[15][64]; int i=0;
                       memset (val, 0, sizeof(val));
                       BTRCore_GetLEProperty(lhBTRCore, devnum, leUuidString, propSelection, (void*)&val);
-                      fprintf(stderr, "--Val :\n");
-                      for (; i < 15 && val[i]; i++) {
-                          fprintf(stderr, "\t%s\n", val[i]);
+                      fprintf(stderr, "\n\tResult :\n");
+                      for (; i < 15 && val[i][0]; i++) {
+                          fprintf(stderr, "\t- %s\n", val[i]);
                       }
                    }  
                    free(leUuidString);
@@ -974,20 +1016,17 @@ main (
                 char *leUuidString = getLeUuidString(); 
 
                 fprintf(stderr, "%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
-                fprintf(stderr, "\t- ReadValue   : 0 \n"); 
-                fprintf(stderr, "\t- WriteValue  : 1 \n");
-                fprintf(stderr, "\t- StartNotify : 2 \n"); 
-                fprintf(stderr, "\t- StopNotify  : 3 \n");
+                fprintf(stderr, "\t[0 - ReadValue | 1 - WriteValue | 2 - StartNotify | 3 - StopNotify]\n");
 
                 enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
 
                 if (leUuidString) {
                    char val[BTRCORE_MAX_STR_LEN] = "\0";
-                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, NULL, (void*)&val);
+                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, (void*)&val);
                    free(leUuidString);
                    leUuidString = NULL; 
                    if (aenBTRCoreLeOp == 0) {
-                      fprintf(stderr, "%d\t: %s - ReadValue [%s]\n", __LINE__, __FUNCTION__, val  );
+                      fprintf(stderr, "%d\t: %s - Obtained Value [%s]\n", __LINE__, __FUNCTION__, val  );
                    }
                 }
             }

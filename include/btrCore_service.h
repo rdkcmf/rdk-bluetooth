@@ -77,7 +77,7 @@ includes information for query of available services
  */
 
 #define BTR_CORE_GATT_TILE_TEXT "Tile"
-#define BTR_CORE_GATT_TILE_1    "0xfeed"
-#define BTR_CORE_GATT_TILE_2    "0xfeec"
+#define BTR_CORE_GATT_TILE_1    "feed"
+#define BTR_CORE_GATT_TILE_2    "feec"
 
 #endif // __BTR_CORE_SERVICE_H__

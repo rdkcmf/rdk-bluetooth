@@ -33,6 +33,7 @@ extern "C" {
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
 #define BTRCORE_STRINGS_MAX_LEN     32
 #define BTRCORE_MAX_DEVICE_PROFILE  32
+#define BTRCORE_UUID_LEN            64
 #define BTRCORE_MAX_STR_LEN         256
 
 
@@ -140,7 +141,6 @@ typedef enum _enBTRCoreLeProp {
     enBTRCoreLePropGNotifying,
     enBTRCoreLePropGFlags,
     enBTRCoreLePropGChar,
-    enBTRCoreLePropGCharList,
     enBTRCoreLePropUnknown
 } enBTRCoreLeProp;
 
@@ -307,6 +307,17 @@ typedef struct _stBTRCoreMediaStatusCBInfo {
     stBTRCoreMediaStatusUpdate      m_mediaStatusUpdate;
 } stBTRCoreMediaStatusCBInfo;
 
+typedef struct _stBTRCoreUUID {
+    unsigned short  flags;
+    char            uuid[BTRCORE_UUID_LEN];
+} stBTRCoreUUID;
+
+typedef struct _stBTRCoreUUIDList {
+    unsigned char   numberOfUUID;
+    stBTRCoreUUID   uuidList[BTRCORE_MAX_DEVICE_PROFILE];
+} stBTRCoreUUIDList;
+
+
 
 /* Fptr Callbacks types */
 typedef enBTRCoreRet (*fPtr_BTRCore_DeviceDiscCb) (stBTRCoreBTDevice astBTRCoreScannedDevice, void* apvUserData);
@@ -452,14 +463,11 @@ enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId a
 /* BTRCore_ReportMediaPosition */
 enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_GetLEProperty() */
+/* BTRCore_GetLeProperty */
 enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeProp aenBTRCoreLeProp, void* apvBTRCorePropVal);
 
-/* BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, UUID string, enum of Supported LE operations i.e. _eBTRCoreDevLeOp) */
-enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void *apUserData, void* rpLeOpRes);
-
-/* BTRCore_GetLeCharacteristicUUID */
-enBTRCoreRet BTRCore_GetLeCharacteristicUUID (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, char* apBtrCharUuidList);
+/* BTRCore_PerformLEOp */
+enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void* rpLeOpRes);
 
 // Outgoing callbacks Registration Interfaces
 /* BTRCore_RegisterDiscoveryCb - Callback to notify the application every time when a new device is found and added to discovery list */

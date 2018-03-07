@@ -74,7 +74,6 @@ typedef struct _stBTMediaInfo {
 static int btrCore_BTHandleDusError (DBusError* aDBusErr, int aErrline, const char* aErrfunc);
 static const char* btrCore_DBusType2Name (int ai32DBusMessageType);
 static enBTDeviceType btrCore_BTMapDevClasstoDevType(unsigned int aui32Class);
-static unsigned long long int btrCore_BTGenerateUniqueDeviceID (const char* apcDeviceAddress);
 static char* btrCore_BTGetDefaultAdapterPath (void);
 static int btrCore_BTReleaseDefaultAdapterPath (void);
 
@@ -217,36 +216,6 @@ btrCore_BTMapDevClasstoDevType (
     }
 
     return lenBtDevType;
-}
-
-
-static unsigned long long int
-btrCore_BTGenerateUniqueDeviceID (
-    const char* apcDeviceAddress
-) {
-    unsigned long long int  lBTRCoreDevId   = 0;
-    char                    lcDevHdlArr[13] = {'\0'};
-
-    // MAC Address Format 
-    // AA:BB:CC:DD:EE:FF\0
-    if (apcDeviceAddress && (strlen(apcDeviceAddress) >= 17)) {
-        lcDevHdlArr[0]  = apcDeviceAddress[0];
-        lcDevHdlArr[1]  = apcDeviceAddress[1];
-        lcDevHdlArr[2]  = apcDeviceAddress[3];
-        lcDevHdlArr[3]  = apcDeviceAddress[4];
-        lcDevHdlArr[4]  = apcDeviceAddress[6];
-        lcDevHdlArr[5]  = apcDeviceAddress[7];
-        lcDevHdlArr[6]  = apcDeviceAddress[9];
-        lcDevHdlArr[7]  = apcDeviceAddress[10];
-        lcDevHdlArr[8]  = apcDeviceAddress[12];
-        lcDevHdlArr[9]  = apcDeviceAddress[13];
-        lcDevHdlArr[10] = apcDeviceAddress[15];
-        lcDevHdlArr[11] = apcDeviceAddress[16];
-
-        lBTRCoreDevId = (unsigned long long int) strtoll(lcDevHdlArr, NULL, 16);
-    }
-
-    return lBTRCoreDevId;
 }
 
 
@@ -2428,13 +2397,14 @@ BtrCore_BTGetProp (
                             } else
                             if (lType == DBUS_TYPE_BYTE) {
                                unsigned char chr = '\0';
+                               char hex[] = "0123456789abcdef";
                                char *byteStream = (char*)apvVal;
 
                                while (dbus_message_iter_get_arg_type(&variantArray) != DBUS_TYPE_INVALID) {
 
                                    dbus_message_iter_get_basic(&variantArray, &chr);
-                                   byteStream[lIndex++] = chr >> 4;
-                                   byteStream[lIndex++] = chr &  0x0F;
+                                   byteStream[lIndex++] = hex[chr >> 4];
+                                   byteStream[lIndex++] = hex[chr &  0x0F];
 
                                    if (!dbus_message_iter_next(&variantArray)) {
                                       break;
@@ -4633,18 +4603,16 @@ btrCore_BTDBusConnectionFilterCb (
                     const char* pCharIface = dbus_message_get_path(apDBusMsg);
                     unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - pCharIface;
                     char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
-                    unsigned long long int lBtDevId = 0;
 
                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
-                       strncpy(apcDeviceIfce, pCharIface, ui32DeviceIfceLen);
+                        strncpy(apcDeviceIfce, pCharIface, ui32DeviceIfceLen);
 
-                       i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
-                       if (!i32OpRet) {
-                          lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
-                       }
-                    }
-                    if (gfpcBTLeGattPath) {
-                       gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, enBTDevStPropChanged, gpDBusConn, lBtDevId, gpcBLePathUserData);
+                        i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
+                        if (!i32OpRet) {
+                            if (gfpcBTLeGattPath) {
+                                gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, gpDBusConn, gpcBLePathUserData);
+                            }
+                        }
                     }
                 }
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH )) {
@@ -4771,57 +4739,50 @@ btrCore_BTDBusConnectionFilterCb (
                                 /* Add Interfaces for GATT */
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_SERVICE_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_SERVICE_PATH);
-                                    // To move the below logic as a api : getDevAddress ? (repeated logic in many places)
                                     char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
                                     unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - lpcDBusIface; 
-                                    unsigned long long int lBtDevId = 0;
 
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
                                         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
-                                           lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
+                                            if (gfpcBTLeGattPath) {
+                                                gfpcBTLeGattPath(enBTGattService, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, gpDBusConn, gpcBLePathUserData);
+                                            }
                                         }
-                                    }
-                                    if (gfpcBTLeGattPath) {
-                                       gfpcBTLeGattPath(enBTGattService, lpcDBusIface, enBTDevStFound, gpDBusConn, lBtDevId, gpcBLePathUserData);
                                     }
                                 }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_CHAR_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
                                     char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
                                     unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - lpcDBusIface; 
-                                    unsigned long long int lBtDevId = 0;
 
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
                                         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
-                                           lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
+                                            if (gfpcBTLeGattPath) {
+                                                gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, gpDBusConn, gpcBLePathUserData);
+                                            }
                                         }
-                                    }
-                                    if (gfpcBTLeGattPath) {
-                                       gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, enBTDevStFound, gpDBusConn, lBtDevId, gpcBLePathUserData);
                                     }
                                 }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH);
                                     char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
                                     unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - lpcDBusIface; 
-                                    unsigned long long int lBtDevId = 0;
 
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
                                         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
-                                           lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
+                                            if (gfpcBTLeGattPath) {
+                                                gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, gpDBusConn, gpcBLePathUserData);
+                                            }
                                         }
-                                    }
-                                    if (gfpcBTLeGattPath) {
-                                       gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, enBTDevStFound, gpDBusConn, lBtDevId, gpcBLePathUserData);
                                     }
                                 }
                                 else {
@@ -4914,54 +4875,48 @@ btrCore_BTDBusConnectionFilterCb (
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_GATT_SERVICE_PATH);
                         char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
                         unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - lpcDBusIface; 
-                        unsigned long long int lBtDevId = 0;
 
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
-                           strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
+                            strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                           i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
-                           if (!i32OpRet) {
-                              lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
-                           }
-                        }
-                        if (gfpcBTLeGattPath) {
-                           gfpcBTLeGattPath(enBTGattService, lpcDBusIface, enBTDevStLost, gpDBusConn, lBtDevId, gpcBLePathUserData);
+                            i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
+                            if (!i32OpRet) {
+                                if (gfpcBTLeGattPath) {
+                                    gfpcBTLeGattPath(enBTGattService, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, gpDBusConn, gpcBLePathUserData);
+                                }
+                            }
                         }
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_CHAR_PATH  )) {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
                         char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
                         unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - lpcDBusIface; 
-                        unsigned long long int lBtDevId = 0;
 
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
-                           strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
+                            strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                           i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
-                           if (!i32OpRet) {
-                              lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
-                           }
-                        }
-                        if (gfpcBTLeGattPath) {
-                           gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, enBTDevStLost, gpDBusConn, lBtDevId, gpcBLePathUserData);
+                            i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
+                            if (!i32OpRet) {
+                                if (gfpcBTLeGattPath) {
+                                    gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, gpDBusConn, gpcBLePathUserData);
+                                }
+                            }
                         }
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH)) {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH);
                         char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
                         unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - lpcDBusIface; 
-                        unsigned long long int lBtDevId = 0;
 
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
-                           strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
+                            strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                           i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
-                           if (!i32OpRet) {
-                              lBtDevId = btrCore_BTGenerateUniqueDeviceID (lstBTDeviceInfo.pcAddress);
-                           }
-                        }
-                        if (gfpcBTLeGattPath) {
-                           gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, enBTDevStLost, gpDBusConn, lBtDevId, gpcBLePathUserData);
+                            i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
+                            if (!i32OpRet) {
+                                if (gfpcBTLeGattPath) {
+                                    gfpcBTLeGattPath(enBTGattDescriptor, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, gpDBusConn, gpcBLePathUserData);
+                                }
+                            }
                         }
                     }
                     else {
@@ -5190,10 +5145,8 @@ BtrCore_BTPerformLeGattOp (
                byteValue[u16idx++] = hexValue[ch >> 4];
                byteValue[u16idx++] = hexValue[ch &  0x0F];
             }
-            if (!dbus_message_iter_has_next(&element_i)) {
+            if (!dbus_message_iter_next(&element_i)) {
                break;
-            } else {
-               dbus_message_iter_next(&element_i);
             }
        }
        byteValue[u16idx] = '\0';
