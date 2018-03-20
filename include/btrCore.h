@@ -28,14 +28,12 @@
 extern "C" {
 #endif
 
-
 #define BTRCORE_MAX_NUM_BT_ADAPTERS 4   // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
 #define BTRCORE_STRINGS_MAX_LEN     32
 #define BTRCORE_MAX_DEVICE_PROFILE  32
 #define BTRCORE_UUID_LEN            64
 #define BTRCORE_MAX_STR_LEN         256
-
 
 typedef enum _enBTRCoreDeviceType {
     enBTRCoreSpeakers,
