@@ -436,6 +436,9 @@ enBTRCoreRet BTRCore_GetDeviceConnected (tBTRCoreHandle hBTRCore, tBTRCoreDevId 
 /* BTRCore_GetDeviceDisconnected */
 enBTRCoreRet BTRCore_GetDeviceDisconnected (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
+/* BTRCore_GetDeviceTypeClass */
+enBTRCoreRet BTRCore_GetDeviceTypeClass (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType* apenBTRCoreDevTy, enBTRCoreDeviceClass* apenBTRCoreDevCl);
+
 /* BTRCore_GetDeviceMediaInfo */
 enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo);
 

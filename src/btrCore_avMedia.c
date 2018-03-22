@@ -777,7 +777,9 @@ BTRCore_AVMedia_MediaControl (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+       //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+       //      Seems to be the root cause of the stack corruption as part of DELIA-25861
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -842,7 +844,9 @@ BTRCore_AVMedia_GetTrackInfo (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+       //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+       //      Seems to be the root cause of the stack corruption as part of DELIA-25861
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -876,7 +880,9 @@ BTRCore_AVMedia_GetPositionInfo (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+       //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+       //      Seems to be the root cause of the stack corruption as part of DELIA-25861
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -886,6 +892,8 @@ BTRCore_AVMedia_GetPositionInfo (
     unsigned int  mediaPosition = 0;
     enBTRCoreRet  positionRet, trackRet;
 
+    //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+    //      Seems to be the root cause of the stack corruption as part of DELIA-25861. This is call seems to be root cause of DELIA-25861
     positionRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition);
     trackRet    = BtrCore_BTGetTrackInformation   (apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (stBTMediaTrackInfo*)&mediaTrackInfo);
 
@@ -922,7 +930,9 @@ BTRCore_AVMedia_GetMediaProperty (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr))) {
+       //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+       //      Seems to be the root cause of the stack corruption as part of DELIA-25861.
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -955,7 +965,9 @@ BTRCore_AVMedia_StartMediaPositionPolling (
     pstlhBTRCoreAVM     =  (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevPath))) {
+       //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+       //      Seems to be the root cause of the stack corruption as part of DELIA-25861.
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevPath)))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
