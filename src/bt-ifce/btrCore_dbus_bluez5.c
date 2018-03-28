@@ -76,6 +76,7 @@ static const char* btrCore_DBusType2Name (int ai32DBusMessageType);
 static enBTDeviceType btrCore_BTMapDevClasstoDevType(unsigned int aui32Class);
 static char* btrCore_BTGetDefaultAdapterPath (void);
 static int btrCore_BTReleaseDefaultAdapterPath (void);
+static int btrCore_BTGetDevAddressFromDevPath (const char* deviceIfcePath, char* devAddr);
 
 static DBusHandlerResult btrCore_BTAgentRelease (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 static DBusHandlerResult btrCore_BTAgentRequestPincode (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
@@ -218,6 +219,36 @@ btrCore_BTMapDevClasstoDevType (
     return lenBtDevType;
 }
 
+static int
+btrCore_BTGetDevAddressFromDevPath (
+    const char*     deviceIfcePath,
+    char*           devAddr
+) {
+    //  DevIfcePath format /org/bluez/hci0/dev_DC_1A_C5_62_F5_EA
+    deviceIfcePath = strstr(deviceIfcePath, "dev") + 4;
+
+    devAddr[0]   = deviceIfcePath[0];
+    devAddr[1]   = deviceIfcePath[1];
+    devAddr[2]   = ':';
+    devAddr[3]   = deviceIfcePath[3];
+    devAddr[4]   = deviceIfcePath[4];
+    devAddr[5]   = ':';
+    devAddr[6]   = deviceIfcePath[6];
+    devAddr[7]   = deviceIfcePath[7];
+    devAddr[8]   = ':';
+    devAddr[9]   = deviceIfcePath[9];
+    devAddr[10]  = deviceIfcePath[10];
+    devAddr[11]  = ':';
+    devAddr[12]  = deviceIfcePath[12];
+    devAddr[13]  = deviceIfcePath[13];
+    devAddr[14]  = ':';
+    devAddr[15]  = deviceIfcePath[15];
+    devAddr[16]  = deviceIfcePath[16];
+
+    devAddr[17]  = '\0';
+
+    return 0;
+}
 
 static char*
 btrCore_BTGetDefaultAdapterPath (
@@ -4826,13 +4857,16 @@ btrCore_BTDBusConnectionFilterCb (
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_DEVICE_PATH);
                         
                         if (lpcDBusIface) {
+                            enBTDeviceType  lenBTDevType = enBTDevUnknown;
+                            /* On InterfacesRemoved signal of BT_DBUS_BLUEZ_DEVICE_PATH, query to get DevInfo is invalid 
                             i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, lpcDBusIface);
                             if (!i32OpRet) {
-                                enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+                                lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
-                                if (gfpcBDevStatusUpdate) {
-                                    if(gfpcBDevStatusUpdate(lenBTDevType, enBTDevStUnPaired, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
-                                    }
+                            }*/
+                            if (gfpcBDevStatusUpdate) {
+                                btrCore_BTGetDevAddressFromDevPath(lpcDBusIface, lstBTDeviceInfo.pcAddress);
+                                if(gfpcBDevStatusUpdate(lenBTDevType, enBTDevStLost, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
                                 }
                             }
                         }
