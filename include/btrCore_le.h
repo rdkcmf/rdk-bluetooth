@@ -31,10 +31,9 @@
 
 typedef void* tBTRCoreLeHdl;
 
-
 /* Enum Types */
 typedef enum _enBTRCoreLEGattProp {
-    enBTRCoreLEGPropUUID,    // G Referring to Gatt
+    enBTRCoreLEGPropUUID,
     enBTRCoreLEGPropPrimary,
     enBTRCoreLEGPropDevice,
     enBTRCoreLEGPropService,
@@ -46,28 +45,30 @@ typedef enum _enBTRCoreLEGattProp {
 } enBTRCoreLEGattProp;
 
 typedef enum _enBTRCoreLEGattOp {
-    enBTRCoreLEGOpReadValue,    // G Referring to Gatt
+    enBTRCoreLEGOpReadValue,
     enBTRCoreLEGOpWriteValue,
     enBTRCoreLEGOpStartNotify,
     enBTRCoreLEGOpStopNotify,
-    enBTRCoreLEGOpUnknown       // Add enBTRCoreLEGOpXXXXX Later if needed
+    enBTRCoreLEGOpUnknown
 } enBTRCoreLEGattOp;
 
 
+/* Fptr callback types */
+    //typedef enBTRCoreRet (*fPtr_BTRCore_LeDevStatusUpdateCb) ( DevType, LeInfo, void* apUserData);
+    // can it be mapped to btrCore_BTDeviceStatusUpdateCb()?
 
-//Fptr callback types
-//typedef enBTRCoreRet (*fPtr_BTRCore_LeDevStatusUpdateCb) ( DevType, LeInfo, void* apUserData);
-// can it be mapped to btrCore_BTDeviceStatusUpdateCb()?
 
-
+/* Interfaces */
 enBTRCoreRet BTRCore_LE_Init (tBTRCoreLeHdl* phBTRCoreLe, void* apBtConn, const char* apBtAdapter);
+
 enBTRCoreRet BTRCore_LE_DeInit (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtAdapter);
 
-/* Should be called by BTRCore_GetSupportedServices */
-enBTRCoreRet BTRCore_LE_GetAvailableServicesGatt (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* lePropertyKey, void* lePropertyValue); // Maps to Gatt service
+enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId atBTRCoreDevId,
+                                         const char* apBtUuid, enBTRCoreLEGattProp aenBTRCoreLEGattProp, void* apBtPropValue);
 
-enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* apBtUuid, enBTRCoreLEGattProp aenBTRCoreLEGattProp, void* apBtPropValue);
+enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId atBTRCoreDevId,
+                                       const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp, void* rpLeOpRes);
 
-enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const char* apBtDevAddr, const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp, void* rpLeOpRes);
+/* Outgoing callbacks Registration Interfaces */
 
 #endif // __BTR_CORE_LE_H__

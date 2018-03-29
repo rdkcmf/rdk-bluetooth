@@ -154,19 +154,20 @@ static tBTRCoreDevId btrCore_LE_BTGenerateUniqueDeviceID (const char* apcDeviceA
 
 static stBTRCoreLeGattProfile* btrCore_LE_FindGattProfile (stBTRCoreLeHdl *pstBTRCoreLeHdl, tBTRCoreDevId aBtrDeviceID);
 static stBTRCoreLeGattService* btrCore_LE_FindGattService (stBTRCoreLeGattProfile  *pstGattProfile, const char *pService);
-static stBTRCoreLeGattChar* btrCore_LE_FindGattCharacteristic (stBTRCoreLeGattService *pstService, const char *pChar);
-static stBTRCoreLeGattDesc* btrCore_LE_FindGattDescriptor (stBTRCoreLeGattChar *pstChar, const char *desc);
+static stBTRCoreLeGattChar*    btrCore_LE_FindGattCharacteristic (stBTRCoreLeGattService *pstService, const char *pChar);
+static stBTRCoreLeGattDesc*    btrCore_LE_FindGattDescriptor (stBTRCoreLeGattChar *pstChar, const char *desc);
 
-static enBTRCoreRet btrCore_LE_GetGattCharacteristicUUIDList (stBTRCoreLeGattService *pstService, void* uuidList);
-static enBTRCoreRet btrCore_LE_GetGattDescriptorUUIDList (stBTRCoreLeGattChar *pstChar, void* uuidList);
-static enBTRCoreRet btrCore_LE_GetDataPath (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId  atBTRCoreDevId, const char* apBtLeUuid, char* rpBtLePath, enBTOpIfceType* renBTOpIfceType);
+static enBTRCoreRet  btrCore_LE_GetGattCharacteristicUUIDList (stBTRCoreLeGattService *pstService, void* uuidList);
+static enBTRCoreRet  btrCore_LE_GetGattDescriptorUUIDList (stBTRCoreLeGattChar *pstChar, void* uuidList);
+static enBTRCoreRet  btrCore_LE_GetDataPath (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId  atBTRCoreDevId,
+                                             const char* apBtLeUuid, char* rpBtLePath, enBTOpIfceType* renBTOpIfceType);
 
-static unsigned short btrCore_LE_GetAllowedGattFlagValues (char (*flags)[BT_MAX_UUID_STR_LEN], enBTOpIfceType aenBtOpIfceType);
-static inline BOOLEAN btrCore_LE_isServiceSupported (char* apUUID);
-
+static unsigned short  btrCore_LE_GetAllowedGattFlagValues (char (*flags)[BT_MAX_UUID_STR_LEN], enBTOpIfceType aenBtOpIfceType);
+static inline BOOLEAN  btrCore_LE_isServiceSupported (char* apUUID);
 
 /* Callbacks */
-static int btrCore_LE_GattInfoCb (enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* aBtdevAddr, enBTDeviceState aenBTDeviceState, void* apConnHdl, void* apUserData );
+static int  btrCore_LE_GattInfoCb (enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* aBtdevAddr,
+                                   enBTDeviceState aenBTDeviceState, void* apConnHdl, void* apUserData );
 
 
 /* static function definitions */
@@ -281,18 +282,29 @@ btrCore_LE_FindGattDescriptor (
     return pstDesc; 
 }
 
+// Could make this to a common layer as btrcore.c also uses similar api
 static inline BOOLEAN
 btrCore_LE_isServiceSupported (
     char*           apUUID
 ) {
     BOOLEAN isSupported = FALSE;
+    char lUUID[8];
 
     if (!apUUID) {
         BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
 
-    if (strstr(apUUID, BTR_CORE_GATT_TILE_1) || strstr(apUUID, BTR_CORE_GATT_TILE_2)) {
+    lUUID[0] = '0';
+    lUUID[1] = 'x';
+    lUUID[2] = apUUID[4];
+    lUUID[3] = apUUID[5];
+    lUUID[4] = apUUID[6];
+    lUUID[5] = apUUID[7];
+    lUUID[6] = '\0';
+    
+    if (!strcmp(lUUID, BTR_CORE_GATT_TILE_1) ||
+        !strcmp(lUUID, BTR_CORE_GATT_TILE_2) ){
         isSupported = TRUE;
     } /* - Add further supported Services
     else if {
@@ -556,8 +568,8 @@ BTRCore_LE_Init (
     stBTRCoreLeHdl*    pstlhBTRCoreLe  = NULL;
 
     if (!phBTRCoreLe || !apBtConn || !apBtAdapter) {
-       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
-       return enBTRCoreInvalidArg;
+        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+        return enBTRCoreInvalidArg;
     }
 
     BTRCORELOG_ERROR ("BTRCore_LE_Init\n");
@@ -565,19 +577,18 @@ BTRCore_LE_Init (
     pstlhBTRCoreLe = (stBTRCoreLeHdl*)malloc(sizeof(stBTRCoreLeHdl));
 
     if (!pstlhBTRCoreLe) {
-       BTRCORELOG_ERROR ("Memory Allocation Failed\n");
-       return enBTRCoreInitFailure;
+        BTRCORELOG_ERROR ("Memory Allocation Failed\n");
+        return enBTRCoreInitFailure;
     }
 
     memset(pstlhBTRCoreLe, 0, sizeof(stBTRCoreLeHdl));
-
 
 
     if (BtrCore_BTRegisterLEGattInfoCb (apBtConn,
                                         apBtAdapter,
                                         &btrCore_LE_GattInfoCb,
                                         pstlhBTRCoreLe)) {
-       lenBTRCoreRet = enBTRCoreFailure;
+        lenBTRCoreRet = enBTRCoreFailure;
     }
                                        
     if (lenBTRCoreRet != enBTRCoreSuccess) {
@@ -614,22 +625,22 @@ enBTRCoreRet
 BTRCore_LE_GetGattProperty (
     tBTRCoreLeHdl        hBTRCoreLe,
     void*                apvBtConn,
-    const char*          apcBtDevAddr,
+    tBTRCoreDevId        atBTRCoreDevId,
     const char*          apcBtUuid,
     enBTRCoreLEGattProp  aenBTRCoreLEGattProp,
     void*                apvBtPropValue
 ) {
     char lpcBtLePath[BT_MAX_STR_LEN] = "\0";
     enBTOpIfceType lenBTOpIfceType   = enBTUnknown;
-    tBTRCoreDevId  ltBTRCoreDevId    = btrCore_LE_BTGenerateUniqueDeviceID (apcBtDevAddr);
+    //tBTRCoreDevId  ltBTRCoreDevId    = btrCore_LE_BTGenerateUniqueDeviceID (apcBtDevAddr);
     unBTOpIfceProp lunBTOpIfceProp;
 
-    if (!hBTRCoreLe || !apvBtConn || !apcBtDevAddr || !apcBtUuid)  {
+    if (!hBTRCoreLe || !apvBtConn || !atBTRCoreDevId || !apcBtUuid)  {
         BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
   
-    if (btrCore_LE_GetDataPath(hBTRCoreLe, apvBtConn, ltBTRCoreDevId, apcBtUuid, lpcBtLePath, &lenBTOpIfceType) != enBTRCoreSuccess) {
+    if (btrCore_LE_GetDataPath(hBTRCoreLe, apvBtConn, atBTRCoreDevId, apcBtUuid, lpcBtLePath, &lenBTOpIfceType) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("Failed to get LE Path for UUID %s !!!", apcBtUuid);
         return enBTRCoreFailure;
     }
@@ -645,7 +656,7 @@ BTRCore_LE_GetGattProperty (
         if (lenBTOpIfceType == enBTGattService) {
             stBTRCoreLeHdl*    lpstlhBTRCoreLe  = (stBTRCoreLeHdl*)hBTRCoreLe;
 
-            stBTRCoreLeGattProfile*  pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, ltBTRCoreDevId);
+            stBTRCoreLeGattProfile*  pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, atBTRCoreDevId);
             stBTRCoreLeGattService*  pService   = btrCore_LE_FindGattService(pProfile, lpcBtLePath);
 
             if (!pService) {
@@ -670,7 +681,7 @@ BTRCore_LE_GetGattProperty (
                 return enBTRCoreFailure;
             }
 
-            stBTRCoreLeGattProfile*  pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, ltBTRCoreDevId);
+            stBTRCoreLeGattProfile*  pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, atBTRCoreDevId);
             stBTRCoreLeGattService*  pService   = btrCore_LE_FindGattService(pProfile, servicePath);
             stBTRCoreLeGattChar*     pChar      = btrCore_LE_FindGattCharacteristic(pService, lpcBtLePath);
 
@@ -703,7 +714,7 @@ BTRCore_LE_GetGattProperty (
                 return enBTRCoreFailure;
             }
 
-            stBTRCoreLeGattProfile* pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, ltBTRCoreDevId);
+            stBTRCoreLeGattProfile* pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, atBTRCoreDevId);
             stBTRCoreLeGattService* pService   = btrCore_LE_FindGattService(pProfile, servicePath);
             stBTRCoreLeGattChar*    pChar      = btrCore_LE_FindGattCharacteristic(pService, charPath);
             stBTRCoreLeGattDesc*    pDesc      = btrCore_LE_FindGattDescriptor(pChar, lpcBtLePath);
@@ -771,7 +782,7 @@ enBTRCoreRet
 BtrCore_LE_PerformGattOp (
     tBTRCoreLeHdl      hBTRCoreLe,
     void*              apvBtConn,
-    const char*        apcBtDevAddr,
+    tBTRCoreDevId      atBTRCoreDevId,
     const char*        apcBtUuid,
     enBTRCoreLEGattOp  aenBTRCoreLEGattOp,
     void*              rpLeOpRes
@@ -780,14 +791,14 @@ BtrCore_LE_PerformGattOp (
     char *pDevicePath                = "\0";
     enBTOpIfceType lenBTOpIfceType   = enBTUnknown;
     enBTLeGattOp   lenBTLeGattOp     = enBTLeGattOpUnknown;
-    tBTRCoreDevId  ltBTRCoreDevId    = btrCore_LE_BTGenerateUniqueDeviceID (apcBtDevAddr);
+    //tBTRCoreDevId  ltBTRCoreDevId    = btrCore_LE_BTGenerateUniqueDeviceID (apcBtDevAddr);
 
-    if (!hBTRCoreLe || !apvBtConn || !apcBtDevAddr || !apcBtUuid) {
+    if (!hBTRCoreLe || !apvBtConn || !atBTRCoreDevId || !apcBtUuid) {
        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
        return enBTRCoreInvalidArg;
     }
   
-    if (btrCore_LE_GetDataPath(hBTRCoreLe, apvBtConn, ltBTRCoreDevId, apcBtUuid, lpcBtLePath, &lenBTOpIfceType) != enBTRCoreSuccess) {
+    if (btrCore_LE_GetDataPath(hBTRCoreLe, apvBtConn, atBTRCoreDevId, apcBtUuid, lpcBtLePath, &lenBTOpIfceType) != enBTRCoreSuccess) {
        BTRCORELOG_ERROR ("Failed to get LE Path for UUID %s !!!", apcBtUuid);
        return enBTRCoreFailure;
     }
@@ -804,7 +815,7 @@ BtrCore_LE_PerformGattOp (
     if (lenBTOpIfceType == enBTGattCharacteristic ||
         lenBTOpIfceType == enBTGattDescriptor     ){
         stBTRCoreLeHdl*    lpstlhBTRCoreLe  = (stBTRCoreLeHdl*)hBTRCoreLe;
-        stBTRCoreLeGattProfile*  pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, ltBTRCoreDevId);
+        stBTRCoreLeGattProfile*  pProfile   = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, atBTRCoreDevId);
         pDevicePath = pProfile->devicePath;
     } 
 

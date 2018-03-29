@@ -278,6 +278,10 @@ btrCore_MapClassIDtoDeviceType (
     enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
     BTRCORELOG_DEBUG ("classID = 0x%x\n", classID);
 
+    if (classID == enBTRCore_DC_Tile) {
+        BTRCORELOG_INFO ("enBTRCore_DC_Tile\n");
+        rc = enBTRCore_DC_Tile;
+    } else
     if ((classID & 0x100u) || (classID & 0x200u) || (classID & 0x400u)) {
         unsigned int ui32DevClassID = classID & 0xFFFu;
         BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
@@ -389,7 +393,7 @@ btrCore_GetScannedDeviceAddress (
 
     if (apsthBTRCore->numOfScannedDevices) {
         for (i = 0; i < apsthBTRCore->numOfScannedDevices; i++) {
-            if (apsthBTRCore->stScannedDevicesArr[i].bFound && aBTRCoreDevId == apsthBTRCore->stScannedDevicesArr[i].tDeviceId)
+            if (aBTRCoreDevId == apsthBTRCore->stScannedDevicesArr[i].tDeviceId)
                 return apsthBTRCore->stScannedDevicesArr[i].pcDevicePath;
         }
     }
@@ -458,6 +462,10 @@ btrCore_AddDeviceToScannedDevicesArr (
             }
             else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_A2SRC, NULL, 16)) {
                 lstFoundDevice.enDeviceType = enBTRCore_DC_SmartPhone;
+            }
+            else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_1, NULL, 16) ||
+                     lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_2, NULL, 16) ){
+                lstFoundDevice.enDeviceType = enBTRCore_DC_Tile;
             }
         }
     }
@@ -554,17 +562,6 @@ btrCore_AddDeviceToKnownDevicesArr (
     apsthBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = apsthBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState;
     apsthBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = apsthBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState;
 
-    /* Remove Device Entry from Scanned List after adding in Paired List */
-    {   /* TODO Let we Exclude LE devices from doing this  */
-        if (i32ScannedDevIdx != apsthBTRCore->numOfScannedDevices-1) {
-            memcpy (&apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx], &apsthBTRCore->stScannedDevicesArr[apsthBTRCore->numOfScannedDevices-1], sizeof(stBTRCoreBTDevice));
-            memcpy (&apsthBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx], &apsthBTRCore->stScannedDevStInfoArr[apsthBTRCore->numOfScannedDevices-1], sizeof(stBTRCoreDevStateInfo));
-        }
-        apsthBTRCore->stScannedDevicesArr[apsthBTRCore->numOfScannedDevices-1].bFound      = FALSE;
-        apsthBTRCore->stScannedDevicesArr[apsthBTRCore->numOfScannedDevices-1].tDeviceId   = 0;
-        apsthBTRCore->numOfScannedDevices--;
-    }
-    
     BTRCORELOG_TRACE ("Added in stKnownDevicesArr - DevID = %lld  i32KnownDevIdx = %d  NumOfPairedDevices = %d\n", ltDeviceId, i32KnownDevIdx, apsthBTRCore->numOfPairedDevices);
 }
 
@@ -724,6 +721,7 @@ btrCore_PopulateListOfPairedDevices (
                     apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDevicePrevState = enBTRCoreDevStInitialized;
                     apsthBTRCore->stKnownDevStInfoArr[apsthBTRCore->numOfPairedDevices].eDeviceCurrState = enBTRCoreDevStPaired;
                     apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices].bDeviceConnected   = FALSE;
+                    apsthBTRCore->stKnownDevicesArr[apsthBTRCore->numOfPairedDevices].bFound             = TRUE; // Paired Now
                 }
                 apsthBTRCore->numOfPairedDevices++;
             }
@@ -3243,12 +3241,13 @@ BTRCore_GetDeviceTypeClass (
         }
     }
 
+
     if (!pstBTDevice && pstlhBTRCore->numOfScannedDevices) {
         if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
             pstBTDevice = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
         }
         else {
-            for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
+            for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
                 if (aBTRCoreDevId == pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId) {
                     pstBTDevice = &pstlhBTRCore->stScannedDevicesArr[i32LoopIdx];
                     break;
@@ -3285,9 +3284,11 @@ BTRCore_GetDeviceTypeClass (
     else if (*apenBTRCoreDevCl == enBTRCore_DC_HIFIAudioDevice) {
        *apenBTRCoreDevTy = enBTRCoreSpeakers;
     }
-    else {
+    else if (*apenBTRCoreDevCl == enBTRCore_DC_Tile) {
+       *apenBTRCoreDevTy = enBTRCoreLE;
         //TODO: May be use should have AudioDeviceClass & LE DeviceClass 
         //      will help us to identify the device Type as LE
+    } else {
         *apenBTRCoreDevTy = enBTRCoreUnknown; 
     }
 
@@ -4111,14 +4112,11 @@ BTRCore_GetLEProperty (
 
     stBTRCoreHdl*         pstlhBTRCore   = (stBTRCoreHdl*)hBTRCore;
     stBTRCoreBTDevice*    pstScannedDev  = NULL;
-    const char*           pDevicePath    = NULL;
+    tBTRCoreDevId         ltBTRCoreDevId = 0;
     int                   i32LoopIdx     = 0;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
        pstScannedDev  = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
-
-       if (pstScannedDev)
-          pDevicePath = pstScannedDev->pcDeviceAddress;
     }
     else {
        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
@@ -4127,18 +4125,19 @@ BTRCore_GetLEProperty (
               break;
            }
        }
-       if (pstScannedDev) {
-          pDevicePath = pstScannedDev->pcDeviceAddress;
-       }
     }
 
-    if (!pstScannedDev || !pDevicePath) {
+    if (pstScannedDev) {
+        ltBTRCoreDevId = pstScannedDev->tDeviceId;
+    }
+
+    if (!pstScannedDev || !ltBTRCoreDevId) {
        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
        return enBTRCoreDeviceNotFound;
     }
 
     BTRCORELOG_DEBUG ("Get LE Property for Device : %s\n", pstScannedDev->pcDeviceName);
-    BTRCORELOG_DEBUG ("LE Device Address  %s\n", pDevicePath);
+    BTRCORELOG_DEBUG ("LE DeviceID  %llu\n", ltBTRCoreDevId);
 
     enBTRCoreLEGattProp  lenBTRCoreLEGattProp = enBTRCoreLEGPropUnknown;
 
@@ -4175,7 +4174,7 @@ BTRCore_GetLEProperty (
 
     if (lenBTRCoreLEGattProp == enBTRCoreLEGPropUnknown || BTRCore_LE_GetGattProperty (pstlhBTRCore->leHdl,
                                                                                       pstlhBTRCore->connHdl,
-                                                                                      pDevicePath,
+                                                                                      ltBTRCoreDevId,
                                                                                       apcBTRCoreLEUuid,
                                                                                       lenBTRCoreLEGattProp,
                                                                                       apvBTRCorePropValue) != enBTRCoreSuccess) {
@@ -4201,16 +4200,13 @@ BTRCore_PerformLEOp (
         return enBTRCoreInvalidArg;
     }
 
-    stBTRCoreHdl*       pstlhBTRCore  = (stBTRCoreHdl*)hBTRCore;
-    stBTRCoreBTDevice*  pstScannedDev = NULL;
-    const char*         pDevicePath   = NULL;
-    int                 i32LoopIdx    = 0;
+    stBTRCoreHdl*       pstlhBTRCore   = (stBTRCoreHdl*)hBTRCore;
+    stBTRCoreBTDevice*  pstScannedDev  = NULL;
+    tBTRCoreDevId       ltBTRCoreDevId = 0;
+    int                 i32LoopIdx     = 0;
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
        pstScannedDev  = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
-
-       if (pstScannedDev)
-          pDevicePath = pstScannedDev->pcDeviceAddress;
     }
     else {
        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
@@ -4219,23 +4215,24 @@ BTRCore_PerformLEOp (
               break;
            }
        }
-       if (pstScannedDev) {
-          pDevicePath = pstScannedDev->pcDeviceAddress;
-       }
     }
 
-    if (!pstScannedDev || !pDevicePath) {
-       BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
-       return enBTRCoreDeviceNotFound;
+    if (pstScannedDev) {
+        ltBTRCoreDevId = pstScannedDev->tDeviceId;
     }
 
-    /*if (pstScannedDev->bFound && pstScannedDev->bDeviceConnected) {
-        BTRCORELOG_ERROR ("Le Device is not connected, Please connect and perform LE method operation\n");
+    if (!pstScannedDev || !ltBTRCoreDevId) {
+        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
         return enBTRCoreDeviceNotFound;
-    } else {*/
-       BTRCORELOG_DEBUG ("Perform LE Op for Device : %s\n", pstScannedDev->pcDeviceName);
-       BTRCORELOG_DEBUG ("LE Device Address  %s\n", pDevicePath);
+    }
+
+    //if (pstScannedDev->bFound && pstScannedDev->bDeviceConnected) {
+    //    BTRCORELOG_ERROR ("Le Device is not connected, Please connect and perform LE method operation\n");
+    //    return enBTRCoreDeviceNotFound;
     //}
+
+    BTRCORELOG_DEBUG ("Perform LE Op for Device : %s\n", pstScannedDev->pcDeviceName);
+    BTRCORELOG_DEBUG ("LE DeviceID  %llu\n", ltBTRCoreDevId);
 
     enBTRCoreLEGattOp  lenBTRCoreLEGattOp = enBTRCoreLEGOpUnknown;
 
@@ -4260,7 +4257,7 @@ BTRCore_PerformLEOp (
 
     if (lenBTRCoreLEGattOp == enBTRCoreLEGOpUnknown || BtrCore_LE_PerformGattOp (pstlhBTRCore->leHdl,
                                                                                  pstlhBTRCore->connHdl,
-                                                                                 pDevicePath,
+                                                                                 ltBTRCoreDevId,
                                                                                  apBtUuid,
                                                                                  lenBTRCoreLEGattOp,
                                                                                  rpLeOpRes) != enBTRCoreSuccess) {
@@ -4269,7 +4266,6 @@ BTRCore_PerformLEOp (
     }
 
     return enBTRCoreSuccess;
-
 }
 
 
@@ -4494,7 +4490,6 @@ btrCore_BTDeviceStatusUpdateCb (
                     BTRCORELOG_INFO ("aUUIDs = %s\n", apstBTDeviceInfo->aUUIDs[j]);
             }
 
-
             lBTRCoreDevId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
             if (btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId)) {
                 BTRCORELOG_INFO ("Already we have a entry in the list; Skip Parsing now \n");
@@ -4514,7 +4509,6 @@ btrCore_BTDeviceStatusUpdateCb (
         if (lpstlhBTRCore && apstBTDeviceInfo) {
             int     i32LoopIdx      = 0;
             BOOLEAN postEvent       = FALSE;
-            BOOLEAN devFound        = FALSE;
 
             tBTRCoreDevId   lBTRCoreDevId     = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
 
@@ -4560,13 +4554,12 @@ btrCore_BTDeviceStatusUpdateCb (
                                 }
                             }
                         }
-                        devFound = TRUE;
                         break;
                     }
                 }
             }
 
-            if (!devFound && lpstlhBTRCore->numOfScannedDevices) {
+            if (lpstlhBTRCore->numOfScannedDevices) {
                 for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
                     if (lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
                         BTRCORELOG_TRACE ("i32LoopIdx = %d\n", i32LoopIdx);
@@ -4676,8 +4669,7 @@ btrCore_BTDeviceStatusUpdateCb (
 
                         if ((enBTRCoreMobileAudioIn != lenBTRCoreDevType) && (enBTRCorePCAudioIn != lenBTRCoreDevType)) {
 
-                            if ( !(((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected ||
-                                     lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnecting )  && (leBTDevState == enBTRCoreDevStDisconnected)) ||
+                            if ( !(((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected) && (leBTDevState == enBTRCoreDevStDisconnected)) ||
                                    ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected) && 
                                     ((lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStPaired) || 
                                      (lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStConnecting))))) {
