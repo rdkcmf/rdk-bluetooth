@@ -191,7 +191,7 @@ static enBTDeviceType
 btrCore_BTMapDevClasstoDevType (
     unsigned int    aui32Class
 ) {
-    enBTDeviceType lenBtDevType = enBTDevStUnknown;
+    enBTDeviceType lenBtDevType = enBTDevUnknown;
 
     if ((aui32Class & 0x100u) || (aui32Class & 0x200u) || (aui32Class & 0x400u)) {
         unsigned int ui32DevClassID = aui32Class & 0xFFFu;
@@ -4521,6 +4521,31 @@ btrCore_BTDBusConnectionFilterCb (
                         }
                         else if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected) {
                             lenBtDevState = enBTDevStFound;
+
+                            if (gfpcBDevStatusUpdate) {
+                                if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                }
+                            }
+                        }
+                        else if (lenBTDevType == enBTDevUnknown) { //TODO: Have to figure out a way to identify it as a LE device
+                            if (lstBTDeviceInfo.bConnected) {
+                                const char* value = "connected";
+
+                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+                                lenBtDevState = enBTDevStPropChanged;
+                            }
+                            else if (!lstBTDeviceInfo.bConnected) { //TODO: We are never going to enter here. Have to think of something else
+                                const char* value = "disconnected"; // Disconnect State is never going to be propagated to upper layer
+
+                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+                                lenBtDevState = enBTDevStPropChanged;
+                            }
 
                             if (gfpcBDevStatusUpdate) {
                                 if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
