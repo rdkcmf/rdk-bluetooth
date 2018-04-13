@@ -110,6 +110,8 @@ static DBusConnection*  gpDBusConn = NULL;
 static char*            gpcBTOutPassCode = NULL;
 static int              gi32DoReject = 0;
 static char             gpcDeviceCurrState[BT_MAX_STR_LEN] = {'\0'};
+static char             gpcLeDeviceCurrState[BT_MAX_STR_LEN] = {'\0'};
+static char             gpcLeDeviceAddress[BT_MAX_STR_LEN] = {'\0'};
 static char             gpcMediaCurrState[BT_MAX_STR_LEN] = {'\0'};
 static char*            gpcBTAgentPath = NULL;
 static char*            gpcBTDAdapterPath = NULL;
@@ -1612,6 +1614,8 @@ BtrCore_BTInitGetConnection (
     gpDBusConn = lpDBusConn;
 
     strncpy(gpcDeviceCurrState, "disconnected", BT_MAX_STR_LEN - 1);
+    strncpy(gpcLeDeviceCurrState, "disconnected", BT_MAX_STR_LEN - 1);
+    strncpy (gpcLeDeviceAddress, "none", BT_MAX_STR_LEN - 1);
     strncpy(gpcMediaCurrState, "none", BT_MAX_STR_LEN - 1); 
 
     if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusConnectionFilterCb, NULL, NULL)) {
@@ -4519,7 +4523,9 @@ btrCore_BTDBusConnectionFilterCb (
                                 }
                             }
                         }
-                        else if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected) {
+                        else if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected &&
+                                 strncmp(gpcLeDeviceAddress, lstBTDeviceInfo.pcAddress,
+                                     ((BT_MAX_STR_LEN > strlen(lstBTDeviceInfo.pcAddress))?strlen(lstBTDeviceInfo.pcAddress):BT_MAX_STR_LEN))) {
                             lenBtDevState = enBTDevStFound;
 
                             if (gfpcBDevStatusUpdate) {
@@ -4531,21 +4537,22 @@ btrCore_BTDBusConnectionFilterCb (
                             if (lstBTDeviceInfo.bConnected) {
                                 const char* value = "connected";
 
-                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
                                 strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-
-                                lenBtDevState = enBTDevStPropChanged;
+                                strncpy(gpcLeDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(gpcLeDeviceAddress, lstBTDeviceInfo.pcAddress, BT_MAX_STR_LEN - 1);
                             }
-                            else if (!lstBTDeviceInfo.bConnected) { //TODO: We are never going to enter here. Have to think of something else
-                                const char* value = "disconnected"; // Disconnect State is never going to be propagated to upper layer
+                            else if (!lstBTDeviceInfo.bConnected) {
+                                const char* value = "disconnected";
 
-                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
                                 strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-
-                                lenBtDevState = enBTDevStPropChanged;
+                                strncpy(gpcLeDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(gpcLeDeviceAddress, "none", strlen("none"));
                             }
+
+                            lenBTDevType  = enBTDevLE;
+                            lenBtDevState = enBTDevStPropChanged;
 
                             if (gfpcBDevStatusUpdate) {
                                 if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
