@@ -32,9 +32,6 @@
 #include "btrCore.h"            //basic RDK BT functions
 #include "btrCore_service.h"    //service UUIDs, use for service discovery
 
-//test func
-void test_func(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
-
 
 //for BT audio input testing
 static pthread_t fileWriteThread;
@@ -1030,9 +1027,6 @@ main (
                    }
                 }
             }
-            break;
-        case 88:
-            test_func(lhBTRCore, &lstBTRCoreAdapter);
             break;
         case 99: 
             fprintf(stderr, "%d\t: %s - Quitting program!\n", __LINE__, __FUNCTION__);

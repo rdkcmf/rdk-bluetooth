@@ -293,7 +293,7 @@ btrCore_AVMedia_PlaybackPositionPolling (
         if (threadExit)
             break;
 
-        if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {     /* a better way to synchronization has to be deviced */
+        if (pstlhBTRCoreAVM->pcAVMediaTransportPath && pstlhBTRCoreAVM->pcAVMediaPlayerPath) {     /* a better way to synchronization has to be deviced */
             statusRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Status",   (void*)&mediaState);
         }
         else {
@@ -328,7 +328,7 @@ btrCore_AVMedia_PlaybackPositionPolling (
         }
 
 
-        if (isPlaying && pstlhBTRCoreAVM->pcAVMediaTransportPath) {
+        if (isPlaying && pstlhBTRCoreAVM->pcAVMediaTransportPath && pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
             positionRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition);
             trackRet    = BtrCore_BTGetTrackInformation(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (stBTMediaTrackInfo*)&mediaTrackInfo);
 
@@ -1016,19 +1016,19 @@ BTRCore_AVMedia_ExitMediaPositionPolling (
 
     if (pstlhBTRCoreAVM->pMediaPollingThread) {
 
-       g_mutex_lock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
-          pstlhBTRCoreAVM->mediaPollingThreadExit = TRUE;   /* Exit playback position polling thread */
-       g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+        g_mutex_lock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+        pstlhBTRCoreAVM->mediaPollingThreadExit = TRUE;   /* Exit playback position polling thread */
+        g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
 
-       g_thread_join (pstlhBTRCoreAVM->pMediaPollingThread);
-       g_mutex_clear (&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+        g_thread_join (pstlhBTRCoreAVM->pMediaPollingThread);
+        g_mutex_clear (&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
 
-       BTRCORELOG_INFO ("Successfully Exited Media Position Polling Thread");
+        BTRCORELOG_INFO ("Successfully Exited Media Position Polling Thread");
     }
     else {
-       BTRCORELOG_ERROR ("pstlhBTRCoreAVM->pMediaPollingThread doesn't exists!!!");
-       lenBTRCoreRet = enBTRCoreFailure;
-    } 
+        BTRCORELOG_ERROR ("pstlhBTRCoreAVM->pMediaPollingThread doesn't exists!!!");
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
 
     return lenBTRCoreRet;
 }
