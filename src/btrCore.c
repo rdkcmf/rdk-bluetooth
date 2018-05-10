@@ -417,14 +417,16 @@ btrCore_AddDeviceToScannedDevicesArr (
     memset(&lstFoundDevice, 0, sizeof(stBTRCoreBTDevice));
 
 
-    lstFoundDevice.bFound       = FALSE;
-    lstFoundDevice.i32RSSI      = apstBTDeviceInfo->i32RSSI;
-    lstFoundDevice.ui32VendorId = apstBTDeviceInfo->ui16Vendor;
-    lstFoundDevice.tDeviceId    = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
-    lstFoundDevice.enDeviceType = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
-    strncpy(lstFoundDevice.pcDeviceName,      apstBTDeviceInfo->pcName,       BD_NAME_LEN);
-    strncpy(lstFoundDevice.pcDeviceAddress,   apstBTDeviceInfo->pcAddress,    BD_NAME_LEN);
-    strncpy(lstFoundDevice.pcDevicePath,      apstBTDeviceInfo->pcDevicePath, BD_NAME_LEN);
+    lstFoundDevice.bFound               = FALSE;
+    lstFoundDevice.i32RSSI              = apstBTDeviceInfo->i32RSSI;
+    lstFoundDevice.ui32VendorId         = apstBTDeviceInfo->ui16Vendor;
+    lstFoundDevice.tDeviceId            = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
+    lstFoundDevice.enDeviceType         = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+    lstFoundDevice.ui32DevClassBtSpec   = apstBTDeviceInfo->ui32Class;
+
+    strncpy(lstFoundDevice.pcDeviceName,    apstBTDeviceInfo->pcName,       BD_NAME_LEN);
+    strncpy(lstFoundDevice.pcDeviceAddress, apstBTDeviceInfo->pcAddress,    BD_NAME_LEN);
+    strncpy(lstFoundDevice.pcDevicePath,    apstBTDeviceInfo->pcDevicePath, BD_NAME_LEN);
 
     /* Populate the profile supported */
     for (i = 0; i < BT_MAX_DEVICE_PROFILE; i++) {
@@ -454,20 +456,12 @@ btrCore_AddDeviceToScannedDevicesArr (
 
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if ((lstFoundDevice.tDeviceId == apsthBTRCore->stScannedDevicesArr[i].tDeviceId) || (apsthBTRCore->stScannedDevicesArr[i].bFound == FALSE)) {
-            BTRCORELOG_DEBUG ("Unique DevID = %lld\n", lstFoundDevice.tDeviceId);
+            BTRCORELOG_DEBUG ("Unique DevID = %lld\n",      lstFoundDevice.tDeviceId);
             BTRCORELOG_DEBUG ("Adding %s at location %d\n", lstFoundDevice.pcDeviceAddress, i);
-            apsthBTRCore->stScannedDevicesArr[i].bFound         = TRUE;     //mark the record as found
-            apsthBTRCore->stScannedDevicesArr[i].i32RSSI        = lstFoundDevice.i32RSSI;
-            apsthBTRCore->stScannedDevicesArr[i].ui32VendorId   = lstFoundDevice.ui32VendorId;
-            apsthBTRCore->stScannedDevicesArr[i].enDeviceType   = lstFoundDevice.enDeviceType;
-            apsthBTRCore->stScannedDevicesArr[i].tDeviceId      = lstFoundDevice.tDeviceId;
 
-            strncpy(apsthBTRCore->stScannedDevicesArr[i].pcDeviceName,   lstFoundDevice.pcDeviceName,    BD_NAME_LEN);
-            strncpy(apsthBTRCore->stScannedDevicesArr[i].pcDeviceAddress,lstFoundDevice.pcDeviceAddress, BD_NAME_LEN);
-            strncpy(apsthBTRCore->stScannedDevicesArr[i].pcDevicePath,   lstFoundDevice.pcDevicePath,    BD_NAME_LEN);
-            
-            /* Copy the profile supports */
-            memcpy (&apsthBTRCore->stScannedDevicesArr[i].stDeviceProfile, &lstFoundDevice.stDeviceProfile, sizeof(stBTRCoreSupportedServiceList));
+            lstFoundDevice.bFound   = TRUE;     //mark the record as found
+
+            memcpy (&apsthBTRCore->stScannedDevicesArr[i], &lstFoundDevice, sizeof(stBTRCoreBTDevice));
 
             apsthBTRCore->stScannedDevStInfoArr[i].eDevicePrevState = apsthBTRCore->stScannedDevStInfoArr[i].eDeviceCurrState;
             apsthBTRCore->stScannedDevStInfoArr[i].eDeviceCurrState = enBTRCoreDevStFound;
@@ -528,18 +522,9 @@ btrCore_AddDeviceToKnownDevicesArr (
 
 
     i32KnownDevIdx = apsthBTRCore->numOfPairedDevices++;
-    apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].tDeviceId          = apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].tDeviceId;
-    apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType       = apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].enDeviceType;
-    apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].i32RSSI            = apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].i32RSSI;
-    apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].ui32VendorId       = apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].ui32VendorId;
-    apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].bFound             = apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].bFound;
+
+    memcpy (&apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx], &apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx], sizeof(stBTRCoreBTDevice));
     apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected   = apstBTDeviceInfo->bConnected;
-
-    strncpy(apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].pcDeviceName,    apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].pcDeviceName,    BD_NAME_LEN - 1);
-    strncpy(apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].pcDeviceAddress, apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].pcDeviceAddress, BD_NAME_LEN - 1);
-    strncpy(apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].pcDevicePath,    apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].pcDevicePath,    BD_NAME_LEN - 1);
-
-    memcpy (&apsthBTRCore->stKnownDevicesArr[i32KnownDevIdx].stDeviceProfile, &apsthBTRCore->stScannedDevicesArr[i32ScannedDevIdx].stDeviceProfile, sizeof(stBTRCoreSupportedServiceList));
 
     BTRCORELOG_TRACE ("Added in stKnownDevicesArr - DevID = %lld  i32KnownDevIdx = %d  NumOfPairedDevices = %d\n", ltDeviceId, i32KnownDevIdx, apsthBTRCore->numOfPairedDevices);
 
@@ -559,6 +544,7 @@ btrCore_MapKnownDeviceListFromPairedDeviceInfo (
         knownDevicesArr[i_idx].bDeviceConnected     = pairedDeviceInfo->deviceInfo[i_idx].bConnected;
         knownDevicesArr[i_idx].tDeviceId            = btrCore_GenerateUniqueDeviceID(pairedDeviceInfo->deviceInfo[i_idx].pcAddress);
         knownDevicesArr[i_idx].enDeviceType         = btrCore_MapClassIDtoDeviceType(pairedDeviceInfo->deviceInfo[i_idx].ui32Class);
+        knownDevicesArr[i_idx].ui32DevClassBtSpec   = pairedDeviceInfo->deviceInfo[i_idx].ui32Class;
         strncpy(knownDevicesArr[i_idx].pcDeviceName, pairedDeviceInfo->deviceInfo[i_idx].pcName, BD_NAME_LEN);
         strncpy(knownDevicesArr[i_idx].pcDeviceAddress, pairedDeviceInfo->deviceInfo[i_idx].pcAddress, BD_NAME_LEN);
         strncpy(knownDevicesArr[i_idx].pcDevicePath, pairedDeviceInfo->devicePath[i_idx], BD_NAME_LEN);
@@ -2373,9 +2359,6 @@ BTRCore_PairDevice (
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         pstScannedDev   = &pstlhBTRCore->stScannedDevicesArr[aBTRCoreDevId];
-
-        if (pstScannedDev)
-            pDeviceAddress  = pstScannedDev->pcDeviceAddress;
     }
     else {
         for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
@@ -2384,9 +2367,12 @@ BTRCore_PairDevice (
                 break;
             }
         }
-        if (pstScannedDev)
-            pDeviceAddress  = pstScannedDev->pcDeviceAddress;
     }
+
+
+    if (pstScannedDev)
+        pDeviceAddress  = pstScannedDev->pcDeviceAddress;
+
 
     if (!pstScannedDev || !pDeviceAddress || !strlen(pDeviceAddress)) {
         BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
@@ -2642,7 +2628,7 @@ BTRCore_IsDeviceConnectable (
     tBTRCoreDevId       aBTRCoreDevId
 ) {
     stBTRCoreHdl*       pstlhBTRCore = NULL;
-    const char*         pDeviceAddress = NULL;
+    const char*         pDeviceMac = NULL;
 
 
     if (!hBTRCore) {
@@ -2670,20 +2656,20 @@ BTRCore_IsDeviceConnectable (
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress  = pstKnownDevice->pcDeviceAddress;
+        pDeviceMac      = pstKnownDevice->pcDeviceAddress;
     }
     else {
-        pDeviceAddress  = btrCore_GetKnownDeviceMac(pstlhBTRCore, aBTRCoreDevId);
+        pDeviceMac      = btrCore_GetKnownDeviceMac(pstlhBTRCore, aBTRCoreDevId);
     }
 
 
-    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
+    if (!pDeviceMac || !strlen(pDeviceMac)) {
         BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
     }
 
 
-    if (BtrCore_BTIsDeviceConnectable(pstlhBTRCore->connHdl, pDeviceAddress) != 0) {
+    if (BtrCore_BTIsDeviceConnectable(pstlhBTRCore->connHdl, pDeviceMac) != 0) {
         BTRCORELOG_ERROR ("Device NOT CONNECTABLE\n");
         return enBTRCoreFailure;
     }
@@ -4401,7 +4387,19 @@ btrCore_BTDeviceStatusUpdateCb (
 
     switch (aeBtDeviceType) {
     case enBTDevAudioSink:
-        lenBTRCoreDevType =  enBTRCoreSpeakers;
+        lenBTRCoreDevCl = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
+        if (lenBTRCoreDevCl == enBTRCore_DC_WearableHeadset) {
+           lenBTRCoreDevType =  enBTRCoreHeadSet;
+        }
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Headphones) {
+           lenBTRCoreDevType = enBTRCoreHeadSet;
+        }
+        else if (lenBTRCoreDevCl == enBTRCore_DC_Loudspeaker) {
+           lenBTRCoreDevType = enBTRCoreSpeakers;
+        }
+        else if (lenBTRCoreDevCl == enBTRCore_DC_HIFIAudioDevice) {
+           lenBTRCoreDevType = enBTRCoreSpeakers;
+        }
         break;
     case enBTDevAudioSource:
         lenBTRCoreDevCl = btrCore_MapClassIDtoDeviceType(apstBTDeviceInfo->ui32Class);
@@ -4514,12 +4512,13 @@ btrCore_BTDeviceStatusUpdateCb (
 
                         // move this out of if block. populating stDevStatusCbInfo should be done common for both paired and scanned devices 
                         if (postEvent) {
-                            lpstlhBTRCore->stDevStatusCbInfo.deviceId         = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId;
-                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass     = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].enDeviceType;
-                            lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState;
-                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
-                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceType      = lenBTRCoreDevType;
-                            lpstlhBTRCore->stDevStatusCbInfo.isPaired         = 1;
+                            lpstlhBTRCore->stDevStatusCbInfo.deviceId           = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass       = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].enDeviceType;
+                            lpstlhBTRCore->stDevStatusCbInfo.ui32DevClassBtSpec = lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].ui32DevClassBtSpec;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState   = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState   = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
+                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceType        = lenBTRCoreDevType;
+                            lpstlhBTRCore->stDevStatusCbInfo.isPaired           = 1;
                             strncpy(lpstlhBTRCore->stDevStatusCbInfo.deviceName, lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].pcDeviceName, BD_NAME_LEN - 1);
 
                             if (lpstlhBTRCore->fpcBBTRCoreStatus) {
@@ -4536,19 +4535,33 @@ btrCore_BTDeviceStatusUpdateCb (
             if (lpstlhBTRCore->numOfScannedDevices) {
                 for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
                     if (lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
+                        stBTRCoreBTDevice   lstFoundDevice;
+
                         BTRCORELOG_TRACE ("i32LoopIdx = %d\n", i32LoopIdx);
                         BTRCORELOG_TRACE ("lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDeviceCurrState = %d\n", lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDeviceCurrState);
                         BTRCORELOG_TRACE ("lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDevicePrevState = %d\n", lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDevicePrevState);
 
-                        {   // To confirm if this index preserving method is fine or scan 32 fixed element list always just by flipping  bFound to TRUE/FALSE
-                            if (i32LoopIdx != lpstlhBTRCore->numOfScannedDevices-1) {
-                                memcpy (&lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx], &lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices-1], sizeof(stBTRCoreBTDevice));
-                                memcpy (&lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx], &lpstlhBTRCore->stScannedDevStInfoArr[lpstlhBTRCore->numOfScannedDevices-1], sizeof(stBTRCoreDevStateInfo));   
-                            }
-                            lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices-1].tDeviceId = 0;
-                            lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices-1].bFound    = FALSE;
-                            lpstlhBTRCore->numOfScannedDevices--;
+
+                        memcpy (&lstFoundDevice, &lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx], sizeof(stBTRCoreBTDevice));
+                        lstFoundDevice.bFound = FALSE;
+                        // To confirm if this index preserving method is fine or scan 32 fixed element list always just by flipping  bFound to TRUE/FALSE
+                        // Clean flipping logic. This will suffice
+                        if (i32LoopIdx != lpstlhBTRCore->numOfScannedDevices-1) {
+                            memcpy (&lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx], &lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreBTDevice));
+                            memcpy (&lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx], &lpstlhBTRCore->stScannedDevStInfoArr[lpstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreDevStateInfo));   
                         }
+
+                        memset(&lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreBTDevice));
+                        memset(&lpstlhBTRCore->stScannedDevStInfoArr[lpstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreDevStateInfo));
+
+                        lpstlhBTRCore->numOfScannedDevices--;
+
+                        if (lpstlhBTRCore->fpcBBTRCoreDeviceDisc) {
+                            if ((lenBTRCoreRet = lpstlhBTRCore->fpcBBTRCoreDeviceDisc(lstFoundDevice, lpstlhBTRCore->pvcBDevDiscUserData)) != enBTRCoreSuccess) {
+                                BTRCORELOG_ERROR ("Failure fpcBBTRCoreDeviceDisc Ret = %d\n", lenBTRCoreRet);
+                            }
+                        }
+
 
                         if (!lpstlhBTRCore->numOfScannedDevices) {
                             BTRCORELOG_INFO ("\nClearing Scanned Device List...\n");
@@ -4566,6 +4579,7 @@ btrCore_BTDeviceStatusUpdateCb (
                                 //}      
                             }
                         }
+
                         break;
                     }
                 }
@@ -4786,11 +4800,12 @@ btrCore_BTDeviceStatusUpdateCb (
                 }
 
                 if (bTriggerDevStatusChangeCb == TRUE) {
-                    lpstlhBTRCore->stDevStatusCbInfo.deviceId         = lBTRCoreDevId;
-                    lpstlhBTRCore->stDevStatusCbInfo.eDeviceType      = lenBTRCoreDevType;
-                    lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState = lpstBTRCoreDevStateInfo->eDevicePrevState;
-                    lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState = leBTDevState;
-                    lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass     = lpstBTRCoreBTDevice->enDeviceType;
+                    lpstlhBTRCore->stDevStatusCbInfo.deviceId           = lBTRCoreDevId;
+                    lpstlhBTRCore->stDevStatusCbInfo.eDeviceType        = lenBTRCoreDevType;
+                    lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState   = lpstBTRCoreDevStateInfo->eDevicePrevState;
+                    lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState   = leBTDevState;
+                    lpstlhBTRCore->stDevStatusCbInfo.eDeviceClass       = lpstBTRCoreBTDevice->enDeviceType;
+                    lpstlhBTRCore->stDevStatusCbInfo.ui32DevClassBtSpec = lpstBTRCoreBTDevice->ui32DevClassBtSpec;
                     strncpy(lpstlhBTRCore->stDevStatusCbInfo.deviceName,lpstBTRCoreBTDevice->pcDeviceName, BD_NAME_LEN - 1);
 
                     if (lpstlhBTRCore->fpcBBTRCoreStatus) {

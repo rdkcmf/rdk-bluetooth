@@ -188,6 +188,7 @@ typedef struct _stBTRCoreDevStatusCBInfo {
     enBTRCoreDeviceState    eDevicePrevState;
     enBTRCoreDeviceState    eDeviceCurrState;
     unsigned char           isPaired;
+    unsigned int            ui32DevClassBtSpec;  
 } stBTRCoreDevStatusCBInfo;
 
 typedef struct _stBTRCoreSupportedService {
@@ -219,6 +220,7 @@ typedef struct _stBTRCoreBTDevice {
     BOOLEAN                       bDeviceConnected;
     int                           i32RSSI;
     unsigned int                  ui32VendorId;
+    unsigned int                  ui32DevClassBtSpec;  
     char                          pcDeviceName[BD_NAME_LEN+1];
     char                          pcDeviceAddress[BD_NAME_LEN+1];
     char                          pcDevicePath[BD_NAME_LEN+1];

@@ -24,9 +24,12 @@
 #include <unistd.h>     //for close?
 #include <errno.h>      //for errno handling
 #include <poll.h>
-#include <pthread.h>
+
 #include <sys/stat.h> //for mkfifo
 #include <fcntl.h> //for open
+
+/* Ext lib Headers */
+#include <glib.h>
 
 /* Interface lib Headers */
 #include "btrCore.h"            //basic RDK BT functions
@@ -34,10 +37,9 @@
 
 
 //for BT audio input testing
-static pthread_t fileWriteThread;
-static int  iret1;
-static int writeSBC = 0;
-unsigned int BT_loop = 0;
+static GThread* fileWriteThread = NULL;
+static int      writeSBC = 0;
+unsigned int    BT_loop = 0;
 
 
 typedef struct appDataStruct{
@@ -544,7 +546,7 @@ main (
     //display a menu of choices
     printMenu();
     //start Bluetooth input data writing thread - supports BT in audio test
-    iret1 = pthread_create( &fileWriteThread, NULL, DoSBCwrite, (void*) &stAppData);
+    fileWriteThread = g_thread_new("DoSBCwrite", DoSBCwrite, (gpointer)&stAppData);
     do {
         fprintf(stderr, "Enter a choice...\n");
         scanf("%d", &choice);
