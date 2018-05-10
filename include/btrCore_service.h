@@ -16,7 +16,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-/*btrCore_service.h
+
+/*@file btrCore_service.h
 includes information for query of available services
 */
 
@@ -27,6 +28,10 @@ includes information for query of available services
  * https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
  */
 
+/**
+ * @addtogroup BLUETOOTH_TYPES
+ * @{
+ */
 #define BTR_CORE_SP_TEXT        "Serial Port"
 #define BTR_CORE_SP             "0x1101"
 
@@ -79,5 +84,7 @@ includes information for query of available services
 #define BTR_CORE_GATT_TILE_TEXT "Tile"
 #define BTR_CORE_GATT_TILE_1    "0xfeed"
 #define BTR_CORE_GATT_TILE_2    "0xfeec"
+
+/* @} */ // End of group BLUETOOTH_TYPES
 
 #endif // __BTR_CORE_SERVICE_H__

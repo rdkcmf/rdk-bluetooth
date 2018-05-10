@@ -19,6 +19,12 @@
 /* Bluetooth Header file - June 04, 2015*/
 /* Make header file for the various functions... include structures*/
 /* commit 6aca47c658cf75cad0192a824915dabf82d3200f*/
+
+/*
+ * @file btrCore.h
+ * Core abstraction for BT functionality
+ */
+
 #ifndef __BTR_CORE_H__
 #define __BTR_CORE_H__
 
@@ -27,6 +33,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ @defgroup BLUETOOTH_CORE Bluetooth Core
+* Bluetooth Manager implements the Bluetooth HAL i.e. Bluetooth Core[BTRCore] API.
+* Bluetooth HAL interface provides a software abstraction layer that interfaces
+* with the actual Bluetooth implementation and/or drivers. RDK Bluetooth HAL layer
+* enables projects to pick any Bluetooth profiles as per their requirements.
+* Bluetooth HAL uses BlueZ5.42 stack which is a quite popular Linux Bluetooth library.
+* - Bluetooth HAL - Provides APIs to perform Bluetooth operations by abstracting and simplifying the complexities
+*  of Bt-Ifce (& BLuez)
+* - Bt-Ifce - Abstracts Bluez versions and serves as a HAL for other Bluetooth stacks - Interacts with Bluez over DBus
+* - Bluez -  Interacts with kernel layer bluetooth modules
+* @defgroup BLUETOOTH_TYPES Bluetooth Core Types
+* @ingroup BLUETOOTH_CORE
+*
+* @defgroup BLUETOOTH_APIS Bluetooth Core APIs
+* @ingroup BLUETOOTH_CORE
+*
+**/
+
+/**
+ * @addtogroup BLUETOOTH_TYPES
+ * @{
+ */
 
 #define BTRCORE_MAX_NUM_BT_ADAPTERS 4   // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
@@ -332,6 +362,14 @@ typedef enBTRCoreRet (*fPtr_BTRCore_MediaStatusCb) (stBTRCoreMediaStatusCBInfo* 
 typedef enBTRCoreRet (*fPtr_BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
 typedef enBTRCoreRet (*fPtr_BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInAuthResp, void* apvUserData);
 
+/* @} */ // End of group BLUETOOTH_TYPES
+
+
+/**
+ * @addtogroup BLUETOOTH_APIS
+ * @{
+ */
+
 
 /*
  * Interfaces
@@ -339,143 +377,586 @@ typedef enBTRCoreRet (*fPtr_BTRCore_ConnAuthCb) (stBTRCoreConnCBInfo* apstConnCb
 // TODO: Reduce the number of interfaces exposed to the outside world
 // TODO: Combine interfaces which perform the same functionality
 
-/* Generic call to init any needed stack.. may be called during powerup*/
+/**
+ * @brief This API connects to a bus daemon and registers the client with it.
+ *
+ * @param[in]  phBTRCore       Bluetooth core handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_Init (tBTRCoreHandle* phBTRCore);
 
-/* Deinitialze and free BTRCore */
+/**
+ * @brief This APi deinitialzes and free BTRCore.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_DeInit (tBTRCoreHandle hBTRCore);
 
-/* Register Agent to accept connection requests */
+/**
+ * @brief This API registers an agent handler.
+ *
+ * Every application can register its own agent and for all actions triggered by that application its
+ * agent is used.
+ * If an application chooses to not register an agent, the default agent is used.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ * @param[in]  iBTRCapMode     Capabilities can be "DisplayOnly", "DisplayYesNo", "KeyboardOnly",
+ *                             "NoInputNoOutput" and "KeyboardDisplay" which
+ *                             reflects the input and output capabilities of the agent.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ *
+ * @note An application can only register one agent. Multiple agents per application is not supported.
+ *
+ */
 enBTRCoreRet BTRCore_RegisterAgent (tBTRCoreHandle hBTRCore, int iBTRCapMode);
 
-/* unregister agent to support pairing initiated from settop */
+/**
+ * @brief This unregisters the agent that has been previously registered.
+ *
+ * The object path parameter must match the same value that has been used on registration.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_UnregisterAgent (tBTRCoreHandle hBTRCore);
 
-/* BTRCore_GetListOfAdapters call to determine the number of BT radio interfaces... typically one, but could be more*/
+
+/**
+ * @brief Returns list of adapter object paths under /org/bluez
+ *
+ * @param[in]  hBTRCore         Bluetooth core handle.
+ * @param[out] pstListAdapters  List of adapters.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetListOfAdapters (tBTRCoreHandle hBTRCore, stBTRCoreListAdapters* pstListAdapters);
 
-/* BTRCore_SetAdapterPower call to set BT radio power to ON or OFF ... */
+/**
+ * @brief  This API sets the bluetooth adapter power as ON/OFF.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ * @param[in]  pAdapterPath    Bluetooth adapter address.
+ * @param[in]  powerStatus     Bluetooth adapter power status.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_SetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char powerStatus);
 
-/* BTRCore_GetAdapterPower call to gets BT radio power status as ON or OFF ... */
+/**
+ * @brief This API returns the value of  org.bluez.Adapter.powered .
+ *
+ * @param[in]  hBTRCore       Bluetooth core handle.
+ * @param[in]  pAdapterPath   Bluetooth adapter address.
+ * @param[out] pAdapterPower  Value of bluetooth adapter.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetAdapterPower (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char* pAdapterPower);
 
-/* BTRCore_GetAdapters  call to determine the number of BT radio interfaces... typically one, but could be more*/
+/**
+ * @brief This API returns the value of org.bluez.Manager.Getadapters .
+ *
+ * @param[in]  hBTRCore          Bluetooth core handle.
+ * @param[out] pstGetAdapters    Adapter value.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetAdapters (tBTRCoreHandle hBTRCore, stBTRCoreGetAdapters* pstGetAdapters);
 
-/* BTRCore_GetAdapter get info about a specific adatper*/
+/**
+ * @brief  This API returns the bluetooth adapter path.
+ *
+ * @param[in]  hBTRCore            Bluetooth core handle.
+ * @param[out] apstBTRCoreAdapter  Adapter path.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
-/* BTRCore_SetAdapter Set Current Bluetotth Adapter to use*/
+/**
+ * @brief  This API sets Current Bluetooth Adapter to use.
+ *
+ * @param[in]  hBTRCore         Bluetooth core handle.
+ * @param[in]  adapter_number   Bluetooth adapter number.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_SetAdapter (tBTRCoreHandle hBTRCore, int adapter_number);
 
-/* BTRCore_EnableAdapter enable specific adapter*/
+/**
+ * @brief  This API enables specific adapter.
+ *
+ * @param[in]  hBTRCore             Bluetooth core handle.
+ * @param[in]  apstBTRCoreAdapter   Structure which holds the adapter info.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_EnableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
-/* BTRCore_DisableAdapter disable specific adapter*/
+/**
+ * @brief  This API disables specific adapter.
+ *
+ * @param[in]  hBTRCore            Bluetooth core handle.
+ * @param[in]  apstBTRCoreAdapter  Structure which holds the adapter info.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_DisableAdapter (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
-/* BTRCore_GetAdapterAddr Get Address of BT Adapter */
+/**
+ * @brief   This API gets Address of BT Adapter.
+ *
+ * @param[in]  hBTRCore            Bluetooth core handle.
+ * @param[in]  aui8adapterIdx      Adapter index.
+ * @param[out] apui8adapterAddr    Adapter address.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetAdapterAddr (tBTRCoreHandle hBTRCore, unsigned char aui8adapterIdx, char* apui8adapterAddr);
 
-/* BTRCore_SetAdapterDiscoverable set adapter as discoverable or not discoverable*/
+/**
+ * @brief  This API sets adapter as discoverable.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  pAdapterPath       Adapter path.
+ * @param[in]  discoverable       Value that sets the device discoverable or not.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_SetAdapterDiscoverable (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char discoverable);
 
-/* BTRCore_SetAdapterDiscoverableTimeout set how long the adapter is discoverable*/
+/**
+ * @brief  This API sets how long the adapter is discoverable.
+ *
+ * @param[in]  hBTRCore          Bluetooth core handle.
+ * @param[in]  pAdapterPath      Adapter path.
+ * @param[in]  timeout           Time out value.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_SetAdapterDiscoverableTimeout (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned short timeout);
 
-/* BTRCore_GetAdapterDiscoverableStatus checks whether the discovery is in progres or not */
+/**
+ * @brief  This API checks whether the discovery is in progress or not.
+ *
+ * @param[in]  hBTRCore            Bluetooth core handle.
+ * @param[in]  pAdapterPath        Adapter path.
+ * @param[in]  pDiscoverable       Indicates discoverable or not.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetAdapterDiscoverableStatus (tBTRCoreHandle hBTRCore, const char* pAdapterPath, unsigned char* pDiscoverable);
 
-/* BTRCore_SetAdapterDeviceName set friendly name of BT adapter*/
+/**
+ * @brief  This API sets a friendly name to BT adapter device.
+ *
+ * @param[in]  hBTRCore             Bluetooth core handle.
+ * @param[in]  apstBTRCoreAdapter   Adapter path.
+ * @param[in]  apcAdapterDeviceName Adapter device name.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_SetAdapterDeviceName (tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter, char* apcAdapterDeviceName);
 
-/* BTRCore_SetAdapterName sets friendly name of BT adapter*/
+/**
+ * @brief  This API sets a friendly name to BT adapter.
+ *
+ * @param[in]  hBTRCore            Bluetooth core handle.
+ * @param[in]  pAdapterPath        Adapter path.
+ * @param[in]  pAdapterName        Adapter name.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_SetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, const char* pAdapterName);
 
-/* BTRCore_GetAdapterName gets friendly name of BT adapter*/
+/**
+ * @brief  This API gets the name of BT adapter.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  pAdapterPath       Adapter path.
+ * @param[out] pAdapterName       Adapter name.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetAdapterName (tBTRCoreHandle hBTRCore, const char* pAdapterPath, char* pAdapterName);
 
-/* BTRCore_ResetAdapter reset specific adapter*/
+/**
+ * @brief  This API resets specific adapter.
+ *
+ * @param[in]  hBTRCore            Bluetooth core handle.
+ * @param[in]  apstBTRCoreAdapter  Adapter to be reset.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropiate error code otherwise.
+ */
 enBTRCoreRet BTRCore_ResetAdapter(tBTRCoreHandle hBTRCore, stBTRCoreAdapter* apstBTRCoreAdapter);
 
-/* BTRCore_GetVersionInfo Get BT Version */
+/**
+ * @brief  This API gets BT Version.
+ *
+ * @param[in]  hBTRCore      Bluetooth core handle.
+ * @param[out] apcBtVersion  Bluetooth version.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropiate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetVersionInfo(tBTRCoreHandle hBTRCore, char* apcBtVersion);
 
-/* BTRCore_StartDiscovery - Start the discovery process*/
+/**
+ * @brief  This method starts the device discovery session.
+ *
+ * This includes an inquiry procedure and remote device name resolving.
+ * This process will start emitting DeviceFound and PropertyChanged "Discovering" signals.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  pAdapterPath       Adapter path the message should be sent to.
+ * @param[in]  aenBTRCoreDevType  Bluetooth device types like headset, speakers, Low energy devices etc.
+ * @param[in]  aui32DiscDuration  Timeout for the discovery.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_StartDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath, enBTRCoreDeviceType aenBTRCoreDevType, unsigned int aui32DiscDuration);
 
-/* BTRCore_StopDiscovery - aborts the discovery process*/
+/**
+ * @brief  This method will cancel any previous StartDiscovery transaction.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  pAdapterPath       Adapter path where the message should be sent to.
+ * @param[in]  aenBTRCoreDevType  Bluetooth device types like headset, speakers, Low energy devices etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ *
+ * @note Discovery procedure is shared between all discovery sessions thus calling StopDiscovery will only
+ * release a single session.
+ */
 enBTRCoreRet BTRCore_StopDiscovery (tBTRCoreHandle hBTRCore, const char* pAdapterPath, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_GetListOfScannedDevices - gets the discovered devices list */
+/**
+ * @brief  This API returns the number of devices scanned.
+ *
+ * This includes the Device name, MAC address, Signal strength etc.
+ *
+ * @param[in]   hBTRCore               Bluetooth core handle.
+ * @param[out]  pListOfScannedDevices  Structure which holds the count and the device info.
+ */
 enBTRCoreRet BTRCore_GetListOfScannedDevices (tBTRCoreHandle hBTRCore, stBTRCoreScannedDevicesCount *pListOfScannedDevices);
 
-/* BTRCore_PairDevice*/
+/**
+ * @brief This API initiates the pairing of the device.
+ *
+ * This method will connect to the remote device and retrieve all SDP records and then initiate the pairing.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId   Device ID for pairing.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_PairDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId);
 
-/* BTRCore_UnPairDevice is similar to BTRCore_ForgetDevice */
+/**
+ * @brief  This API removes the remote device object at the given path.
+ *
+ * It will remove also the pairing information.
+ * BTRCore_UnPairDevice is similar to BTRCore_ForgetDevice.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId   Device ID for pairing.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_UnPairDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId);
 
-/* BTRCore_GetListOfPairedDevices - gets the paired devices list */
+/**
+ * @brief   Gets the paired devices list.
+ *
+ * @param[in]  hBTRCore        Bluetooth core handle.
+ * @param[out] pListOfDevices  List of paired devices that has to be fetched.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetListOfPairedDevices (tBTRCoreHandle hBTRCore, stBTRCorePairedDevicesCount *pListOfDevices);
 
-/* BTRCore_FindDevice */
+/**
+ * @brief   This API checks the device entry in the scanned device list.
+ *
+ * @param[in]  hBTRCore         Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId    Device ID to be checked.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ *
+ */
 enBTRCoreRet BTRCore_FindDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
 
-/*BTRCore_FindServiceByIndex - confirm if a given service exists on a device*/
+/**
+ * @brief   This API is used to confirm if a given service exists on a device.
+ *
+ * @param[in]  hBTRCore         Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId    Device ID to be checked.
+ * @param[in]  UUID             UUID  of the bluetooth device.
+ * @param[in]  XMLdata          Service name.
+ * @param[out] found            Indicates service found or not.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
 
-/* BTRCore_GetSupportedServices - confirm if a given service exists on a device*/
+/**
+ * @brief   This API retuns the list of services supported by the device.
+ *
+ * @param[in]  hBTRCore         Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId    Device ID to be checked.
+ * @param[out] pProfileList     List of supported services.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetSupportedServices (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, stBTRCoreSupportedServiceList *pProfileList);
 
-/* BTRCore_IsDeviceConnectable */
+/**
+ * @brief   This API checks the device is connectable.
+ *
+ * It uses ping utility to check the connection with the remote device.
+ *
+ * @param[in]  hBTRCore         Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId    Device ID to be checked.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_IsDeviceConnectable (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId);
 
-/* BTRCore_ConnectDevice */
+/**
+ * @brief  This method connect any profiles the remote device supports.
+ *
+ * It is been flagged as auto-connectable on adapter side. If only subset of profiles is already
+ * connected it will try to connect currently disconnected ones.
+ * If at least one profile was connected successfully this method will indicate success.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId      Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType  Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_ConnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_DisconnectDevice */
+/**
+ * @brief  This method gracefully disconnects all connected profiles and then terminates  connection.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId      Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType  Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_DisconnectDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_GetDeviceConnected */
+/**
+ * @brief  This method checks the current device that is connected.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId      Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType  Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetDeviceConnected (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_GetDeviceDisconnected */
+/**
+ * @brief  This method checks the current device that is disconnected.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId      Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType  Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetDeviceDisconnected (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_GetDeviceTypeClass */
+/**
+ * @brief  This API returns current media info that includes the codec info, channel modes, subbands etc.
+ *
+ * @param[in]  hBTRCore                Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId           Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType       Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[out] apstBTRCoreDevMediaInfo Structure which stores the media info.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetDeviceTypeClass (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType* apenBTRCoreDevTy, enBTRCoreDeviceClass* apenBTRCoreDevCl);
 
-/* BTRCore_GetDeviceMediaInfo */
+/**
+ * @brief  This API returns current media info that includes the codec info, channel modes, subbands etc.
+ *
+ * @param[in]  hBTRCore                Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId           Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType       Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[out] apstBTRCoreDevMediaInfo Structure which stores the media info.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo);
 
-/* BTRCore_AcquireDeviceDataPath */
+/**
+ * @brief  This API returns the bluetooth device address.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId      Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType  Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[out] aiDataPath         Device address.
+ * @param[in]  aidataReadMTU      Read data length.
+ * @param[in]  aidataWriteMTU     Write data length.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
                                             int* aidataReadMTU, int* aidataWriteMTU); //TODO: Change to a unique device Identifier
 
-/* BTRCore_ReleaseDeviceDataPath */
+/**
+ * @brief  This API release the bluetooth device address.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId      Device Id of the remote device.
+ * @param[in]  enDeviceType       Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
 
-/* BTRCore_MediaControl */
+/**
+ * @brief  This API is used to perform media control operations like play, pause, NExt, Previous, Rewind etc.
+ *
+ * @param[in]  hBTRCore             Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId        Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType    Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[in]  aenBTRCoreMediaCtrl  Indicates which operation needs to be performed.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
+ */
 enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl aenBTRCoreMediaCtrl);
 
-/* BTRCore_GetTrackInformation */
+/**
+ * @brief  This API is used to retrieve the media track information.
+ *
+ * @param[in]  hBTRCore              Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId         Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType     Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[out] apstBTMediaTrackInfo  Structure which represents the media track information.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaTrackInfo* apstBTMediaTrackInfo);
 
-/* BTRCore_GetMediaPositionInfo */
+/**
+ * @brief  This API returns the duration and the current position of the media.
+ *
+ * @param[in]  hBTRCore                  Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId             Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType         Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[out] apstBTMediaPositionInfo  Structure which represents the position information.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetMediaPositionInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaPositionInfo* apstBTMediaPositionInfo);
 
-/* BTRCore_GetMediaProperty */
+/**
+ * @brief  This API returns the media file properties of the Bluetooth device.
+ *
+ * As of now, it is implemented to return dummy value.
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId            Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType        Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[out] mediaPropertyKey         Key to the property.
+ * @param[out] mediaPropertyValue       Value to the property.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue); 
 
-/* BTRCore_ReportMediaPosition */
+/**
+ * @brief  This API reports the provided device id to set for position polling.
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId            Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType        Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
-/* BTRCore_GetLeProperty */
+/**
+ * @brief  This API returns the Low energy profile device name and address.
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId            Device Id of the remote device.
+ * @param[in]  apcBTRCoreLEUuid         UUID to distinguish the devices.
+ * @param[in]  aenBTRCoreLeProp         Indicates the property name.
+ * @param[out] apvBTRCorePropVal        LE device property value.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeProp aenBTRCoreLeProp, void* apvBTRCorePropVal);
 
-/* BTRCore_PerformLEOp */
+/**
+ * @brief  This API is used to perform read, write, notify operations on LE devices.
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId            Device Id of the remote device.
+ * @param[in]  apcBTRCoreLEUuid         UUID to distinguish the devices.
+ * @param[in]  aenBTRCoreLeOp           Indicates the operation to be performed.
+ * @param[in]  apUserData               Data to perform the operation.
+ * @param[out] rpLeOpRes                        LE operation result.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
 enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void* rpLeOpRes);
 
 // Outgoing callbacks Registration Interfaces
@@ -494,6 +975,7 @@ enBTRCoreRet BTRCore_RegisterConnectionIntimationCb (tBTRCoreHandle hBTRCore, fP
 /* BTRCore_RegisterConnectionAuthenticationCallback - callback for receiving a connection request from another device */
 enBTRCoreRet BTRCore_RegisterConnectionAuthenticationCb (tBTRCoreHandle hBTRCore, fPtr_BTRCore_ConnAuthCb afpcBBTRCoreConnAuth, void* apUserData);
 
+/* @} */    //BLUETOOTH_APIS
 
 #ifdef __cplusplus
 }

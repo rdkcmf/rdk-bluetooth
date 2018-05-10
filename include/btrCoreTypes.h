@@ -16,10 +16,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-/* Bluetooth Core Types Header file */
+
+/* @file Bluetooth Core Types Header file */
 #ifndef __BTR_CORE_TYPES_H__
 #define __BTR_CORE_TYPES_H__
 
+/**
+ * @addtogroup BLUETOOTH_TYPES
+ * @{
+ */
 
 #ifdef TRUE
 #undef TRUE
@@ -52,5 +57,6 @@ typedef enum _enBTRCoreRet {
     enBTRCoreSuccess
 } enBTRCoreRet;
 
+/* @} */ // End of group BLUETOOTH_TYPES
 
 #endif // __BTR_CORE_TYPES_H__
