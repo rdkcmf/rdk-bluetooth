@@ -26,7 +26,7 @@
 
 #define BT_MAX_STR_LEN           256
 #define BT_MAX_UUID_STR_LEN      64
-#define BT_MAX_NUM_DEVICE        64
+#define BT_MAX_NUM_DEVICE        32
 #define BT_MAX_DEVICE_PROFILE    32
 
 
