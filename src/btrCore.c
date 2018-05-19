@@ -59,12 +59,13 @@ typedef enum _enBTRCoreTaskOp {
 } enBTRCoreTaskOp;
 
 typedef enum _enBTRCoreTaskProcessType {
-   enBTRCoreTaskPTcBDeviceDisc,
-   enBTRCoreTaskPTcBStatus,
-   enBTRCoreTaskPTcBMediaStatus,
-   enBTRCoreTaskPTcBConnIntim,
-   enBTRCoreTaskPTcBConnAuth,
-   enBTRCoreTaskPTUnknown
+    enBTRCoreTaskPTcBDeviceDisc,
+    enBTRCoreTaskPTcBDeviceRemoved,
+    enBTRCoreTaskPTcBStatus,
+    enBTRCoreTaskPTcBMediaStatus,
+    enBTRCoreTaskPTcBConnIntim,
+    enBTRCoreTaskPTcBConnAuth,
+    enBTRCoreTaskPTUnknown
 } enBTRCoreTaskProcessType;
 
 
@@ -133,16 +134,18 @@ typedef struct _stBTRCoreHdl {
 
 /* Static Function Prototypes */
 static void btrCore_InitDataSt (stBTRCoreHdl* apsthBTRCore);
-static tBTRCoreDevId btrCore_GenerateUniqueDeviceID (const char* apcDeviceAddress);
+static tBTRCoreDevId btrCore_GenerateUniqueDeviceID (const char* apcDeviceMac);
 static enBTRCoreDeviceClass btrCore_MapClassIDtoDeviceType(unsigned int classID);
 static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
-static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static int btrCore_AddDeviceToScannedDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo, stBTRCoreBTDevice* apstFoundDevice); 
 static int btrCore_AddDeviceToKnownDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo);
 static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCore, const char* pAdapterPath);
 static void btrCore_MapKnownDeviceListFromPairedDeviceInfo (stBTRCoreBTDevice* knownDevicesArr, stBTPairedDeviceInfo* pairedDeviceInfo);
-static const char* btrCore_GetKnownDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
+static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static const char* btrCore_GetKnownDeviceMac (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
+static enBTRCoreRet btrCore_GetDeviceInfo (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType,
+                                            enBTDeviceType* apenBTDeviceType, stBTRCoreBTDevice** appstBTRCoreBTDevice,
+                                                stBTRCoreDevStateInfo** appstBTRCoreDevStateInfo, const char** appcBTRCoreBTDevicePath, const char** appcBTRCoreBTDeviceName);
 static void btrCore_ShowSignalStrength (short strength);
 static unsigned int btrCore_BTParseUUIDValue (const char *pUUIDString, char* pServiceNameOut);
 static enBTRCoreDeviceState btrCore_BTParseDeviceConnectionState (const char* pcStateValue);
@@ -242,32 +245,33 @@ btrCore_InitDataSt (
 
 static tBTRCoreDevId
 btrCore_GenerateUniqueDeviceID (
-    const char* apcDeviceAddress
+    const char* apcDeviceMac
 ) {
     tBTRCoreDevId   lBTRCoreDevId = 0;
     char            lcDevHdlArr[13] = {'\0'};
 
     // MAC Address Format 
     // AA:BB:CC:DD:EE:FF\0
-    if (apcDeviceAddress && (strlen(apcDeviceAddress) >= 17)) {
-        lcDevHdlArr[0]  = apcDeviceAddress[0];
-        lcDevHdlArr[1]  = apcDeviceAddress[1];
-        lcDevHdlArr[2]  = apcDeviceAddress[3];
-        lcDevHdlArr[3]  = apcDeviceAddress[4];
-        lcDevHdlArr[4]  = apcDeviceAddress[6];
-        lcDevHdlArr[5]  = apcDeviceAddress[7];
-        lcDevHdlArr[6]  = apcDeviceAddress[9];
-        lcDevHdlArr[7]  = apcDeviceAddress[10];
-        lcDevHdlArr[8]  = apcDeviceAddress[12];
-        lcDevHdlArr[9]  = apcDeviceAddress[13];
-        lcDevHdlArr[10] = apcDeviceAddress[15];
-        lcDevHdlArr[11] = apcDeviceAddress[16];
+    if (apcDeviceMac && (strlen(apcDeviceMac) >= 17)) {
+        lcDevHdlArr[0]  = apcDeviceMac[0];
+        lcDevHdlArr[1]  = apcDeviceMac[1];
+        lcDevHdlArr[2]  = apcDeviceMac[3];
+        lcDevHdlArr[3]  = apcDeviceMac[4];
+        lcDevHdlArr[4]  = apcDeviceMac[6];
+        lcDevHdlArr[5]  = apcDeviceMac[7];
+        lcDevHdlArr[6]  = apcDeviceMac[9];
+        lcDevHdlArr[7]  = apcDeviceMac[10];
+        lcDevHdlArr[8]  = apcDeviceMac[12];
+        lcDevHdlArr[9]  = apcDeviceMac[13];
+        lcDevHdlArr[10] = apcDeviceMac[15];
+        lcDevHdlArr[11] = apcDeviceMac[16];
 
         lBTRCoreDevId = (tBTRCoreDevId) strtoll(lcDevHdlArr, NULL, 16);
     }
 
     return lBTRCoreDevId;
 }
+
 
 static enBTRCoreDeviceClass
 btrCore_MapClassIDtoDeviceType (
@@ -384,24 +388,6 @@ btrCore_ClearScannedDevicesList (
     }
 
     apsthBTRCore->numOfScannedDevices = 0;
-}
-
-
-static const char*
-btrCore_GetScannedDeviceAddress (
-    stBTRCoreHdl*   apsthBTRCore,
-    tBTRCoreDevId   aBTRCoreDevId
-) {
-    int i = 0;
-
-    if (apsthBTRCore->numOfScannedDevices) {
-        for (i = 0; i < apsthBTRCore->numOfScannedDevices; i++) {
-            if (aBTRCoreDevId == apsthBTRCore->stScannedDevicesArr[i].tDeviceId)
-                return apsthBTRCore->stScannedDevicesArr[i].pcDevicePath;
-        }
-    }
-
-    return NULL;
 }
 
 
@@ -531,6 +517,7 @@ btrCore_AddDeviceToKnownDevicesArr (
     return i32KnownDevIdx;
 }
 
+
 static void
 btrCore_MapKnownDeviceListFromPairedDeviceInfo (
     stBTRCoreBTDevice*      knownDevicesArr,
@@ -545,9 +532,10 @@ btrCore_MapKnownDeviceListFromPairedDeviceInfo (
         knownDevicesArr[i_idx].tDeviceId            = btrCore_GenerateUniqueDeviceID(pairedDeviceInfo->deviceInfo[i_idx].pcAddress);
         knownDevicesArr[i_idx].enDeviceType         = btrCore_MapClassIDtoDeviceType(pairedDeviceInfo->deviceInfo[i_idx].ui32Class);
         knownDevicesArr[i_idx].ui32DevClassBtSpec   = pairedDeviceInfo->deviceInfo[i_idx].ui32Class;
-        strncpy(knownDevicesArr[i_idx].pcDeviceName, pairedDeviceInfo->deviceInfo[i_idx].pcName, BD_NAME_LEN);
-        strncpy(knownDevicesArr[i_idx].pcDeviceAddress, pairedDeviceInfo->deviceInfo[i_idx].pcAddress, BD_NAME_LEN);
-        strncpy(knownDevicesArr[i_idx].pcDevicePath, pairedDeviceInfo->devicePath[i_idx], BD_NAME_LEN);
+
+        strncpy(knownDevicesArr[i_idx].pcDeviceName,    pairedDeviceInfo->deviceInfo[i_idx].pcName,     BD_NAME_LEN);
+        strncpy(knownDevicesArr[i_idx].pcDeviceAddress, pairedDeviceInfo->deviceInfo[i_idx].pcAddress,  BD_NAME_LEN);
+        strncpy(knownDevicesArr[i_idx].pcDevicePath,    pairedDeviceInfo->devicePath[i_idx],            BD_NAME_LEN);
    
         BTRCORELOG_DEBUG ("Unique DevID = %lld\n", knownDevicesArr[i_idx].tDeviceId);
 
@@ -701,19 +689,16 @@ btrCore_PopulateListOfPairedDevices (
 
 
 static const char*
-btrCore_GetKnownDeviceAddress (
+btrCore_GetScannedDeviceAddress (
     stBTRCoreHdl*   apsthBTRCore,
     tBTRCoreDevId   aBTRCoreDevId
 ) {
-    int loop = 0;
+    int i = 0;
 
-    if ((!aBTRCoreDevId) || (!apsthBTRCore))
-        return NULL;
-
-    if (apsthBTRCore->numOfPairedDevices) {
-        for (loop = 0; loop < apsthBTRCore->numOfPairedDevices; loop++) {
-            if (aBTRCoreDevId == apsthBTRCore->stKnownDevicesArr[loop].tDeviceId)
-             return apsthBTRCore->stKnownDevicesArr[loop].pcDevicePath;
+    if (apsthBTRCore->numOfScannedDevices) {
+        for (i = 0; i < apsthBTRCore->numOfScannedDevices; i++) {
+            if (aBTRCoreDevId == apsthBTRCore->stScannedDevicesArr[i].tDeviceId)
+                return apsthBTRCore->stScannedDevicesArr[i].pcDevicePath;
         }
     }
 
@@ -739,6 +724,156 @@ btrCore_GetKnownDeviceMac (
     }
 
     return NULL;
+}
+
+
+static enBTRCoreRet
+btrCore_GetDeviceInfo (
+    stBTRCoreHdl*           apsthBTRCore,
+    tBTRCoreDevId           aBTRCoreDevId,
+    enBTRCoreDeviceType     aenBTRCoreDevType,
+    enBTDeviceType*         apenBTDeviceType,
+    stBTRCoreBTDevice**     appstBTRCoreBTDevice,
+    stBTRCoreDevStateInfo** appstBTRCoreDevStateInfo,
+    const char**            appcBTRCoreBTDevicePath,
+    const char**            appcBTRCoreBTDeviceName
+) {
+    stBTRCoreBTDevice*      lpstBTRCoreBTDeviceArr  = NULL;
+    stBTRCoreDevStateInfo*  lpstBTRCoreDevStInfoArr = NULL;
+    unsigned int            ui32NumOfDevices        = 0;
+    unsigned int            ui32LoopIdx             = 0;
+
+
+    if (!apsthBTRCore->numOfPairedDevices) {
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
+        btrCore_PopulateListOfPairedDevices(apsthBTRCore, apsthBTRCore->curAdapterPath);    /* Keep the list upto date */
+    }
+
+
+    if (aenBTRCoreDevType != enBTRCoreLE) {
+        ui32NumOfDevices        = apsthBTRCore->numOfPairedDevices;
+        lpstBTRCoreBTDeviceArr  = apsthBTRCore->stKnownDevicesArr;
+        lpstBTRCoreDevStInfoArr = apsthBTRCore->stKnownDevStInfoArr;
+    }
+    else {
+        ui32NumOfDevices        = apsthBTRCore->numOfScannedDevices;
+        lpstBTRCoreBTDeviceArr  = apsthBTRCore->stScannedDevicesArr;
+        lpstBTRCoreDevStInfoArr = apsthBTRCore->stScannedDevStInfoArr;
+    }
+
+
+    if (!ui32NumOfDevices) {
+        BTRCORELOG_ERROR ("There is no device paried/scanned for this adapter\n");
+        return enBTRCoreFailure;
+    }
+
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        *appstBTRCoreBTDevice       = &lpstBTRCoreBTDeviceArr[aBTRCoreDevId];
+        *appstBTRCoreDevStateInfo   = &lpstBTRCoreDevStInfoArr[aBTRCoreDevId];
+    }
+    else {
+        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
+            if (aBTRCoreDevId == lpstBTRCoreBTDeviceArr[ui32LoopIdx].tDeviceId) {
+                *appstBTRCoreBTDevice       = &lpstBTRCoreBTDeviceArr[ui32LoopIdx];
+                *appstBTRCoreDevStateInfo   = &lpstBTRCoreDevStInfoArr[ui32LoopIdx];
+                break;
+            }
+        }
+    }
+
+
+    *appcBTRCoreBTDevicePath    = (*appstBTRCoreBTDevice)->pcDevicePath;
+    *appcBTRCoreBTDeviceName    = (*appstBTRCoreBTDevice)->pcDeviceName;
+
+    if (!(*appcBTRCoreBTDevicePath) || !strlen(*appcBTRCoreBTDevicePath)) {
+        BTRCORELOG_ERROR ("Failed to find device in paired/scanned devices list\n");
+        return enBTRCoreDeviceNotFound;
+    }
+
+
+    switch (aenBTRCoreDevType) {
+    case enBTRCoreSpeakers:
+    case enBTRCoreHeadSet:
+        *apenBTDeviceType = enBTDevAudioSink;
+        break;
+    case enBTRCoreMobileAudioIn:
+    case enBTRCorePCAudioIn:
+        *apenBTDeviceType = enBTDevAudioSource;
+        break;
+    case enBTRCoreLE:
+        *apenBTDeviceType = enBTDevLE;
+        break;
+    case enBTRCoreUnknown:
+    default:
+        *apenBTDeviceType = enBTDevUnknown;
+        break;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+static enBTRCoreRet
+btrCore_GetDeviceInfoKnown (
+    stBTRCoreHdl*           apsthBTRCore,
+    tBTRCoreDevId           aBTRCoreDevId,
+    enBTRCoreDeviceType     aenBTRCoreDevType,
+    enBTDeviceType*         apenBTDeviceType,
+    stBTRCoreBTDevice**     appstBTRCoreBTDevice,
+    const char**            appcBTRCoreBTDevicePath
+) {
+    unsigned int            ui32NumOfDevices        = 0;
+    unsigned int            ui32LoopIdx             = 0;
+
+    if (!apsthBTRCore->numOfPairedDevices) {
+        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
+        btrCore_PopulateListOfPairedDevices(apsthBTRCore, apsthBTRCore->curAdapterPath); /* Keep the list upto date */
+    }
+
+
+    ui32NumOfDevices = apsthBTRCore->numOfPairedDevices;
+    if (!ui32NumOfDevices) {
+        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
+        return enBTRCoreFailure;
+    }
+
+
+    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
+        *appstBTRCoreBTDevice = &apsthBTRCore->stKnownDevicesArr[aBTRCoreDevId];
+    }
+    else {
+        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
+            if (aBTRCoreDevId == apsthBTRCore->stKnownDevicesArr[ui32LoopIdx].tDeviceId) {
+                *appstBTRCoreBTDevice = &apsthBTRCore->stKnownDevicesArr[ui32LoopIdx];
+            }
+        }
+    }
+
+
+    *appcBTRCoreBTDevicePath = (*appstBTRCoreBTDevice)->pcDevicePath;
+    if (!(*appcBTRCoreBTDevicePath) || !strlen(*appcBTRCoreBTDevicePath)) {
+        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
+        return enBTRCoreDeviceNotFound;
+    }
+
+
+    switch (aenBTRCoreDevType) {
+    case enBTRCoreSpeakers:
+    case enBTRCoreHeadSet:
+        *apenBTDeviceType  = enBTDevAudioSink;
+        break;
+    case enBTRCoreMobileAudioIn:
+    case enBTRCorePCAudioIn:
+        *apenBTDeviceType = enBTDevAudioSource;
+        break;
+    case enBTRCoreUnknown:
+    default:
+        *apenBTDeviceType = enBTDevUnknown;
+        break;
+    }
+
+    return enBTRCoreSuccess;
 }
 
 static void 
@@ -969,6 +1104,11 @@ btrCore_OutTaskAddOp (
 
     lpstOutTaskGAqData->enBTRCoreTskPT = aenOutTaskPT;
     if (lpstOutTaskGAqData->enBTRCoreTskPT == enBTRCoreTaskPTcBDeviceDisc) {
+        if ((lpstOutTaskGAqData->pvBTRCoreTskInData = g_malloc0(sizeof(stBTDeviceInfo)))) {
+            memcpy(lpstOutTaskGAqData->pvBTRCoreTskInData, (stBTDeviceInfo*)apvOutTaskInData, sizeof(stBTDeviceInfo));
+        }
+    }
+    if (lpstOutTaskGAqData->enBTRCoreTskPT == enBTRCoreTaskPTcBDeviceRemoved) {
         if ((lpstOutTaskGAqData->pvBTRCoreTskInData = g_malloc0(sizeof(stBTDeviceInfo)))) {
             memcpy(lpstOutTaskGAqData->pvBTRCoreTskInData, (stBTDeviceInfo*)apvOutTaskInData, sizeof(stBTDeviceInfo));
         }
@@ -1279,6 +1419,67 @@ btrCore_OutTask (
                         if (pstlhBTRCore->fpcBBTRCoreDeviceDisc) {
                             if ((lenBTRCoreRet = pstlhBTRCore->fpcBBTRCoreDeviceDisc(lstFoundDevice, pstlhBTRCore->pvcBDevDiscUserData)) != enBTRCoreSuccess) {
                                 BTRCORELOG_ERROR ("Failure fpcBBTRCoreDeviceDisc Ret = %d\n", lenBTRCoreRet);
+                            }
+                        }
+
+                        g_free(lpvOutTskInData);
+                        lpvOutTskInData = NULL;
+                    }
+                }
+                else if (lenOutTskPTCur == enBTRCoreTaskPTcBDeviceRemoved) {
+                    if (lpvOutTskInData) {
+                        stBTDeviceInfo*     lpstBTDeviceInfo = (stBTDeviceInfo*)lpvOutTskInData;
+                        stBTRCoreBTDevice   lstRemovedDevice;
+                        tBTRCoreDevId       lBTRCoreDevId = btrCore_GenerateUniqueDeviceID(lpstBTDeviceInfo->pcAddress);
+                        int                 i32LoopIdx = -1;
+
+
+                        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
+                            if (pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
+                                break;
+                            }
+                        }
+
+                        BTRCORELOG_TRACE ("i32ScannedDevIdx = %d\n", i32LoopIdx);
+                        BTRCORELOG_TRACE ("pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDeviceCurrState = %d\n", pstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDeviceCurrState);
+                        BTRCORELOG_TRACE ("pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDevicePrevState = %d\n", pstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDevicePrevState);
+
+
+                        memcpy (&lstRemovedDevice, &pstlhBTRCore->stScannedDevicesArr[i32LoopIdx], sizeof(stBTRCoreBTDevice));
+                        lstRemovedDevice.bFound = FALSE;
+
+                        // Clean flipping logic. This will suffice
+                        if (i32LoopIdx != pstlhBTRCore->numOfScannedDevices - 1) {
+                            memcpy (&pstlhBTRCore->stScannedDevicesArr[i32LoopIdx], &pstlhBTRCore->stScannedDevicesArr[pstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreBTDevice));
+                            memcpy (&pstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx], &pstlhBTRCore->stScannedDevStInfoArr[pstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreDevStateInfo));   
+                        }
+
+                        memset(&pstlhBTRCore->stScannedDevicesArr[pstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreBTDevice));
+                        memset(&pstlhBTRCore->stScannedDevStInfoArr[pstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreDevStateInfo));
+
+                        pstlhBTRCore->numOfScannedDevices--;
+
+                        if (pstlhBTRCore->fpcBBTRCoreDeviceDisc) {
+                            if ((lenBTRCoreRet = pstlhBTRCore->fpcBBTRCoreDeviceDisc(lstRemovedDevice, pstlhBTRCore->pvcBDevDiscUserData)) != enBTRCoreSuccess) {
+                                BTRCORELOG_ERROR ("Failure fpcBBTRCoreDeviceDisc Ret = %d\n", lenBTRCoreRet);
+                            }
+                        }
+
+
+                        if (!pstlhBTRCore->numOfScannedDevices) {
+                            BTRCORELOG_INFO ("\nClearing Scanned Device List...\n");
+                            btrCore_ClearScannedDevicesList(pstlhBTRCore);
+
+                            pstlhBTRCore->stDevStatusCbInfo.deviceId         = 0; // Need to have any special IDs for this purpose like 0xFFFFFFFF
+                            pstlhBTRCore->stDevStatusCbInfo.eDevicePrevState = enBTRCoreDevStFound;
+                            pstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStLost;
+                            pstlhBTRCore->stDevStatusCbInfo.isPaired         = 0;           
+
+                            if (pstlhBTRCore->fpcBBTRCoreStatus) {
+                                // We are already in OutTask - But use btrCore_OutTaskAddOp - Dont trigger Status callbacks from DeviceRemoved Process Type
+                                //if (pstlhBTRCore->fpcBBTRCoreStatus(&pstlhBTRCore->stDevStatusCbInfo, pstlhBTRCore->pvcBStatusUserData) != enBTRCoreSuccess) {
+                                    //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
+                                //}      
                             }
                         }
 
@@ -2404,8 +2605,12 @@ BTRCore_UnPairDevice (
     tBTRCoreHandle  hBTRCore,
     tBTRCoreDevId   aBTRCoreDevId
 ) {
-    stBTRCoreHdl*   pstlhBTRCore    = NULL;
-    const char*     pDeviceAddress  = NULL;
+    stBTRCoreHdl*       pstlhBTRCore    = NULL;
+    const char*         pDeviceAddress  = NULL;
+    enBTDeviceType      lenBTDeviceType = enBTDevUnknown;
+    enBTRCoreRet        lenBTRCoreRet   = enBTRCoreFailure;
+    stBTRCoreBTDevice*  pstKnownDevice  = NULL;
+    enBTRCoreDeviceType aenBTRCoreDevType = enBTRCoreUnknown;
 
     /* We can enhance the BTRCore with passcode support later point in time */
     if (!hBTRCore) {
@@ -2419,28 +2624,11 @@ BTRCore_UnPairDevice (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated\n");
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-    }
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice*   pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
-        return enBTRCoreDeviceNotFound;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &pstKnownDevice, &pDeviceAddress)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
     if (BtrCore_BTPerformAdapterOp( pstlhBTRCore->connHdl,
@@ -2531,8 +2719,14 @@ BTRCore_FindService (
     char*           XMLdata,
     int*            found
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    const char*     pDeviceAddress = NULL;
+    stBTRCoreHdl*       pstlhBTRCore    = NULL;
+    const char*         pDeviceAddress  = NULL;
+    stBTRCoreBTDevice*  pstKnownDevice  = NULL;
+    enBTRCoreRet        lenBTRCoreRet   = enBTRCoreFailure;
+
+
+    enBTRCoreDeviceType aenBTRCoreDevType = enBTRCoreUnknown;
+    enBTDeviceType      lenBTDeviceType = enBTDevUnknown;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -2541,18 +2735,10 @@ BTRCore_FindService (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice*   pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress) {
-        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
-        return enBTRCoreDeviceNotFound;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &pstKnownDevice, &pDeviceAddress)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
     BTRCORELOG_INFO ("Checking for service %s on %s\n", UUID, pDeviceAddress);
@@ -2571,10 +2757,15 @@ BTRCore_GetSupportedServices (
     tBTRCoreDevId                   aBTRCoreDevId,
     stBTRCoreSupportedServiceList*  pProfileList
 ) {
-    stBTRCoreHdl*   pstlhBTRCore = NULL;
-    const char*     pDeviceAddress = NULL;
+    stBTRCoreHdl*       pstlhBTRCore = NULL;
+    const char*         lpcBTRCoreBTDevicePath  = NULL;
+    unsigned int        ui32LoopIdx         = 0;
+    enBTRCoreDeviceType aenBTRCoreDevType   = enBTRCoreUnknown;
+    enBTDeviceType      lenBTDeviceType     = enBTDevUnknown;
+    stBTRCoreBTDevice*  lpstBTRCoreBTDevice = NULL;
+    enBTRCoreRet        lenBTRCoreRet       = enBTRCoreFailure;
+
     stBTDeviceSupportedServiceList profileList;
-    int i = 0;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -2587,18 +2778,10 @@ BTRCore_GetSupportedServices (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice*   pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress) {
-        BTRCORELOG_ERROR ("Failed to find device in Scanned devices list\n");
-        return enBTRCoreDeviceNotFound;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &lpstBTRCoreBTDevice, &lpcBTRCoreBTDevicePath)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
 
@@ -2606,16 +2789,17 @@ BTRCore_GetSupportedServices (
     memset (pProfileList, 0 , sizeof(stBTRCoreSupportedServiceList));
     memset (&profileList, 0 , sizeof(stBTDeviceSupportedServiceList));
 
-    if (BtrCore_BTDiscoverDeviceServices(pstlhBTRCore->connHdl, pDeviceAddress, &profileList) != 0) {
+
+    if (BtrCore_BTDiscoverDeviceServices(pstlhBTRCore->connHdl, lpcBTRCoreBTDevicePath, &profileList) != 0) {
         return enBTRCoreFailure;
     }
 
     BTRCORELOG_INFO ("Successfully received the supported services... \n");
 
     pProfileList->numberOfService = profileList.numberOfService;
-    for (i = 0; i < profileList.numberOfService; i++) {
-        pProfileList->profile[i].uuid_value = profileList.profile[i].uuid_value;
-        strncpy (pProfileList->profile[i].profile_name,  profileList.profile[i].profile_name, 30);
+    for (ui32LoopIdx = 0; ui32LoopIdx < profileList.numberOfService; ui32LoopIdx++) {
+        pProfileList->profile[ui32LoopIdx].uuid_value = profileList.profile[ui32LoopIdx].uuid_value;
+        strncpy (pProfileList->profile[ui32LoopIdx].profile_name,  profileList.profile[ui32LoopIdx].profile_name, 30);
     }
 
     return enBTRCoreSuccess;
@@ -2629,6 +2813,7 @@ BTRCore_IsDeviceConnectable (
 ) {
     stBTRCoreHdl*       pstlhBTRCore = NULL;
     const char*         pDeviceMac = NULL;
+    stBTRCoreBTDevice*  pstKnownDevice = NULL;
 
 
     if (!hBTRCore) {
@@ -2654,7 +2839,6 @@ BTRCore_IsDeviceConnectable (
     }
 
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice*   pstKnownDevice = NULL;
         pstKnownDevice  = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
         pDeviceMac      = pstKnownDevice->pcDeviceAddress;
     }
@@ -2690,12 +2874,8 @@ BTRCore_ConnectDevice (
     enBTDeviceType          lenBTDeviceType         = enBTDevUnknown;
     stBTRCoreBTDevice*      lpstBTRCoreBTDevice     = NULL;
     stBTRCoreDevStateInfo*  lpstBTRCoreDevStateInfo = NULL;
-    stBTRCoreBTDevice*      lpstBTRCoreBTDeviceArr  = NULL;
-    stBTRCoreDevStateInfo*  lpstBTRCoreDevStInfoArr = NULL;
     const char*             lpcBTRCoreBTDevicePath  = NULL;
     const char*             lpcBTRCoreBTDeviceName  = NULL;
-    unsigned int            ui32NumOfDevices        = 0;
-    unsigned int            ui32LoopIdx             = 0;
 
 
     if (!hBTRCore) {
@@ -2707,80 +2887,18 @@ BTRCore_ConnectDevice (
         return enBTRCoreInvalidArg;
     }
 
-
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);    /* Keep the list upto date */
-    }
-
-
-    if (aenBTRCoreDevType != enBTRCoreLE) {
-        ui32NumOfDevices        = pstlhBTRCore->numOfPairedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stKnownDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stKnownDevStInfoArr;
-    }
-    else {
-        ui32NumOfDevices        = pstlhBTRCore->numOfScannedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stScannedDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stScannedDevStInfoArr;
-
-    }
-
-
-    if (!ui32NumOfDevices) {
-        BTRCORELOG_ERROR ("There is no device paried/scanned for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[aBTRCoreDevId];
-        lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[aBTRCoreDevId];
-        lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-        lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-    }
-    else {
-        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
-            if (aBTRCoreDevId == lpstBTRCoreBTDeviceArr[ui32LoopIdx].tDeviceId) {
-                lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[ui32LoopIdx];
-                lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[ui32LoopIdx];
-                lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-                lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-                break;
-            }
-        }
-    }
-
-
-    if (!lpcBTRCoreBTDevicePath || !strlen(lpcBTRCoreBTDevicePath)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired/scanned devices list\n");
-        return enBTRCoreDeviceNotFound;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfo(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                               &lenBTDeviceType, &lpstBTRCoreBTDevice, &lpstBTRCoreDevStateInfo,
+                                               &lpcBTRCoreBTDevicePath, &lpcBTRCoreBTDeviceName)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
 
     // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
     // before making the connect call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreLE:
-        lenBTDeviceType = enBTDevLE;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
-    }
-
-
     if (BtrCore_BTConnectDevice(pstlhBTRCore->connHdl, lpcBTRCoreBTDevicePath, lenBTDeviceType) != 0) {
         BTRCORELOG_ERROR ("Connect to device failed\n");
         return enBTRCoreFailure;
@@ -2816,12 +2934,8 @@ BTRCore_DisconnectDevice (
     enBTDeviceType          lenBTDeviceType         = enBTDevUnknown;
     stBTRCoreBTDevice*      lpstBTRCoreBTDevice     = NULL;
     stBTRCoreDevStateInfo*  lpstBTRCoreDevStateInfo = NULL;
-    stBTRCoreBTDevice*      lpstBTRCoreBTDeviceArr  = NULL;
-    stBTRCoreDevStateInfo*  lpstBTRCoreDevStInfoArr = NULL;
     const char*             lpcBTRCoreBTDevicePath  = NULL;
     const char*             lpcBTRCoreBTDeviceName  = NULL;
-    unsigned int            ui32NumOfDevices        = 0;
-    unsigned int            ui32LoopIdx             = 0;
 
 
     if (!hBTRCore) {
@@ -2833,80 +2947,18 @@ BTRCore_DisconnectDevice (
         return enBTRCoreInvalidArg;
     }
 
-
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);    /* Keep the list upto date */
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfo(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                               &lenBTDeviceType, &lpstBTRCoreBTDevice, &lpstBTRCoreDevStateInfo,
+                                               &lpcBTRCoreBTDevicePath, &lpcBTRCoreBTDeviceName)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
 
-    if (aenBTRCoreDevType != enBTRCoreLE) {
-        ui32NumOfDevices        = pstlhBTRCore->numOfPairedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stKnownDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stKnownDevStInfoArr;
-    }
-    else {
-        ui32NumOfDevices        = pstlhBTRCore->numOfScannedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stScannedDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stScannedDevStInfoArr;
-
-    }
-
-
-    if (!ui32NumOfDevices) {
-        BTRCORELOG_ERROR ("There is no device paried/scanned for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[aBTRCoreDevId];
-        lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[aBTRCoreDevId];
-        lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-        lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-    }
-    else {
-        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
-            if (aBTRCoreDevId == lpstBTRCoreBTDeviceArr[ui32LoopIdx].tDeviceId) {
-                lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[ui32LoopIdx];
-                lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[ui32LoopIdx];
-                lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-                lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-                break;
-            }
-        }
-    }
-
-
-    if (!lpcBTRCoreBTDevicePath || !strlen(lpcBTRCoreBTDevicePath)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired/scanned devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-
-
-    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
+    // TODO: Implement a Device State Machine and Check whether the device is in a Disconnectable State
     // before making the connect call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreLE:
-        lenBTDeviceType = enBTDevLE;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
-    }
-
-
     if (BtrCore_BTDisconnectDevice(pstlhBTRCore->connHdl, lpcBTRCoreBTDevicePath, lenBTDeviceType) != 0) {
         BTRCORELOG_ERROR ("DisConnect from device failed\n");
         return enBTRCoreFailure;
@@ -2941,12 +2993,8 @@ BTRCore_GetDeviceConnected (
     enBTDeviceType          lenBTDeviceType         = enBTDevUnknown;
     stBTRCoreBTDevice*      lpstBTRCoreBTDevice     = NULL;
     stBTRCoreDevStateInfo*  lpstBTRCoreDevStateInfo = NULL;
-    stBTRCoreBTDevice*      lpstBTRCoreBTDeviceArr  = NULL;
-    stBTRCoreDevStateInfo*  lpstBTRCoreDevStInfoArr = NULL;
     const char*             lpcBTRCoreBTDevicePath  = NULL;
     const char*             lpcBTRCoreBTDeviceName  = NULL;
-    unsigned int            ui32NumOfDevices        = 0;
-    unsigned int            ui32LoopIdx             = 0;
 
 
     if (!hBTRCore) {
@@ -2960,75 +3008,13 @@ BTRCore_GetDeviceConnected (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);    /* Keep the list upto date */
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfo(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                               &lenBTDeviceType, &lpstBTRCoreBTDevice, &lpstBTRCoreDevStateInfo,
+                                               &lpcBTRCoreBTDevicePath, &lpcBTRCoreBTDeviceName)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
-
-    if (aenBTRCoreDevType != enBTRCoreLE) {
-        ui32NumOfDevices        = pstlhBTRCore->numOfPairedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stKnownDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stKnownDevStInfoArr;
-    }
-    else {
-        ui32NumOfDevices        = pstlhBTRCore->numOfScannedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stScannedDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stScannedDevStInfoArr;
-
-    }
-
-
-    if (!ui32NumOfDevices) {
-        BTRCORELOG_ERROR ("There is no device paried/scanned for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[aBTRCoreDevId];
-        lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[aBTRCoreDevId];
-        lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-        lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-    }
-    else {
-        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
-            if (aBTRCoreDevId == lpstBTRCoreBTDeviceArr[ui32LoopIdx].tDeviceId) {
-                lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[ui32LoopIdx];
-                lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[ui32LoopIdx];
-                lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-                lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-                break;
-            }
-        }
-    }
-
-
-    if (!lpcBTRCoreBTDevicePath || !strlen(lpcBTRCoreBTDevicePath)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired/scanned devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-
-
-    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
-    // before making the connect call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreLE:
-        lenBTDeviceType = enBTDevLE;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
-    }
 
     (void)lenBTDeviceType;
 
@@ -3053,12 +3039,8 @@ BTRCore_GetDeviceDisconnected (
     enBTDeviceType          lenBTDeviceType         = enBTDevUnknown;
     stBTRCoreBTDevice*      lpstBTRCoreBTDevice     = NULL;
     stBTRCoreDevStateInfo*  lpstBTRCoreDevStateInfo = NULL;
-    stBTRCoreBTDevice*      lpstBTRCoreBTDeviceArr  = NULL;
-    stBTRCoreDevStateInfo*  lpstBTRCoreDevStInfoArr = NULL;
     const char*             lpcBTRCoreBTDevicePath  = NULL;
     const char*             lpcBTRCoreBTDeviceName  = NULL;
-    unsigned int            ui32NumOfDevices        = 0;
-    unsigned int            ui32LoopIdx             = 0;
 
 
     if (!hBTRCore) {
@@ -3072,75 +3054,13 @@ BTRCore_GetDeviceDisconnected (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);    /* Keep the list upto date */
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfo(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                               &lenBTDeviceType, &lpstBTRCoreBTDevice, &lpstBTRCoreDevStateInfo,
+                                               &lpcBTRCoreBTDevicePath, &lpcBTRCoreBTDeviceName)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
-
-    if (aenBTRCoreDevType != enBTRCoreLE) {
-        ui32NumOfDevices        = pstlhBTRCore->numOfPairedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stKnownDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stKnownDevStInfoArr;
-    }
-    else {
-        ui32NumOfDevices        = pstlhBTRCore->numOfScannedDevices;
-        lpstBTRCoreBTDeviceArr  = pstlhBTRCore->stScannedDevicesArr;
-        lpstBTRCoreDevStInfoArr = pstlhBTRCore->stScannedDevStInfoArr;
-
-    }
-
-
-    if (!ui32NumOfDevices) {
-        BTRCORELOG_ERROR ("There is no device paried/scanned for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[aBTRCoreDevId];
-        lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[aBTRCoreDevId];
-        lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-        lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-    }
-    else {
-        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
-            if (aBTRCoreDevId == lpstBTRCoreBTDeviceArr[ui32LoopIdx].tDeviceId) {
-                lpstBTRCoreBTDevice     = &lpstBTRCoreBTDeviceArr[ui32LoopIdx];
-                lpstBTRCoreDevStateInfo = &lpstBTRCoreDevStInfoArr[ui32LoopIdx];
-                lpcBTRCoreBTDevicePath  = lpstBTRCoreBTDevice->pcDevicePath;
-                lpcBTRCoreBTDeviceName  = lpstBTRCoreBTDevice->pcDeviceName;
-                break;
-            }
-        }
-    }
-
-
-    if (!lpcBTRCoreBTDevicePath || !strlen(lpcBTRCoreBTDevicePath)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired/scanned devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-
-
-    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
-    // before making the connect call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreLE:
-        lenBTDeviceType = enBTDevLE;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
-    }
 
     (void)lenBTDeviceType;
 
@@ -3259,12 +3179,15 @@ BTRCore_GetDeviceMediaInfo (
     enBTRCoreDeviceType     aenBTRCoreDevType,
     stBTRCoreDevMediaInfo*  apstBTRCoreDevMediaInfo
 ) {
-    stBTRCoreHdl*           pstlhBTRCore = NULL;
-    const char*             pDeviceAddress = NULL;
+    stBTRCoreHdl*           pstlhBTRCore    = NULL;
+    const char*             pDeviceAddress  = NULL;
     enBTDeviceType          lenBTDeviceType = enBTDevUnknown;
 
-    stBTRCoreAVMediaInfo        lstBtrCoreMediaInfo;
-    stBTRCoreAVMediaSbcInfo     lstBtrCoreMediaSbcInfo;
+    stBTRCoreAVMediaInfo    lstBtrCoreMediaInfo;
+    stBTRCoreAVMediaSbcInfo lstBtrCoreMediaSbcInfo;
+
+    stBTRCoreBTDevice*      pstKnownDevice  = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreFailure;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -3277,56 +3200,24 @@ BTRCore_GetDeviceMediaInfo (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        /* Keep the list upto date */
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-    }
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice* pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-
-    BTRCORELOG_INFO (" We will get Media Info for %s\n", pDeviceAddress);
-
-    // TODO: Implement a Device State Machine and Check whether the device is Connected before making the call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &pstKnownDevice, &pDeviceAddress)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
     //TODO: Make a Device specific call baced on lenBTDeviceType
     (void)lenBTDeviceType;
 
+
+    BTRCORELOG_INFO (" We will get Media Info for %s\n", pDeviceAddress);
+
     lstBtrCoreMediaInfo.eBtrCoreAVMType         = eBTRCoreAVMTypeUnknown;
     lstBtrCoreMediaInfo.pstBtrCoreAVMCodecInfo  = &lstBtrCoreMediaSbcInfo;
 
 
+    // TODO: Implement a Device State Machine and Check whether the device is Connected before making the call
     if (BTRCore_AVMedia_GetCurMediaInfo (pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, &lstBtrCoreMediaInfo)) {
         BTRCORELOG_ERROR ("AVMedia_GetCurMediaInfo ERROR occurred\n");
         return enBTRCoreFailure;
@@ -3402,13 +3293,16 @@ BTRCore_AcquireDeviceDataPath (
     int*                aidataReadMTU,
     int*                aidataWriteMTU
 ) {
-    stBTRCoreHdl*   pstlhBTRCore    = NULL;
-    const char*     pDeviceAddress  = NULL;
-    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
-    int             liDataPath      = 0;
-    int             lidataReadMTU   = 0;
-    int             lidataWriteMTU  = 0;
-    int             i32LoopIdx      = 0;
+    stBTRCoreHdl*       pstlhBTRCore    = NULL;
+    const char*         pDeviceAddress  = NULL;
+    enBTDeviceType      lenBTDeviceType = enBTDevUnknown;
+    int                 liDataPath      = 0;
+    int                 lidataReadMTU   = 0;
+    int                 lidataWriteMTU  = 0;
+    unsigned int        ui32NumOfDevices= 0;
+    unsigned int        ui32LoopIdx     = 0;
+    stBTRCoreBTDevice*  pstKnownDevice  = NULL;
+    enBTRCoreRet        lenBTRCoreRet   = enBTRCoreFailure;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -3421,53 +3315,19 @@ BTRCore_AcquireDeviceDataPath (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        /* Keep the list upto date */
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-    }
-
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice* pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-
-    BTRCORELOG_INFO (" We will Acquire Data Path for %s\n", pDeviceAddress);
-
-    // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
-    // before making the call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &pstKnownDevice, &pDeviceAddress)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
     //TODO: Make a Device specific call baced on lenBTDeviceType
     (void)lenBTDeviceType;
 
+    BTRCORELOG_INFO (" We will Acquire Data Path for %s\n", pDeviceAddress);
+
+    // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
+    // before making the call
     if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
@@ -3486,12 +3346,12 @@ BTRCore_AcquireDeviceDataPath (
         }
     }
     else {
-        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
-            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId) {
-                pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState  = pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
+        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
+            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[ui32LoopIdx].tDeviceId) {
+                pstlhBTRCore->stKnownDevStInfoArr[ui32LoopIdx].eDevicePrevState  = pstlhBTRCore->stKnownDevStInfoArr[ui32LoopIdx].eDeviceCurrState;
 
-                if (pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState  != enBTRCoreDevStPlaying) {
-                    pstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState   = enBTRCoreDevStPlaying; 
+                if (pstlhBTRCore->stKnownDevStInfoArr[ui32LoopIdx].eDeviceCurrState  != enBTRCoreDevStPlaying) {
+                    pstlhBTRCore->stKnownDevStInfoArr[ui32LoopIdx].eDeviceCurrState   = enBTRCoreDevStPlaying; 
                 }
             }
         }
@@ -3508,9 +3368,11 @@ BTRCore_ReleaseDeviceDataPath (
     tBTRCoreDevId       aBTRCoreDevId,
     enBTRCoreDeviceType aenBTRCoreDevType
 ) {
-    stBTRCoreHdl*   pstlhBTRCore    = NULL;
-    const char*     pDeviceAddress  = NULL;
-    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
+    stBTRCoreHdl*       pstlhBTRCore    = NULL;
+    const char*         pDeviceAddress  = NULL;
+    enBTDeviceType      lenBTDeviceType = enBTDevUnknown;
+    stBTRCoreBTDevice*  pstKnownDevice  = NULL;
+    enBTRCoreRet        lenBTRCoreRet   = enBTRCoreFailure;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -3523,47 +3385,19 @@ BTRCore_ReleaseDeviceDataPath (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice* pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-
-    BTRCORELOG_INFO (" We will Release Data Path for %s\n", pDeviceAddress);
-
-    // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
-    // before making the call
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &pstKnownDevice, &pDeviceAddress)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
     //TODO: Make a Device specific call baced on lenBTDeviceType
     (void)lenBTDeviceType;
 
+    BTRCORELOG_INFO (" We will Release Data Path for %s\n", pDeviceAddress);
+
+    // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
+    // before making the call
     if(BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pDeviceAddress) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
@@ -3580,12 +3414,15 @@ BTRCore_MediaControl (
     enBTRCoreDeviceType aenBTRCoreDevType,
     enBTRCoreMediaCtrl  aenBTRCoreMediaCtrl
 ) {
-    stBTRCoreHdl*   pstlhBTRCore    = NULL;
-    const char*     pDeviceAddress  = NULL;
-    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
-    BOOLEAN         lbBTDeviceConnected = FALSE; 
-    int             loop = 0;
+    stBTRCoreHdl*        pstlhBTRCore = NULL;
+    const char*          pDeviceAddress = NULL;
+    enBTDeviceType       lenBTDeviceType = enBTDevUnknown;
+    BOOLEAN              lbBTDeviceConnected = FALSE; 
     enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl = 0;
+    unsigned int         ui32LoopIdx     = 0;
+    unsigned int         ui32NumOfDevices= 0;
+    stBTRCoreBTDevice*   pstKnownDevice = NULL;
+    enBTRCoreRet         lenBTRCoreRet   = enBTRCoreFailure;
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -3598,61 +3435,27 @@ BTRCore_MediaControl (
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_DEBUG ("Possibly the list is not populated; like booted and connecting\n");
-        /* Keep the list upto date */
-        btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
-    }
-
-    if (!pstlhBTRCore->numOfPairedDevices) {
-        BTRCORELOG_ERROR ("There is no device paried for this adapter\n");
-        return enBTRCoreFailure;
-    }
-
-    if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
-        stBTRCoreBTDevice*   pstKnownDevice = NULL;
-        pstKnownDevice = &pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId];
-        pDeviceAddress = pstKnownDevice->pcDevicePath;
-    }
-    else {
-        pDeviceAddress = btrCore_GetKnownDeviceAddress(pstlhBTRCore, aBTRCoreDevId);
-    }
-
-    if (!pDeviceAddress || !strlen(pDeviceAddress)) {
-        BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
-        return enBTRCoreDeviceNotFound;
-    }
-    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
-    // before making the connect call
-
-    switch (aenBTRCoreDevType) {
-    case enBTRCoreSpeakers:
-    case enBTRCoreHeadSet:
-        lenBTDeviceType = enBTDevAudioSink;
-        break;
-    case enBTRCoreMobileAudioIn:
-    case enBTRCorePCAudioIn:
-        lenBTDeviceType = enBTDevAudioSource;
-        break;
-    case enBTRCoreUnknown:
-    default:
-        lenBTDeviceType = enBTDevUnknown;
-        break;
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+                                                    &lenBTDeviceType, &pstKnownDevice, &pDeviceAddress)) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+        return lenBTRCoreRet;
     }
 
     //TODO: Make a Device specific call baced on lenBTDeviceType
     (void)lenBTDeviceType;
 
 
+    // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
+    // before making the connect call
     if (aBTRCoreDevId < BTRCORE_MAX_NUM_BT_DEVICES) {
         pDeviceAddress      = pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].pcDevicePath;
         lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[aBTRCoreDevId].bDeviceConnected;
     }
     else {
-        for (loop = 0; loop < pstlhBTRCore->numOfPairedDevices; loop++) {
-            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[loop].tDeviceId) {
-                lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[loop].bDeviceConnected;
-                pDeviceAddress      = pstlhBTRCore->stKnownDevicesArr[loop].pcDevicePath;
+        for (ui32LoopIdx = 0; ui32LoopIdx < ui32NumOfDevices; ui32LoopIdx++) {
+            if (aBTRCoreDevId == pstlhBTRCore->stKnownDevicesArr[ui32LoopIdx].tDeviceId) {
+                lbBTDeviceConnected = pstlhBTRCore->stKnownDevicesArr[ui32LoopIdx].bDeviceConnected;
+                pDeviceAddress      = pstlhBTRCore->stKnownDevicesArr[ui32LoopIdx].pcDevicePath;
             }
         }
     }
@@ -4463,12 +4266,13 @@ btrCore_BTDeviceStatusUpdateCb (
             }
 
             lBTRCoreDevId = btrCore_GenerateUniqueDeviceID(apstBTDeviceInfo->pcAddress);
+
             if (btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId)) {
                 BTRCORELOG_INFO ("Already we have a entry in the list; Skip Parsing now \n");
             }
             else {
                 if ((lenBTRCoreRet = btrCore_OutTaskAddOp(lpstlhBTRCore->pGAQueueOutTask, enBTRCoreTaskOpProcess, enBTRCoreTaskPTcBDeviceDisc, apstBTDeviceInfo)) != enBTRCoreSuccess) {
-                    BTRCORELOG_ERROR("Failure btrCore_OutTaskAddOp enBTRCoreTaskOpProcess enBTRCoreTaskPTcBDeviceDisc %d\n", lenBTRCoreRet);
+                    BTRCORELOG_WARN("Failure btrCore_OutTaskAddOp enBTRCoreTaskOpProcess enBTRCoreTaskPTcBDeviceDisc %d\n", lenBTRCoreRet);
                 }
             }
         }
@@ -4532,56 +4336,12 @@ btrCore_BTDeviceStatusUpdateCb (
                 }
             }
 
-            if (lpstlhBTRCore->numOfScannedDevices) {
-                for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
-                    if (lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
-                        stBTRCoreBTDevice   lstFoundDevice;
-
-                        BTRCORELOG_TRACE ("i32LoopIdx = %d\n", i32LoopIdx);
-                        BTRCORELOG_TRACE ("lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDeviceCurrState = %d\n", lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDeviceCurrState);
-                        BTRCORELOG_TRACE ("lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDevicePrevState = %d\n", lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDevicePrevState);
-
-
-                        memcpy (&lstFoundDevice, &lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx], sizeof(stBTRCoreBTDevice));
-                        lstFoundDevice.bFound = FALSE;
-                        // To confirm if this index preserving method is fine or scan 32 fixed element list always just by flipping  bFound to TRUE/FALSE
-                        // Clean flipping logic. This will suffice
-                        if (i32LoopIdx != lpstlhBTRCore->numOfScannedDevices-1) {
-                            memcpy (&lpstlhBTRCore->stScannedDevicesArr[i32LoopIdx], &lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreBTDevice));
-                            memcpy (&lpstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx], &lpstlhBTRCore->stScannedDevStInfoArr[lpstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreDevStateInfo));   
-                        }
-
-                        memset(&lpstlhBTRCore->stScannedDevicesArr[lpstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreBTDevice));
-                        memset(&lpstlhBTRCore->stScannedDevStInfoArr[lpstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreDevStateInfo));
-
-                        lpstlhBTRCore->numOfScannedDevices--;
-
-                        if (lpstlhBTRCore->fpcBBTRCoreDeviceDisc) {
-                            if ((lenBTRCoreRet = lpstlhBTRCore->fpcBBTRCoreDeviceDisc(lstFoundDevice, lpstlhBTRCore->pvcBDevDiscUserData)) != enBTRCoreSuccess) {
-                                BTRCORELOG_ERROR ("Failure fpcBBTRCoreDeviceDisc Ret = %d\n", lenBTRCoreRet);
-                            }
-                        }
-
-
-                        if (!lpstlhBTRCore->numOfScannedDevices) {
-                            BTRCORELOG_INFO ("\nClearing Scanned Device List...\n");
-                            btrCore_ClearScannedDevicesList(lpstlhBTRCore);
-
-                            lpstlhBTRCore->stDevStatusCbInfo.deviceId         = 0; // Need to have any special IDs for this purpose like 0xFFFFFFFF
-                            lpstlhBTRCore->stDevStatusCbInfo.eDevicePrevState = enBTRCoreDevStFound;
-                            lpstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStLost;
-                            lpstlhBTRCore->stDevStatusCbInfo.isPaired         = 0;           
-
-                            if (lpstlhBTRCore->fpcBBTRCoreStatus) {
-                                // Do it in OutTask
-                                //if (lpstlhBTRCore->fpcBBTRCoreStatus(&lpstlhBTRCore->stDevStatusCbInfo, lpstlhBTRCore->pvcBStatusUserData) != enBTRCoreSuccess) {
-                                    //TODO: Triggering Outgoing callbacks from Incoming callbacks..aaaaaaaahhhh not a good idea
-                                //}      
-                            }
-                        }
-
-                        break;
-                    }
+            if (!btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId)) {
+                BTRCORELOG_INFO ("We dont have a entry in the list; Skip Parsing now \n");
+            }
+            else {
+                if ((lenBTRCoreRet = btrCore_OutTaskAddOp(lpstlhBTRCore->pGAQueueOutTask, enBTRCoreTaskOpProcess, enBTRCoreTaskPTcBDeviceRemoved, apstBTDeviceInfo)) != enBTRCoreSuccess) {
+                    BTRCORELOG_WARN("Failure btrCore_OutTaskAddOp enBTRCoreTaskOpProcess enBTRCoreTaskPTcBDeviceRemoved %d\n", lenBTRCoreRet);
                 }
             }
         }
