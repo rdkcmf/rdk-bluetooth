@@ -24,6 +24,8 @@
 /* System Headers */
 #include <stdlib.h>
 #include <unistd.h>
+#include <sched.h>
+
 #include <glib.h>
 
 /* External Library Headers */
@@ -573,6 +575,15 @@ BTRCore_AVMedia_GetCurMediaInfo (
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
     if (apstBtrCoreAVMediaInfo->pstBtrCoreAVMCodecInfo) {
+
+        /* Max 4 sec timeout - Polled at 200ms second interval */
+        unsigned int ui32sleepIdx = 20;
+        do {
+            sched_yield();
+            usleep(200000);
+        } while ((!pstlhBTRCoreAVM->pcAVMediaTransportPath) && (--ui32sleepIdx));
+
+
         //TODO: Get this from the Negotiated Media callback by storing in the handle
         apstBtrCoreAVMediaInfo->eBtrCoreAVMType = eBTRCoreAVMTypeSBC;
 
@@ -1180,21 +1191,6 @@ btrCore_AVMedia_TransportPathCb (
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
 
-    if (pstlhBTRCoreAVM) { 
-        if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
-            if(!strncmp(pstlhBTRCoreAVM->pcAVMediaTransportPath, apBtMediaTransportPath, strlen(pstlhBTRCoreAVM->pcAVMediaTransportPath))) {
-                BTRCORELOG_INFO ("Freeing %p:%s\n", pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
-                i32BtRet = 0;
-             }
-
-            free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
-            pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;
-        }
-        else {
-            pstlhBTRCoreAVM->pcAVMediaTransportPath = strdup(apBtMediaTransportPath);
-        }
-    }
-
     if (apBtMediaCaps) {
         a2dp_sbc_t* apBtMediaSBCCaps = NULL;
         a2dp_sbc_t  lstBTMediaSBCConfig;
@@ -1262,6 +1258,23 @@ btrCore_AVMedia_TransportPathCb (
             }
         }
     }
+
+
+    if (pstlhBTRCoreAVM) {
+        if (pstlhBTRCoreAVM->pcAVMediaTransportPath) {
+            if(!strncmp(pstlhBTRCoreAVM->pcAVMediaTransportPath, apBtMediaTransportPath, strlen(pstlhBTRCoreAVM->pcAVMediaTransportPath))) {
+                BTRCORELOG_INFO ("Freeing %p:%s\n", pstlhBTRCoreAVM->pcAVMediaTransportPath, pstlhBTRCoreAVM->pcAVMediaTransportPath);
+                i32BtRet = 0;
+             }
+
+            free(pstlhBTRCoreAVM->pcAVMediaTransportPath);
+            pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;
+        }
+        else {
+            pstlhBTRCoreAVM->pcAVMediaTransportPath = strdup(apBtMediaTransportPath);
+        }
+    }
+
 
     return i32BtRet;
 }
