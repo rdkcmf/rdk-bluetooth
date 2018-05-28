@@ -782,9 +782,10 @@ btrCore_GetDeviceInfo (
         }
     }
 
-
-    *appcBTRCoreBTDevicePath    = (*appstBTRCoreBTDevice)->pcDevicePath;
-    *appcBTRCoreBTDeviceName    = (*appstBTRCoreBTDevice)->pcDeviceName;
+    if (*appstBTRCoreBTDevice) {
+        *appcBTRCoreBTDevicePath    = (*appstBTRCoreBTDevice)->pcDevicePath;
+        *appcBTRCoreBTDeviceName    = (*appstBTRCoreBTDevice)->pcDeviceName;
+    }
 
     if (!(*appcBTRCoreBTDevicePath) || !strlen(*appcBTRCoreBTDevicePath)) {
         BTRCORELOG_ERROR ("Failed to find device in paired/scanned devices list\n");
@@ -850,8 +851,10 @@ btrCore_GetDeviceInfoKnown (
         }
     }
 
+    if (*appstBTRCoreBTDevice) {
+        *appcBTRCoreBTDevicePath = (*appstBTRCoreBTDevice)->pcDevicePath;
+    }
 
-    *appcBTRCoreBTDevicePath = (*appstBTRCoreBTDevice)->pcDevicePath;
     if (!(*appcBTRCoreBTDevicePath) || !strlen(*appcBTRCoreBTDevicePath)) {
         BTRCORELOG_ERROR ("Failed to find device in paired devices list\n");
         return enBTRCoreDeviceNotFound;
