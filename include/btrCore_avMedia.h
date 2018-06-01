@@ -145,7 +145,7 @@ typedef struct _stBTRCoreAVMediaStatusUpdate {
 
 
 /* Fptr Callbacks types */
-typedef enBTRCoreRet (*fPtr_BTRCore_AVMediaStatusUpdateCb) (void* pBTRCoreAVMediaStreamStatus, const char* apcAVMediaDevAddress, void* apvUserCbData);
+typedef enBTRCoreRet (*fPtr_BTRCore_AVMediaStatusUpdateCb) (stBTRCoreAVMediaStatusUpdate* pBTRCoreAVMediaStreamStatus, const char* apcAVMediaDevAddress, void* apvUserData);
 
 /**
  * @addtogroup BLUETOOTH_APIS

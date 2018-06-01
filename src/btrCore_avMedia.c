@@ -348,7 +348,7 @@ btrCore_AVMedia_PlaybackPositionPolling (
             }
 
             /* post callback */
-            pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate((void*)&mediaStatus,
+            pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate(&mediaStatus,
                                                             pstAVMediaStUserData->apcAVMDevAddress,
                                                             pstlhBTRCoreAVM->pcBMediaStatusUserData);
         }
@@ -1379,7 +1379,7 @@ btrCore_AVMedia_MediaStatusUpdateCb (
 
     /* post callback */
     if (pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate && postEvent) {
-        if (pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate((void*)&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData) != enBTRCoreSuccess) {
+        if (pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate(&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData) != enBTRCoreSuccess) {
             BTRCORELOG_ERROR ("fpcBBTRCoreAVMediaStatusUpdate - Failure !!!\n");
             return -1;
         }
