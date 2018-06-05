@@ -485,6 +485,8 @@ printMenu (
     fprintf( stderr, "40. Disconnect to LE Device\n");
     fprintf( stderr, "41. Get Gatt Properties of connected LE device.\n");
     fprintf( stderr, "42. Perform Operation on connected LE device.\n");
+    fprintf( stderr, "43. Connect to HID/Unknown\n");
+    fprintf( stderr, "44. Disconnect to HID/Unknown\n");
 
     fprintf( stderr, "88. debug test\n");
     fprintf( stderr, "99. Exit\n");
@@ -1030,6 +1032,30 @@ main (
                 }
             }
             break;
+        case 43:
+            {
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                fprintf(stderr, "%d\t: %s - Pick a Device to Connect...\n", __LINE__, __FUNCTION__);
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                BTRCore_ConnectDevice(lhBTRCore, devnum, enBTRCoreUnknown);
+                connectedDeviceIndex = devnum; //TODO update this if remote device initiates connection.
+                fprintf(stderr, "%d\t: %s - device connect process completed.\n", __LINE__, __FUNCTION__);
+            }
+            break;
+        case 44:
+            {
+                stBTRCorePairedDevicesCount lstBTRCorePairedDevList;
+                fprintf(stderr, "%d\t: %s - Pick a Device to Disconnect...\n", __LINE__, __FUNCTION__);
+                lstBTRCoreAdapter.adapter_number = myadapter;
+                BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
+                devnum = getChoice();
+                BTRCore_DisconnectDevice(lhBTRCore, devnum, enBTRCoreUnknown);
+                fprintf(stderr, "%d\t: %s - device disconnect process completed.\n", __LINE__, __FUNCTION__);
+            }
+            break;
+
         case 99: 
             fprintf(stderr, "%d\t: %s - Quitting program!\n", __LINE__, __FUNCTION__);
             BTRCore_DeInit(lhBTRCore);
