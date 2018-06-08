@@ -4124,10 +4124,16 @@ BtrCore_BTGetTrackInformation (
     char*               Track       = "Track";
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
-    DBusPendingCall*    lpDBusPendC = NULL;
     DBusError           lDBusErr;
-    DBusMessageIter     args;
     char*               mediaPlayerPath = BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH;
+
+    DBusMessageIter     lDBusMsgIter;
+    DBusMessageIter     lDBusReplyIter;
+    DBusMessageIter     arrayMsgIter;
+    DBusMessageIter     dictMsgIter;
+    DBusMessageIter     element;
+    DBusMessageIter     elementBasic;
+    int                 dbus_type = DBUS_TYPE_INVALID;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
         BTRCORELOG_ERROR ("DBus Connection Failure!!!"); 
@@ -4149,36 +4155,42 @@ BtrCore_BTGetTrackInformation (
         return -1;
     }
 
-    dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &mediaPlayerPath, DBUS_TYPE_STRING, &Track, DBUS_TYPE_INVALID);
+    dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+    
+    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &mediaPlayerPath);
+    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &Track);
+
 
     dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
-        BTRCORELOG_ERROR ("failed to send message");
+    lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lpDBusReply) {
+        BTRCORELOG_ERROR ("lpDBusReply NULL\n");
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
         return -1;
     }
 
     dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(lpDBusMsg);
 
-    dbus_pending_call_block(lpDBusPendC);
-    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
-
-    if (!lpDBusReply) {
-        BTRCORELOG_ERROR ("lpDBusReply Null\n");
-        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+    dbus_message_iter_init(lpDBusReply, &lDBusReplyIter);           // lpDBusMsg is pointer to dbus message received
+    if ((dbus_message_iter_get_arg_type (&lDBusReplyIter)) == DBUS_TYPE_INVALID) {
+        BTRCORELOG_ERROR ("DBUS_TYPE_INVALID\n");
+        dbus_message_unref(lpDBusReply);
         return -1;
     }
-    dbus_pending_call_unref(lpDBusPendC);
 
-    DBusMessageIter MsgIter, arrayMsgIter, dictMsgIter, element, elementBasic;
-    int dbus_type = DBUS_TYPE_INVALID;
+    dbus_message_iter_recurse(&lDBusReplyIter, &arrayMsgIter);      // pointer to first element ARRAY of the dbus messge received
+    if ((dbus_message_iter_get_arg_type (&arrayMsgIter)) == DBUS_TYPE_INVALID) {
+        BTRCORELOG_ERROR ("DBUS_TYPE_INVALID\n");
+        dbus_message_unref(lpDBusReply);
+        return -1;
+    }
 
-    dbus_message_iter_init(lpDBusReply, &MsgIter);                    // lpDBusMsg is pointer to dbus message received
-    dbus_message_iter_recurse(&MsgIter, &arrayMsgIter);               // pointer to first element ARRAY of the dbus messge received
     dbus_message_iter_recurse(&arrayMsgIter, &dictMsgIter);         // pointer to first element DICTIONARY of the dbus messge received
 
-    while (DBUS_TYPE_INVALID != (dbus_type = dbus_message_iter_get_arg_type(&dictMsgIter))) {
+
+    while ((dbus_type = dbus_message_iter_get_arg_type(&dictMsgIter)) != DBUS_TYPE_INVALID) {
         if (DBUS_TYPE_DICT_ENTRY == dbus_type) {
             dbus_message_iter_recurse(&dictMsgIter,&element);         // pointer to element STRING of the dbus messge received
 
@@ -4244,6 +4256,8 @@ BtrCore_BTGetTrackInformation (
             dbus_message_iter_next(&dictMsgIter);
         }
     }
+
+    dbus_message_unref(lpDBusReply);
 
     return 0;
 }
