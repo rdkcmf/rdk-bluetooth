@@ -4240,7 +4240,8 @@ btrCore_BTDeviceStatusUpdateCb (
                 }
             }
 
-            if (!btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId)) {
+            if (btrCore_GetKnownDeviceMac(lpstlhBTRCore, lBTRCoreDevId)   ||
+                !btrCore_GetScannedDeviceAddress(lpstlhBTRCore, lBTRCoreDevId) ){
                 BTRCORELOG_INFO ("We dont have a entry in the list; Skip Parsing now \n");
             }
             else {
