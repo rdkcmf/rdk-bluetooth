@@ -32,9 +32,6 @@
  */
 
 
-#define BTRCORE_MAX_STR_LEN 256
-#define BTRCORE_STR_LEN     32
-
 typedef void* tBTRCoreAVMediaHdl;
 
 typedef enum _eBTRCoreAVMType {

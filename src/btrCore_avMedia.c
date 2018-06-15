@@ -255,16 +255,21 @@ btrCore_AVMedia_PlaybackPositionPolling (
     }
 
     BTRCORELOG_INFO ("Started AVMedia Position Polling thread successfully...");
-    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
-    enBTRCoreRet positionRet=0, statusRet=0, trackRet=0;
-    char          mediaTitle[BTRCORE_MAX_STR_LEN] = "\0";
-    unsigned char isPlaying          = 0;
-    void*         apBtConn           = 0;
 
-    stBTRCoreAVMediaStatusUpdate   mediaStatus;
-    stBTRCoreAVMediaTrackInfo      mediaTrackInfo;
-    unsigned int  mediaPosition = 0;
-    char*         mediaState    = 0;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            positionRet     = 0;
+    enBTRCoreRet            statusRet       = 0;
+    enBTRCoreRet            trackRet        = 0;
+    char                    mediaTitle[BTRCORE_MAX_STR_LEN] = "\0";
+    char                    lpcAVMediaPlayerPath[BTRCORE_MAX_STR_LEN] = "\0";
+    unsigned char           isPlaying       = 0;
+    unsigned char           isTrackChanged  = 0;
+    void*                   apBtConn        = 0;
+
+    stBTRCoreAVMediaStatusUpdate    mediaStatus;
+    stBTRCoreAVMediaTrackInfo       mediaTrackInfo;
+    unsigned int                    mediaPosition = 0;
+    char*                           mediaState    = 0;
 
     stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = NULL;
     BOOLEAN  threadExit = FALSE;
@@ -341,10 +346,25 @@ btrCore_AVMedia_PlaybackPositionPolling (
 
             mediaStatus.m_mediaPositionInfo.ui32Position = mediaPosition;
             mediaStatus.m_mediaPositionInfo.ui32Duration = mediaTrackInfo.ui32Duration;
-                                /* can look for a better logic later */ 
-            if (strcmp(mediaTitle, mediaTrackInfo.pcTitle)) {
-                mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStarted;
-                strncpy(mediaTitle, mediaTrackInfo.pcTitle, BTRCORE_MAX_STR_LEN);
+
+            /* can look for a better logic later */ 
+            if (strcmp(lpcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath)) {
+                mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStChanged;
+                memcpy(&mediaStatus.m_mediaTrackInfo, &mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+                strncpy(lpcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1);
+                isTrackChanged = 1;
+            }
+            else if (strcmp(mediaTitle, mediaTrackInfo.pcTitle)) {
+                if (!isTrackChanged) {
+                    mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStChanged;
+                    memcpy(&mediaStatus.m_mediaTrackInfo, &mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+                    isTrackChanged = 1;
+                }
+                else {
+                    mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStarted;
+                    strncpy(mediaTitle, mediaTrackInfo.pcTitle, BTRCORE_MAX_STR_LEN - 1);
+                    isTrackChanged = 0;
+                }
             }
 
             /* post callback */
@@ -790,7 +810,7 @@ BTRCore_AVMedia_MediaControl (
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
        //      Seems to be the root cause of the stack corruption as part of DELIA-25861
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr), BTRCORE_MAX_STR_LEN - 1))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -857,7 +877,7 @@ BTRCore_AVMedia_GetTrackInfo (
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
        //      Seems to be the root cause of the stack corruption as part of DELIA-25861
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr), BTRCORE_MAX_STR_LEN - 1))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -893,7 +913,7 @@ BTRCore_AVMedia_GetPositionInfo (
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
        //      Seems to be the root cause of the stack corruption as part of DELIA-25861
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr), BTRCORE_MAX_STR_LEN - 1))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -943,7 +963,7 @@ BTRCore_AVMedia_GetMediaProperty (
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
        //      Seems to be the root cause of the stack corruption as part of DELIA-25861.
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr)))) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevAddr), BTRCORE_MAX_STR_LEN - 1))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -978,7 +998,7 @@ BTRCore_AVMedia_StartMediaPositionPolling (
     if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
        //      Seems to be the root cause of the stack corruption as part of DELIA-25861.
-       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevPath)))) {
+       if (!(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(BtrCore_BTGetMediaPlayerPath (apBtConn, apBtDevPath), BTRCORE_MAX_STR_LEN - 1))) {
           BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
           return enBTRCoreFailure;
        }
@@ -988,7 +1008,7 @@ BTRCore_AVMedia_StartMediaPositionPolling (
        stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*) malloc (sizeof(stBTRCoreAVMediaStatusUserData));
 
        pstAVMediaStUserData->apvAVMUserData   = apBtConn;
-       pstAVMediaStUserData->apcAVMDevAddress = strdup(apBtDevAddr);
+       pstAVMediaStUserData->apcAVMDevAddress = strndup(apBtDevAddr, BTRCORE_MAX_STR_LEN - 1);
 
        pstlhBTRCoreAVM->pvThreadData = (void*)pstAVMediaStUserData;
 
@@ -1271,7 +1291,7 @@ btrCore_AVMedia_TransportPathCb (
             pstlhBTRCoreAVM->pcAVMediaTransportPath = NULL;
         }
         else {
-            pstlhBTRCoreAVM->pcAVMediaTransportPath = strdup(apBtMediaTransportPath);
+            pstlhBTRCoreAVM->pcAVMediaTransportPath = strndup(apBtMediaTransportPath, BTRCORE_MAX_STR_LEN - 1);
         }
     }
 
@@ -1306,12 +1326,12 @@ btrCore_AVMedia_MediaPlayerPathCb (
             else {
                 BTRCORELOG_INFO ("Switching Media Player from  %s  to  %s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, apcBTMediaPlayerPath);
                 free(pstlhBTRCoreAVM->pcAVMediaPlayerPath);
-                pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(apcBTMediaPlayerPath);
+                pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(apcBTMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1);
              }   
         }
         else {
             BTRCORELOG_INFO ("Storing Media Player : %s\n", apcBTMediaPlayerPath);
-            pstlhBTRCoreAVM->pcAVMediaPlayerPath = strdup(apcBTMediaPlayerPath);
+            pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(apcBTMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1);
         }
 
         i32BtRet = 0;

@@ -34,6 +34,11 @@
 #undef FALSE
 #endif
 
+
+#define BTRCORE_MAX_STR_LEN     256
+#define BTRCORE_STR_LEN         32
+
+
 typedef enum _BOOLEAN {
     FALSE,
     TRUE
