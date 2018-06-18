@@ -350,6 +350,7 @@ btrCore_AVMedia_PlaybackPositionPolling (
             /* can look for a better logic later */ 
             if (strcmp(lpcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath)) {
                 mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStChanged;
+                memset(&mediaStatus.m_mediaTrackInfo, '\0', sizeof(stBTRCoreAVMediaTrackInfo));
                 memcpy(&mediaStatus.m_mediaTrackInfo, &mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
                 strncpy(lpcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1);
                 isTrackChanged = 1;
@@ -357,6 +358,7 @@ btrCore_AVMedia_PlaybackPositionPolling (
             else if (strcmp(mediaTitle, mediaTrackInfo.pcTitle)) {
                 if (!isTrackChanged) {
                     mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStChanged;
+                    memset(&mediaStatus.m_mediaTrackInfo, '\0', sizeof(stBTRCoreAVMediaTrackInfo));
                     memcpy(&mediaStatus.m_mediaTrackInfo, &mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
                     isTrackChanged = 1;
                 }
