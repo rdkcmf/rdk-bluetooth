@@ -40,7 +40,7 @@
 
 
 typedef enum _BOOLEAN {
-    FALSE,
+    FALSE = 0,
     TRUE
 } BOOLEAN;
 
