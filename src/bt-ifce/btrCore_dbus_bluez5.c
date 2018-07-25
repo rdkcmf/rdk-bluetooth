@@ -2786,6 +2786,10 @@ BtrCore_BTStopLEDiscovery (
         BTRCORELOG_WARN ("Failed to Stop Discovery\n");
     }
 
+    // for now, adding a 1s sleep to prevent stop discovery from being interrupted
+    // by an LE connect request that immediately follows the stop discovery request
+    // TODO: avoid sleep. handle correctly by listening for "Discovering" events from Adapter interface
+    sleep (1);
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apBtAdapter,
