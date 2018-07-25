@@ -2777,6 +2777,7 @@ BtrCore_BTStopLEDiscovery (
 ) {
     DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
+    DBusMessageIter lDBusMsgIter, lDBusMsgIterDict;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -2795,6 +2796,17 @@ BtrCore_BTStopLEDiscovery (
         BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
+
+    dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_open_container(&lDBusMsgIter,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDict);
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+
 
     lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
     dbus_message_unref(lpDBusMsg);
