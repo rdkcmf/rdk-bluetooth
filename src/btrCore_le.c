@@ -57,8 +57,8 @@
 
 #define BTR_MAX_GATT_PROFILE                            16
 #define BTR_MAX_GATT_SERVICE                            4
-#define BTR_MAX_GATT_CHAR                               6
-#define BTR_MAX_GATT_DESC                               8
+#define BTR_MAX_GATT_CHAR                               10
+#define BTR_MAX_GATT_DESC                               4
 
 
 #define BTR_MAX_GATT_CHAR_FLAGS                         15
@@ -135,6 +135,9 @@ typedef struct _stBTRCoreLeGattProfile {
 typedef struct _stBTRCoreLeHdl {
     stBTRCoreLeGattProfile  astBTRGattProfile[BTR_MAX_GATT_PROFILE];
     unsigned short          ui16NumberOfGattProfile;
+
+    fPtr_BTRCore_LeStatusUpdateCb  fpcBTRCoreLeStatusUpdate;
+    void*                          pvBtLeStatusUserData;
 } stBTRCoreLeHdl;
 
 
@@ -213,7 +216,7 @@ btrCore_LE_FindGattProfile (
         for (ui16LoopIdx = 0; ui16LoopIdx < pstBTRCoreLeHdl->ui16NumberOfGattProfile; ui16LoopIdx++) {
             if (pstBTRCoreLeHdl->astBTRGattProfile[ui16LoopIdx].deviceID == aBtrDeviceID) {
                 pstProfile = &pstBTRCoreLeHdl->astBTRGattProfile[ui16LoopIdx];
-                BTRCORELOG_DEBUG ("Gatt Profile for Device %llu Found", aBtrDeviceID);
+                BTRCORELOG_DEBUG ("Gatt Profile for Device %llu Found.\n", aBtrDeviceID);
                 break;
             }
         }
@@ -235,7 +238,7 @@ btrCore_LE_FindGattService (
         for (ui16LoopIdx = 0; ui16LoopIdx < pstProfile->ui16NumberOfGattService; ui16LoopIdx++) {
             if (!strcmp(pstProfile->astBTRGattService[ui16LoopIdx].servicePath, pService)) {
                 pstService = &pstProfile->astBTRGattService[ui16LoopIdx];
-                BTRCORELOG_DEBUG ("Gatt Service %s Found", pService);
+                BTRCORELOG_DEBUG ("Gatt Service %s Found.\n", pService);
                 break;
             }
         }
@@ -257,7 +260,7 @@ btrCore_LE_FindGattCharacteristic (
         for (ui16LoopIdx = 0; ui16LoopIdx < pstService->ui16NumberOfGattChar; ui16LoopIdx++) {
             if (!strcmp(pstService->astBTRGattChar[ui16LoopIdx].charPath, pChar)) {
                 pstChar = &pstService->astBTRGattChar[ui16LoopIdx];
-                BTRCORELOG_DEBUG ("Gatt Char %s Found", pChar);
+                BTRCORELOG_DEBUG ("Gatt Char %s Found.\n", pChar);
                 break;
             }
         }
@@ -279,7 +282,7 @@ btrCore_LE_FindGattDescriptor (
         for (ui16LoopIdx = 0; ui16LoopIdx < pstChar->ui16NumberOfGattDesc; ui16LoopIdx++) {
             if (!strcmp(pstChar->atBTRGattDesc[ui16LoopIdx].descPath, pDesc)) {
                 pstDesc = &pstChar->atBTRGattDesc[ui16LoopIdx];
-                BTRCORELOG_DEBUG ("Gatt Descriptor %s Found", pDesc);
+                BTRCORELOG_DEBUG ("Gatt Descriptor %s Found.\n", pDesc);
                 break;
             }
         }
@@ -417,7 +420,7 @@ btrCore_LE_GetDataPath (
                 if (strstr(pService->serviceUuid, apBtLeUuid)) {
                     retLeDataPath = pService->servicePath;
                     *renBTOpIfceType = enBTGattService;
-                    BTRCORELOG_DEBUG ("UUID matched Service : %s", pService->servicePath);
+                    BTRCORELOG_DEBUG ("UUID matched Service : %s.\n", pService->servicePath);
                     break; // service loop
                 }
             }
@@ -442,7 +445,7 @@ btrCore_LE_GetDataPath (
                     if (!strcmp(pChar->charUuid, apBtLeUuid)) {
                         retLeDataPath = pChar->charPath;
                         *renBTOpIfceType = enBTGattCharacteristic;
-                        BTRCORELOG_DEBUG ("UUID matched Characteristic : %s", pChar->charPath);
+                        BTRCORELOG_DEBUG ("UUID matched Characteristic : %s.\n", pChar->charPath);
                         break; // char loop
                     }
                     else {
@@ -652,12 +655,12 @@ BTRCore_LE_GetGattProperty (
     }
   
     if (btrCore_LE_GetDataPath(hBTRCoreLe, apvBtConn, atBTRCoreDevId, apcBtUuid, lpcBtLePath, &lenBTOpIfceType) != enBTRCoreSuccess) {
-        BTRCORELOG_ERROR ("Failed to get LE Path for UUID %s !!!", apcBtUuid);
+        BTRCORELOG_ERROR ("Failed to get LE Path for UUID %s !!!\n", apcBtUuid);
         return enBTRCoreFailure;
     }
     
     if (!lpcBtLePath[0]) {
-        BTRCORELOG_ERROR ("Obtained LE Path is NULL!!!");
+        BTRCORELOG_ERROR ("Obtained LE Path is NULL!!!\n");
         return enBTRCoreFailure;
     }
      
@@ -783,7 +786,7 @@ BTRCore_LE_GetGattProperty (
 
     case enBTRCoreLEGPropUnknown:
     default:
-        BTRCORELOG_ERROR ("Invalid enBTRCoreLEGattProp Options %d !!!", aenBTRCoreLEGattProp);
+        BTRCORELOG_ERROR ("Invalid enBTRCoreLEGattProp Options %d !!!\n", aenBTRCoreLEGattProp);
         break;
 
     }
@@ -793,7 +796,7 @@ BTRCore_LE_GetGattProperty (
                                                              lenBTOpIfceType,
                                                              lunBTOpIfceProp,
                                                              apvBtPropValue)) {
-        BTRCORELOG_ERROR ("Failed to get Gatt %d Prop for UUID : %s!!!", aenBTRCoreLEGattProp, apcBtUuid);
+        BTRCORELOG_ERROR ("Failed to get Gatt %d Prop for UUID : %s!!!\n", aenBTRCoreLEGattProp, apcBtUuid);
         return enBTRCoreFailure;
     }
 
@@ -808,10 +811,11 @@ BtrCore_LE_PerformGattOp (
     tBTRCoreDevId      atBTRCoreDevId,
     const char*        apcBtUuid,
     enBTRCoreLEGattOp  aenBTRCoreLEGattOp,
-    void*              rpLeOpRes
+    char*              apLeOpArg,
+    char*              rpLeOpRes
 ) {
     char            lpcBtLePath[BT_MAX_STR_LEN] = "\0";
-    char*           pDevicePath = "\0";
+    char*           lpDevicePath      = "\0";
     enBTOpIfceType  lenBTOpIfceType   = enBTUnknown;
     enBTLeGattOp    lenBTLeGattOp     = enBTLeGattOpUnknown;
     //tBTRCoreDevId ltBTRCoreDevId   = btrCore_LE_BTGenerateUniqueDeviceID (apcBtDevAddr);
@@ -822,12 +826,12 @@ BtrCore_LE_PerformGattOp (
     }
   
     if (btrCore_LE_GetDataPath(hBTRCoreLe, apvBtConn, atBTRCoreDevId, apcBtUuid, lpcBtLePath, &lenBTOpIfceType) != enBTRCoreSuccess) {
-       BTRCORELOG_ERROR ("Failed to get LE Path for UUID %s !!!", apcBtUuid);
+       BTRCORELOG_ERROR ("Failed to get LE Path for UUID %s !!!\n", apcBtUuid);
        return enBTRCoreFailure;
     }
     
     if (!lpcBtLePath[0]) {
-       BTRCORELOG_ERROR ("LE Path is NULL!!!");
+       BTRCORELOG_ERROR ("LE Path is NULL!!!\n");
        return enBTRCoreFailure;
     }
 
@@ -839,10 +843,10 @@ BtrCore_LE_PerformGattOp (
              lenBTOpIfceType == enBTGattDescriptor    )  {
         stBTRCoreLeHdl*         lpstlhBTRCoreLe = (stBTRCoreLeHdl*)hBTRCoreLe;
         stBTRCoreLeGattProfile* pProfile        = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, atBTRCoreDevId);
-        pDevicePath = pProfile->devicePath;
+        lpDevicePath = pProfile->devicePath;
     } 
 
-
+    // Validate UUID 
     switch (aenBTRCoreLEGattOp) {
 
     case enBTRCoreLEGOpReadValue:
@@ -859,7 +863,7 @@ BtrCore_LE_PerformGattOp (
         break;
     case enBTRCoreLEGOpUnknown:
     default:
-        BTRCORELOG_ERROR ("Invalid enBTRCoreLEGattOp Options %d !!!", aenBTRCoreLEGattOp);
+        BTRCORELOG_ERROR ("Invalid enBTRCoreLEGattOp Options %d !!!.\n", aenBTRCoreLEGattOp);
         break;
     }
 
@@ -867,9 +871,10 @@ BtrCore_LE_PerformGattOp (
                                                                            lpcBtLePath,
                                                                            lenBTOpIfceType,
                                                                            lenBTLeGattOp,
-                                                                           (void*)pDevicePath,  // for now
+                                                                           lpDevicePath,  // for now
+                                                                           apLeOpArg, 
                                                                            rpLeOpRes) ) {
-       BTRCORELOG_ERROR ("Failed to Perform Le Gatt Op %d for UUID %s  !!!", aenBTRCoreLEGattOp, apcBtUuid);
+       BTRCORELOG_ERROR ("Failed to Perform Le Gatt Op %d for UUID %s  !!!.\n", aenBTRCoreLEGattOp, apcBtUuid);
        return enBTRCoreFailure;
     }
 
@@ -877,28 +882,26 @@ BtrCore_LE_PerformGattOp (
 }
 
 // Outgoing callbacks Registration Interfaces
-#if 0
 enBTRCoreRet
-BTRCore_LE_RegisterDevStatusUpdateCb (
-    tBTRCoreLeHdl*                      hBTRCoreLe,
-    fPtr_BTRCore_LeDevStatusUpdateCb    afpcBTRCoreLeDevStatusUpdate,
-    void*                               apvBtLeDevStatusUserData
+BTRCore_LE_RegisterStatusUpdateCb (
+    tBTRCoreLeHdl                       hBTRCoreLe,
+    fPtr_BTRCore_LeStatusUpdateCb       afpcBTRCoreLeStatusUpdate,
+    void*                               apvBtLeStatusUserData
 ) {
     stBTRCoreLeHdl* phBTRCoreLe = NULL;
 
-    if (!hBTRCoreLe || !afpcBTRCoreLeDevStatusUpdate)  {
+    if (!hBTRCoreLe || !afpcBTRCoreLeStatusUpdate)  {
        BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
        return enBTRCoreInvalidArg;
     }
 
     phBTRCoreLe = (stBTRCoreLeHdl*)hBTRCoreLe;
 
-    phBTRCoreLe->fpcBTRCoreLeDevStatusUpdate = afpcBBTRCoreAVMediaStatusUpdate;
-    phBTRCoreLe->pvBtLeDevStatusUserData     = apvBtLeDevStatusUserData;
+    phBTRCoreLe->fpcBTRCoreLeStatusUpdate = afpcBTRCoreLeStatusUpdate;
+    phBTRCoreLe->pvBtLeStatusUserData     = apvBtLeStatusUserData;
 
     return enBTRCoreSuccess;
 }
-#endif
 
 
 //incoming callbacks
@@ -916,7 +919,7 @@ btrCore_LE_GattInfoCb (
     tBTRCoreDevId           ltBTRCoreDevId  = -1;
 
     if (!apBtGattPath || !aBtdevAddr || !apUserData) {
-        BTRCORELOG_ERROR("Invalid arguments!!!");
+        BTRCORELOG_ERROR("Invalid arguments!!!\n");
         return -1;
     }
 
@@ -947,10 +950,10 @@ btrCore_LE_GattInfoCb (
                             strncpy(pProfile->devicePath, lBtDevPath, BTRCORE_MAX_STR_LEN - 1);
                             pProfile->deviceID = ltBTRCoreDevId;
                             lpstlhBTRCoreLe->ui16NumberOfGattProfile++;
-                            BTRCORELOG_DEBUG ("Added Profile for Device %llu Successfully.", ltBTRCoreDevId);
+                            BTRCORELOG_DEBUG ("Added Profile for Device %llu Successfully.\n", ltBTRCoreDevId);
                         }
                         else {
-                            BTRCORELOG_ERROR ("BTR_MAX_GATT_PROFILE Added. Couldn't add anymore...");
+                            BTRCORELOG_ERROR ("BTR_MAX_GATT_PROFILE Added. Couldn't add anymore...\n");
                         }
                     }
                     if (pProfile->ui16NumberOfGattService < BTR_MAX_GATT_SERVICE) {
@@ -960,14 +963,14 @@ btrCore_LE_GattInfoCb (
                             strncpy(pService->servicePath, apBtGattPath, BTRCORE_MAX_STR_LEN - 1);
                             pService->parentProfile = pProfile;
                             pProfile->ui16NumberOfGattService++;
-                            BTRCORELOG_DEBUG ("Added Service %s Successfully.", lBtUuid);
+                            BTRCORELOG_DEBUG ("Added Service %s Successfully.\n", lBtUuid);
                         }
                         else {
-                            BTRCORELOG_WARN ("Gatt Service %s already exists...", apBtGattPath);
+                            BTRCORELOG_WARN ("Gatt Service %s already exists...\n", apBtGattPath);
                         }
                     }
                     else {
-                        BTRCORELOG_WARN ("BTR_MAX_GATT_SERVICE Added. Couldn't add anymore...");
+                        BTRCORELOG_WARN ("BTR_MAX_GATT_SERVICE Added. Couldn't add anymore...\n");
                     }
                 }
                 else {
@@ -975,7 +978,7 @@ btrCore_LE_GattInfoCb (
                 }
             }
             else {
-                BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retDPath : %d",retUuid, retDPath);
+                BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retDPath : %d.\n",retUuid, retDPath);
             }
         }
         else if (aenBtOpIfceType == enBTGattCharacteristic) {
@@ -1011,26 +1014,26 @@ btrCore_LE_GattInfoCb (
                                     pChar->charFlags = btrCore_LE_GetAllowedGattFlagValues(cFlags, enBTGattCharacteristic);
                                 }
                                 pService->ui16NumberOfGattChar++;
-                                BTRCORELOG_DEBUG ("Added Characteristic %s Successfully.", lBtUuid);
+                                BTRCORELOG_DEBUG ("Added Characteristic %s Successfully.\n", lBtUuid);
                             }
                             else {
-                                BTRCORELOG_WARN ("Gatt Characteristic %s already exists...", apBtGattPath);
+                                BTRCORELOG_WARN ("Gatt Characteristic %s already exists.\n", apBtGattPath);
                             }
                         }
                         else {
-                            BTRCORELOG_WARN ("BTR_MAX_GATT_CHAR Addedd. Couldn't add anymore...");
+                            BTRCORELOG_WARN ("BTR_MAX_GATT_CHAR Addedd. Couldn't add anymore.\n");
                         }
                     }
                     else {
-                        BTRCORELOG_ERROR ("Gatt Service %s not found...", lBtSerivcePath);
+                        BTRCORELOG_ERROR ("Gatt Service %s not found.\n", lBtSerivcePath);
                     }
                 }
                 else {
-                    BTRCORELOG_ERROR ("Gatt Profile for device %llu not found...", ltBTRCoreDevId);
+                    BTRCORELOG_ERROR ("Gatt Profile for device %llu not found.\n", ltBTRCoreDevId);
                 }
             }
             else {
-                BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retSPath : %d",retUuid, retSPath);
+                BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retSPath : %d\n",retUuid, retSPath);
             }
         }
         else if (aenBtOpIfceType == enBTGattDescriptor) {
@@ -1073,113 +1076,108 @@ btrCore_LE_GattInfoCb (
                                         pDesc->descFlags = btrCore_LE_GetAllowedGattFlagValues(dFlags, enBTGattDescriptor);
                                     }
                                     pChar->ui16NumberOfGattDesc++;
-                                    BTRCORELOG_DEBUG ("Added Gatt Descriptor %s Successfully.", lBtUuid);
+                                    BTRCORELOG_DEBUG ("Added Gatt Descriptor %s Successfully.\n", lBtUuid);
                                 }
                                 else {
-                                    BTRCORELOG_WARN ("Gatt Descriptor %s already exists...", apBtGattPath);
+                                    BTRCORELOG_WARN ("Gatt Descriptor %s already exists.\n", apBtGattPath);
                                 }
                             }
                             else {
-                                BTRCORELOG_WARN ("BTR_MAX_GATT_DESC Added. Couldn't add anymore...");
+                                BTRCORELOG_WARN ("BTR_MAX_GATT_DESC Added. Couldn't add anymore.\n");
                             }
                         }
                         else {
-                            BTRCORELOG_ERROR ("Gatt Characteristic not found for Desc %s", apBtGattPath);
+                            BTRCORELOG_ERROR ("Gatt Characteristic not found for Desc %s\n", apBtGattPath);
                         }
                     }
                     else {
-                        BTRCORELOG_ERROR ("Gatt Service not found for Desc %s", apBtGattPath);
+                        BTRCORELOG_ERROR ("Gatt Service not found for Desc %s.\n", apBtGattPath);
                     }
                 }
                 else {
-                    BTRCORELOG_ERROR ("Gatt Profile for device %llu not found...", ltBTRCoreDevId);
+                    BTRCORELOG_ERROR ("Gatt Profile for device %llu not found...\n", ltBTRCoreDevId);
                 }
             }
             else {
-                BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retCPath : %d | retSpath : %d !!!", retUuid, retCPath, retSPath);
+                BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed retUuid : %d | retCPath : %d | retSpath : %d !!!\n", retUuid, retCPath, retSPath);
             }
         }
     } 
     else if (aenBTDeviceState == enBTDevStLost) {
         if (aenBtOpIfceType == enBTGattService) {
-            BTRCORELOG_DEBUG ("Freeing Gatt Service %s ", apBtGattPath);
+            BTRCORELOG_DEBUG ("Freeing Gatt Service %s \n", apBtGattPath);
             /* Decide on this later as, enBTDevStLost won't be called upon a LE Dev disconnect/Lost */ 
         }
         else if (aenBtOpIfceType == enBTGattCharacteristic) {
-            BTRCORELOG_DEBUG ("Freeing GATT Characteristic %s ", apBtGattPath);
+            BTRCORELOG_DEBUG ("Freeing GATT Characteristic %s \n", apBtGattPath);
             /* Decide on this later as, enBTDevStLost won't be called upon a LE Dev disconnect/Lost */ 
         }
         else if (aenBtOpIfceType == enBTGattDescriptor) {
-            BTRCORELOG_DEBUG ("Freeing GATT Descriptor %s ", apBtGattPath);
+            BTRCORELOG_DEBUG ("Freeing GATT Descriptor %s \n", apBtGattPath);
             /* Decide on this later as, enBTDevStLost won't be called upon a LE Dev disconnect/Lost */ 
         }
     }
     else if (aenBTDeviceState == enBTDevStPropChanged) {
         if (aenBtOpIfceType == enBTGattService) {
-            BTRCORELOG_DEBUG ("Property Changed for Gatt Service %s", apBtGattPath);
+            BTRCORELOG_DEBUG ("Property Changed for Gatt Service %s\n", apBtGattPath);
         }
         if (aenBtOpIfceType == enBTGattCharacteristic) {
-            BTRCORELOG_DEBUG ("Property Changed for Gatt Char %s", apBtGattPath);
-#if 0
-            /* To decide if we will require this */
+            BTRCORELOG_DEBUG ("Property Changed for Gatt Char %s\n", apBtGattPath);
+
             char lBtSerivcePath[BT_MAX_STR_LEN] = "\0";
             unBTOpIfceProp aunBtOpIfceProp;
-            aunBTOpIfceProp.enBtGattCharProp    = enBTGattCPropService;
+            aunBtOpIfceProp.enBtGattCharProp    = enBTGattCPropService;
+            stBTRCoreLeGattService *pService    = NULL;
+            stBTRCoreLeGattChar    *pChar       = NULL;
 
-            if (!BtrCore_BTGetProp(apConnHdl, apBtGattPath, aenBtOpIfceType, aunBTOpIfceProp, (void*)&lBtSerivcePath)) {
+            if (!BtrCore_BTGetProp(apConnHdl, apBtGattPath, aenBtOpIfceType, aunBtOpIfceProp, (void*)&lBtSerivcePath)) {
                 if ((pProfile = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, ltBTRCoreDevId))) {
                     if ((pService = btrCore_LE_FindGattService(pProfile,  lBtSerivcePath)))   {
                         if ((pChar = btrCore_LE_FindGattCharacteristic(pService, apBtGattPath))) {
 
-                            if (pChar->charFlags & (BTR_GATT_CHAR_FLAG_READ))) {
-                                unsigned char value[BT_MAX_UUID_STR_LEN] = "\0";
-                                char byteValue[BT_MAX_STR_LEN]           = "\0";
-                                char hexaValue[]                         = "0123456789abcdef";
-                                aunBtOpIfceProp.enBtGattCharProp         = enBTGattCPropValue;
+                            if (pChar->charFlags & (BTR_GATT_CHAR_FLAG_READ) ||
+                                pChar->charFlags & (BTR_GATT_CHAR_FLAG_NOTIFY)) {
+                                char value[BT_MAX_STR_LEN];
+                                memset (value, 0, BT_MAX_STR_LEN);
+
+                                aunBtOpIfceProp.enBtGattCharProp   = enBTGattCPropValue;
 
                                 if (!BtrCore_BTGetProp (apConnHdl, apBtGattPath, enBTGattCharacteristic, aunBtOpIfceProp, (void*)&value)) {
-                                    unsigned char u8idx=0, u8idx2=0;
-                                    while (value[u8idx]) {
-                                          byteValue[u8idx2++] = hexaValue[value[u8idx] >> 4];
-                                          byteValue[u8idx2++] = hexaValue[value[u8idx] &  0x0F];
-                                          u8idx++;
-                                    }
-                                    byteValue[u8idx2] = '\0';
-                                    BTRCORELOG_DEBUG ("Obtained byteValue : %s", byteValue);
+                                    BTRCORELOG_TRACE ("Obtained Characteristic Value \"%s\" with len %d\n", value, strlen(value));
 
                                     /* -------------Callback to Higher Layers-------------- */
+                                    lpstlhBTRCoreLe->fpcBTRCoreLeStatusUpdate (value, aBtdevAddr, lpstlhBTRCoreLe->pvBtLeStatusUserData);
                                 }
                                 else {
-                                   BTRCORE_ERROR ("BtrCore_BTGetProp Failed to get property enBTGattCPropValue");
+                                   BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed to get property enBTGattCPropValue.\n");
                                 }
                             }
                             else {  
-                                BTRCORE_ERROR ("BTR_GATT_CHAR_FLAG_READ Operation not permitted in interface %s\n", apBtGattPath);
+                                BTRCORELOG_ERROR ("BTR_GATT_CHAR_FLAG_NOTIFY/READ Operation not permitted in interface %s\n", apBtGattPath);
                             }
                         }
                         else {
-                            BTRCORE_ERROR ("Gatt Char %s Not Found\n", apBtGattPath);
+                            BTRCORELOG_ERROR ("Gatt Char %s Not Found\n", apBtGattPath);
                         }
                     }
                     else {
-                        BTRCORE_ERROR ("Gatt Service %s Not Found\n", lBtSerivcePath);
+                        BTRCORELOG_ERROR ("Gatt Service %s Not Found\n", lBtSerivcePath);
                     }
                 }
                 else {
-                    BTRCORE_ERROR ("Gatt Profile for Device  %llu Not Found\n", ltBTRCoreDevId);
+                    BTRCORELOG_ERROR ("Gatt Profile for Device  %llu Not Found\n", ltBTRCoreDevId);
                 }
             }
             else {
                 BTRCORELOG_ERROR ("BtrCore_BTGetProp Failed to get property enBTGattCPropService\n");
             }
-#endif
        }
        if (aenBtOpIfceType == enBTGattDescriptor) {
-          BTRCORELOG_DEBUG ("Property Changed for Gatt Desc %s", apBtGattPath);
+          BTRCORELOG_DEBUG ("Property Changed for Gatt Desc %s\n", apBtGattPath);
        }
     }
     else {
-       BTRCORELOG_WARN ("Callback for irrelavent DeviceState : %d!!!", aenBTDeviceState);
+       BTRCORELOG_WARN ("Callback for irrelavent DeviceState : %d!!!\n", aenBTDeviceState);
     }
 
     return 0;

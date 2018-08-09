@@ -44,6 +44,8 @@
 #define BT_DBUS_BLUEZ_PATH                  "org.bluez"
 #define BT_DBUS_BLUEZ_ADAPTER_PATH          "org.bluez.Adapter1"
 #define BT_DBUS_BLUEZ_DEVICE_PATH           "org.bluez.Device1"
+#define BT_DBUS_BLUEZ_AGENT_PATH            "org.bluez.Agent1"
+#define BT_DBUS_BLUEZ_AGENT_MGR_PATH        "org.bluez.AgentManager1"
 #define BT_DBUS_BLUEZ_MEDIA_PATH            "org.bluez.Media1"
 #define BT_DBUS_BLUEZ_MEDIA_ENDPOINT_PATH   "org.bluez.MediaEndpoint1"
 #define BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH  "org.bluez.MediaTransport1"
@@ -54,11 +56,15 @@
 #define BT_DBUS_BLUEZ_GATT_SERVICE_PATH     "org.bluez.GattService1"
 #define BT_DBUS_BLUEZ_GATT_CHAR_PATH        "org.bluez.GattCharacteristic1"
 #define BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH  "org.bluez.GattDescriptor1"
-#define BT_DBUS_BLUEZ_AGENT_PATH            "org.bluez.Agent1"
-#define BT_DBUS_BLUEZ_AGENT_MGR_PATH        "org.bluez.AgentManager1"
+#define BT_DBUS_BLUEZ_GATT_MGR_PATH         "org.bluez.GattManager1"
+#define BT_DBUS_BLUEZ_LE_ADV_PATH           "org.bluez.LEAdvertisement1"
+#define BT_DBUS_BLUEZ_LE_ADV_MGR_PATH       "org.bluez.LEAdvertisingManager1"
 
 #define BT_MEDIA_A2DP_SINK_ENDPOINT         "/MediaEndpoint/A2DPSink"
 #define BT_MEDIA_A2DP_SOURCE_ENDPOINT       "/MediaEndpoint/A2DPSource"
+
+#define BT_LE_GATT_SERVER_ENDPOINT          "/LeGattEndpoint/Server"
+#define BT_LE_GATT_SERVER_ADVERTISEMENT     "/LeGattEndpoint/Advert"
 
 
 typedef struct _stBTMediaInfo {
@@ -86,23 +92,82 @@ static DBusHandlerResult btrCore_BTAgentAuthorize (DBusConnection* apDBusConn, D
 static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
+static void btrCore_BTPendingCallCheckReply (DBusPendingCall* apDBusPendC, void* apvUserData);
 
+static int btrCore_BTGetAdapterInfo (stBTAdapterInfo* apstBTAdapterInfo, const char* apcIface);
+static int btrCore_BTParseAdapter (DBusMessage* apDBusMsg, stBTAdapterInfo* apstBTAdapterInfo);
 static int btrCore_BTGetDeviceInfo (stBTDeviceInfo* apstBTDeviceInfo, const char* apcIface);
 static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
+
+#if 0
+static int btrCore_BTParsePropertyChange (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
+static int btrCore_BTGetGattInfo (enBTOpIfceType aenBTOpIfceType, void* apvGattInfo, const char* apcIface);
+#endif
 
 static int btrCore_BTGetMediaInfo (stBTMediaInfo* apstBTDeviceInfo, const char* apcIface);
 static int btrCore_BTParseMediaTransport (DBusMessage* apDBusMsg, stBTMediaInfo*  apstBTMediaInfo); 
 
-//static int btrCore_BTGetGattInfo (enBTOpIfceType aenBTOpIfceType, void* apvGattInfo, const char* apcIface);
-
-#if 0
-static int btrCore_BTParsePropertyChange (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
-#endif
 static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage* apDBusMsg);
 static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage* apDBusMsg);
 static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDBusMsg);
 
 static int btrCore_BTGetMediaIfceProperty (void* apBtConn, const char* apBtObjectPath, const char* apBtInterfacePath, const char* mediaProperty, void* mediaPropertyValue);
+
+static DBusMessage* btrCore_BTRegisterGattService (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, const char* apui8SrvGattPath, const char* apBtSrvUUID, const char* apui8ChrGattPath, const char* apBtChrUUID, const char* apui8DescGattPath, const char* apBtDescUUID);
+static int btrCore_BTUnRegisterGattService (DBusConnection* apDBusConn, const char* apui8SCDGattPath);
+
+#if 0
+//TODO: Next step to migrate toward a re-entrant bt-ifce
+typedef struct _stBtIfceHdl {
+
+    DBusConnection* pDBusConn;
+
+    char*           pcBTAgentPath;
+    char*           pcBTDAdapterPath;
+    char*           pcBTAdapterPath;
+    char*           pcDevTransportPath;
+
+    char*           pcBTOutPassCode;
+
+    void*           gpcBAdapterStatusUserData;
+    void*           pcBDevStatusUserData;
+    void*           pcBMediaStatusUserData;
+    void*           pcBNegMediaUserData;
+    void*           pcBTransPathMediaUserData;
+    void*           pcBMediaPlayerPathUserData;
+    void*           pcBConnIntimUserData;
+    void*           pcBConnAuthUserData;
+    void*           pcBLePathUserData;
+
+    int             i32DoReject;
+
+    unsigned int    ui32cBConnAuthPassKey;
+    unsigned int    ui32DevLost;
+
+    char            pcDeviceCurrState[BT_MAX_STR_LEN];
+    char            pcLeDeviceCurrState[BT_MAX_STR_LEN];
+    char            pcLeDeviceAddress[BT_MAX_STR_LEN];
+    char            pcMediaCurrState[BT_MAX_STR_LEN];
+
+    char            pui8ServiceGattPath[BT_MAX_STR_LEN];
+    char            pui8CharGattPath[BT_MAX_STR_LEN];
+    char            pui8DescGattPath[BT_MAX_STR_LEN];
+    char            pui8ServiceGattUUID[BT_MAX_STR_LEN];
+    char            pui8CharGattUUID[BT_MAX_STR_LEN];
+    char            pui8DescGattUUID[BT_MAX_STR_LEN];
+
+    fPtr_BtrCore_BTAdapterStatusUpdateCb fpcBAdapterStatusUpdate;
+    fPtr_BtrCore_BTDevStatusUpdateCb     fpcBDevStatusUpdate;
+    fPtr_BtrCore_BTMediaStatusUpdateCb   fpcBMediaStatusUpdate;
+    fPtr_BtrCore_BTNegotiateMediaCb      fpcBNegotiateMedia;
+    fPtr_BtrCore_BTTransportPathMediaCb  fpcBTransportPathMedia;
+    fPtr_BtrCore_BTMediaPlayerPathCb     fpcBTMediaPlayerPath;
+    fPtr_BtrCore_BTConnIntimCb           fpcBConnectionIntimation;
+    fPtr_BtrCore_BTConnAuthCb            fpcBConnectionAuthentication;
+    fPtr_BtrCore_BTLeGattPathCb          fpcBTLeGattPath;
+
+} stBtIfceHdl;
+#endif
 
 
 /* Static Global Variables Defs */
@@ -117,6 +182,7 @@ static char*            gpcBTAgentPath = NULL;
 static char*            gpcBTDAdapterPath = NULL;
 static char*            gpcBTAdapterPath = NULL;
 static char*            gpcDevTransportPath = NULL;
+static void*            gpcBAdapterStatusUserData = NULL;
 static void*            gpcBDevStatusUserData = NULL;
 static void*            gpcBMediaStatusUserData = NULL;
 static void*            gpcBNegMediaUserData = NULL;
@@ -126,9 +192,18 @@ static void*            gpcBConnIntimUserData = NULL;
 static void*            gpcBConnAuthUserData = NULL;
 static void*            gpcBLePathUserData = NULL;
 
+static char             gpui8ServiceGattPath[BT_MAX_STR_LEN] = {'\0'};
+static char             gpui8CharGattPath[BT_MAX_STR_LEN] = {'\0'};
+static char             gpui8DescGattPath[BT_MAX_STR_LEN] = {'\0'};
+static char             gpui8ServiceGattUUID[BT_MAX_STR_LEN] = {'\0'};
+static char             gpui8CharGattUUID[BT_MAX_STR_LEN] = {'\0'};
+static char             gpui8DescGattUUID[BT_MAX_STR_LEN] = {'\0'};
+
 static unsigned int     gui32cBConnAuthPassKey = 0;
 static unsigned int     gui32DevLost = 0;
+static unsigned int     gui32IsAdapterDiscovering = 0;
 
+static fPtr_BtrCore_BTAdapterStatusUpdateCb gfpcBAdapterStatusUpdate = NULL;
 static fPtr_BtrCore_BTDevStatusUpdateCb     gfpcBDevStatusUpdate = NULL;
 static fPtr_BtrCore_BTMediaStatusUpdateCb   gfpcBMediaStatusUpdate = NULL;
 static fPtr_BtrCore_BTNegotiateMediaCb      gfpcBNegotiateMedia = NULL;
@@ -142,7 +217,10 @@ static fPtr_BtrCore_BTLeGattPathCb          gfpcBTLeGattPath = NULL;
 /* Incoming Callbacks Prototypes */
 static DBusHandlerResult btrCore_BTDBusConnectionFilterCb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 static DBusHandlerResult btrCore_BTMediaEndpointHandlerCb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
-static DBusHandlerResult btrCore_BTAgentMessageHandlerCb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentMessageHandlerCb  (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTLeGattEndpointHandlerCb(DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTLeGattMessageHandlerCb (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+
 
 static const DBusObjectPathVTable gDBusMediaEndpointVTable = {
     .message_function = btrCore_BTMediaEndpointHandlerCb,
@@ -152,6 +230,13 @@ static const DBusObjectPathVTable gDBusAgentVTable = {
     .message_function = btrCore_BTAgentMessageHandlerCb,
 };
 
+static const DBusObjectPathVTable gDBusLeGattEndpointVTable = {
+    .message_function = btrCore_BTLeGattEndpointHandlerCb,
+};
+
+static const DBusObjectPathVTable gDBusLeGattSCDVTable = {
+    .message_function = btrCore_BTLeGattMessageHandlerCb,
+};
 
 
 /* Static Function Defs */
@@ -162,7 +247,7 @@ btrCore_BTHandleDusError (
     const char* apErrfunc
 ) {
     if (dbus_error_is_set(apDBusErr)) {
-        BTRCORELOG_ERROR ("%d\t: %s - DBus Error is %s\n", aErrline, apErrfunc, apDBusErr->message);
+        BTRCORELOG_ERROR ("%d\t: %s - DBus Error is %s - Name: %s \n", aErrline, apErrfunc, apDBusErr->message, apDBusErr->name);
         dbus_error_free(apDBusErr);
         return 1;
     }
@@ -704,6 +789,200 @@ btrCore_BTSendMethodCall (
 }
 
 
+static void
+btrCore_BTPendingCallCheckReply (
+    DBusPendingCall*    apDBusPendC,
+    void*               apvUserData
+) {
+    DBusMessage *lpDBusReply = NULL; 
+    DBusError lDBusErr;
+
+    BTRCORELOG_DEBUG("btrCore_BTPendingCallCheckReply\n");
+
+    if ((lpDBusReply = dbus_pending_call_steal_reply(apDBusPendC))) {
+        dbus_error_init(&lDBusErr);
+        if (dbus_set_error_from_message(&lDBusErr, lpDBusReply) == TRUE) {
+            BTRCORELOG_ERROR ("Error : %s\n\n", dbus_message_get_error_name(lpDBusReply));
+            btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+        }
+
+        dbus_message_unref(lpDBusReply);
+    }
+
+    dbus_pending_call_unref(apDBusPendC);   //Free pending call handle
+}
+
+
+static int
+btrCore_BTGetAdapterInfo (
+    stBTAdapterInfo* apstBTAdapterInfo,
+    const char*     apcIface
+) {
+    char*               pAdapterInterface = BT_DBUS_BLUEZ_ADAPTER_PATH;
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusMessage*        lpDBusReply = NULL;
+    DBusMessageIter     args;
+    DBusError           lDBusErr;
+    DBusPendingCall*    lpDBusPendC;
+
+
+    if (!apcIface || !apstBTAdapterInfo)
+        return -1;
+
+    BTRCORELOG_DEBUG ("Getting properties for adapter %s\n", apcIface);
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apcIface,
+                                             "org.freedesktop.DBus.Properties",
+                                             "GetAll");
+
+    dbus_message_iter_init_append(lpDBusMsg, &args);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pAdapterInterface, DBUS_TYPE_INVALID);
+
+    dbus_error_init(&lDBusErr);
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
+        BTRCORELOG_ERROR ("failed to send message");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+    dbus_message_unref(lpDBusMsg);
+    lpDBusMsg = NULL;
+
+    dbus_pending_call_block(lpDBusPendC);
+    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
+    dbus_pending_call_unref(lpDBusPendC);
+
+    if (lpDBusReply != NULL) {
+        if (0 != btrCore_BTParseAdapter(lpDBusReply, apstBTAdapterInfo)) {
+            BTRCORELOG_ERROR ("Parsing adapter %s failed..\n", apcIface);
+            dbus_message_unref(lpDBusReply);
+            return -1;
+        }
+        else {
+//            strncpy(apstBTAdapterInfo->acAdapterPath, apcIface, BT_MAX_STR_LEN);
+            dbus_message_unref(lpDBusReply);
+            return 0;
+        }
+    }
+
+    dbus_message_unref(lpDBusReply);
+    return 0;
+}
+
+
+static int
+btrCore_BTParseAdapter (
+    DBusMessage*    apDBusMsg,
+    stBTAdapterInfo* apstBTAdapterInfo
+) {
+    DBusMessageIter msg_iter;
+    DBusMessageIter dict_iter;
+    DBusMessageIter dict_entry_iter;
+    DBusMessageIter dict_entry_value_iter;
+    int dbus_type;
+    const char* pcKey = NULL;
+    const char *pcVal = NULL;
+
+    if (!dbus_message_iter_init(apDBusMsg, &msg_iter)) {
+        BTRCORELOG_ERROR ("dbus_message_iter_init Failed\n");
+        return -1;
+    }
+
+    if (dbus_message_iter_get_arg_type(&msg_iter) != DBUS_TYPE_ARRAY) {
+        dbus_message_iter_next(&msg_iter);
+        if (dbus_message_iter_get_arg_type(&msg_iter) != DBUS_TYPE_ARRAY) {
+            BTRCORELOG_ERROR ("Unknown Prop structure from Bluez\n");
+            return -1;
+        }
+    }
+
+    // 'out' parameter of org.freedesktop.DBus.Properties.GetAll call has format 'DICT<STRING,VARIANT> props'
+    for (dbus_message_iter_recurse(&msg_iter, &dict_iter); // recurse into array (of dictionary entries)
+            (dbus_type = dbus_message_iter_get_arg_type(&dict_iter)) != DBUS_TYPE_INVALID;
+            dbus_message_iter_next(&dict_iter)) {
+
+        if (dbus_type == DBUS_TYPE_DICT_ENTRY) {
+            dbus_message_iter_recurse(&dict_iter, &dict_entry_iter); // recurse into dictionary entry at this position in dictionary
+
+            dbus_message_iter_get_basic(&dict_entry_iter, &pcKey); // get dictionary entry's first item (key) which is a string
+
+            // move to dictionary entry's next item (value associated with key) which should be a variant
+            if (!dbus_message_iter_next(&dict_entry_iter) || dbus_message_iter_get_arg_type(&dict_entry_iter) != DBUS_TYPE_VARIANT)
+                continue; // either this dictionary entry does not have a value (or) the value is not a variant
+
+            dbus_message_iter_recurse(&dict_entry_iter, &dict_entry_value_iter); // recurse into dictionary entry's variant value
+            dbus_type = dbus_message_iter_get_arg_type (&dict_entry_value_iter);
+
+            if (strcmp (pcKey, "Address") == 0 && dbus_type == DBUS_TYPE_STRING) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &pcVal);
+                strncpy(apstBTAdapterInfo->pcAddress, pcVal, BT_MAX_STR_LEN-1);  // TODO strncpy is unsafe; use snprintf instead
+                BTRCORELOG_TRACE ("pcAddress               = %s\n", apstBTAdapterInfo->pcAddress);
+            }
+            else if (strcmp (pcKey, "Name") == 0 && dbus_type == DBUS_TYPE_STRING) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &pcVal);
+                strncpy(apstBTAdapterInfo->pcName, pcVal, BT_MAX_STR_LEN-1);
+                BTRCORELOG_TRACE ("pcName                  = %s\n", apstBTAdapterInfo->pcName);
+            }
+            else if (strcmp (pcKey, "Alias") == 0 && dbus_type == DBUS_TYPE_STRING) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &pcVal);
+                strncpy(apstBTAdapterInfo->pcAlias, pcVal, BT_MAX_STR_LEN-1);
+                BTRCORELOG_TRACE ("pcAlias                 = %s\n", apstBTAdapterInfo->pcAlias);
+            }
+            else if (strcmp (pcKey, "Class") == 0 && dbus_type == DBUS_TYPE_UINT32) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->ui32Class);
+                BTRCORELOG_TRACE ("ui32Class               = %u\n", apstBTAdapterInfo->ui32Class);
+            }
+            else if (strcmp (pcKey, "Powered") == 0 && dbus_type == DBUS_TYPE_BOOLEAN) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->bPowered);
+                BTRCORELOG_TRACE ("bPowered                = %d\n", apstBTAdapterInfo->bPowered);
+            }
+            else if (strcmp (pcKey, "Discoverable") == 0 && dbus_type == DBUS_TYPE_BOOLEAN) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->bDiscoverable);
+                BTRCORELOG_TRACE ("bDiscoverable           = %d\n", apstBTAdapterInfo->bDiscoverable);
+            }
+            else if (strcmp (pcKey, "DiscoverableTimeout") == 0 && dbus_type == DBUS_TYPE_UINT32) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->ui32DiscoverableTimeout);
+                BTRCORELOG_TRACE ("ui32DiscoverableTimeout = %u\n", apstBTAdapterInfo->ui32DiscoverableTimeout);
+            }
+            else if (strcmp (pcKey, "Pairable") == 0 && dbus_type == DBUS_TYPE_BOOLEAN) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->bPairable);
+                BTRCORELOG_TRACE ("bPairable               = %d\n", apstBTAdapterInfo->bPairable);
+            }
+            else if (strcmp (pcKey, "PairableTimeout") == 0 && dbus_type == DBUS_TYPE_UINT32) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->ui32PairableTimeout);
+                BTRCORELOG_TRACE ("ui32PairableTimeout     = %u\n", apstBTAdapterInfo->ui32PairableTimeout);
+            }
+            else if (strcmp (pcKey, "Discovering") == 0 && dbus_type == DBUS_TYPE_BOOLEAN) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &apstBTAdapterInfo->bDiscovering);
+                BTRCORELOG_DEBUG ("bDiscovering            = %d\n", apstBTAdapterInfo->bDiscovering);
+            }
+            else if (strcmp (pcKey, "Modalias") == 0 && dbus_type == DBUS_TYPE_STRING) {
+                dbus_message_iter_get_basic(&dict_entry_value_iter, &pcVal);
+                strncpy(apstBTAdapterInfo->pcModalias, pcVal, BT_MAX_STR_LEN-1);
+                BTRCORELOG_TRACE ("pcModalias              = %s\n", apstBTAdapterInfo->pcModalias);
+            }
+            else if (strcmp (pcKey, "UUIDs") == 0 && dbus_type == DBUS_TYPE_ARRAY) {
+                DBusMessageIter uuid_array_iter;
+                int count = 0;
+                for (dbus_message_iter_recurse(&dict_entry_value_iter, &uuid_array_iter);
+                        (dbus_type = dbus_message_iter_get_arg_type (&uuid_array_iter)) != DBUS_TYPE_INVALID;
+                        dbus_message_iter_next (&uuid_array_iter)) {
+                    if ((dbus_type == DBUS_TYPE_STRING) && (count < BT_MAX_DEVICE_PROFILE)) {
+                        dbus_message_iter_get_basic (&uuid_array_iter, &pcVal);
+                        strncpy(apstBTAdapterInfo->ppcUUIDs[count], pcVal, (BT_MAX_UUID_STR_LEN - 1));
+                        BTRCORELOG_TRACE ("UUID value is %s\n", apstBTAdapterInfo->ppcUUIDs[count]);
+                        count++;
+                    }
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 static int
 btrCore_BTGetDeviceInfo (
     stBTDeviceInfo* apstBTDeviceInfo,
@@ -957,7 +1236,7 @@ btrCore_BTParseDevice (
     (void)dbus_type;
 
     if (strlen(apstBTDeviceInfo->pcAlias))
-        strncpy(apstBTDeviceInfo->pcName, apstBTDeviceInfo->pcAlias, strlen(apstBTDeviceInfo->pcAlias));
+        strncpy(apstBTDeviceInfo->pcName, apstBTDeviceInfo->pcAlias, BT_MAX_STR_LEN-1);
 
     return 0;
 }
@@ -1523,7 +1802,7 @@ btrCore_BTMediaEndpointClearConfiguration (
 }
 
 
-int 
+static int 
 btrCore_BTGetMediaIfceProperty (
     void*               apBtConn,
     const char*         apBtObjectPath,
@@ -1596,6 +1875,328 @@ btrCore_BTGetMediaIfceProperty (
     }
 
     dbus_message_unref(lpDBusReply);
+    return 0;
+}
+
+
+static DBusMessage*
+btrCore_BTRegisterGattService (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    const char*     apui8SrvGattPath,
+    const char*     apBtSrvUUID,
+    const char*     apui8ChrGattPath,       // TODO: Should be an array of strings
+    const char*     apBtChrUUID,            // TODO: Should be an array of strings
+    const char*     apui8DescGattPath,      // TODO: Should be an array of array of strings
+    const char*     apBtDescUUID            // TODO: Should be an array of array of strings
+) {
+    DBusMessage*    lpDBusReply = NULL;
+    DBusMessageIter lDBusMsgIter;
+    DBusMessageIter lDBusMsgIterDict;
+    dbus_bool_t     lbBtPrimaryGatt = TRUE;
+
+    const char*     lui8ConnName = NULL;
+    const char*     lpui8SrvGattPath    = strdup(apui8SrvGattPath);
+    const char*     lpui8ChrGattPath    = strdup(apui8ChrGattPath);
+    const char*     lpui8DescGattPath   = strdup(apui8DescGattPath);
+
+
+    BTRCORELOG_TRACE("Inside btrCore_BTRegisterGattService - %s \n", lpui8SrvGattPath);
+    BTRCORELOG_TRACE("Inside btrCore_BTRegisterGattService - %s \n", lpui8ChrGattPath);
+    BTRCORELOG_TRACE("Inside btrCore_BTRegisterGattService - %s \n", lpui8DescGattPath);
+
+
+   char* param = "";
+
+   // read the arguments
+    if (!dbus_message_iter_init(apDBusMsg, &lDBusMsgIter)) {
+        BTRCORELOG_TRACE("Message has no arguments!\n"); 
+    }
+    else if (DBUS_TYPE_STRING != dbus_message_iter_get_arg_type(&lDBusMsgIter))  {
+        BTRCORELOG_TRACE("Argument is not string!\n"); 
+    }
+    else {
+        dbus_message_iter_get_basic(&lDBusMsgIter, &param);
+    }
+
+    BTRCORELOG_TRACE("Method called with %s\n", param);
+
+    lui8ConnName = dbus_bus_get_unique_name(apDBusConn);
+    BTRCORELOG_DEBUG("!!! Gatt connection name : %s - %s\n", lui8ConnName, lpui8SrvGattPath);
+
+
+    lpDBusReply = dbus_message_new_method_return(apDBusMsg);
+
+
+    dbus_message_iter_init_append(lpDBusReply, &lDBusMsgIter);
+    dbus_message_iter_open_container(&lDBusMsgIter,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_OBJECT_PATH_AS_STRING
+                                     DBUS_TYPE_ARRAY_AS_STRING
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_ARRAY_AS_STRING
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDict);
+    {   // Service
+        DBusMessageIter lDBusMsgIterDictObjPath, lDBusMsgIterDictArr;
+
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictObjPath);
+          dbus_message_iter_append_basic (&lDBusMsgIterDictObjPath, DBUS_TYPE_OBJECT_PATH, &lpui8SrvGattPath);
+          dbus_message_iter_open_container(&lDBusMsgIterDictObjPath,
+                                           DBUS_TYPE_ARRAY,
+                                           DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                           DBUS_TYPE_STRING_AS_STRING
+                                           DBUS_TYPE_ARRAY_AS_STRING
+                                           DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                           DBUS_TYPE_STRING_AS_STRING
+                                           DBUS_TYPE_VARIANT_AS_STRING
+                                           DBUS_DICT_ENTRY_END_CHAR_AS_STRING
+                                           DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                           &lDBusMsgIterDictArr);
+          {
+              DBusMessageIter lDBusMsgIterDictStrIfce, lDBusMsgIterDictArrStr;
+              char* lpcIfce = BT_DBUS_BLUEZ_GATT_SERVICE_PATH;
+
+              dbus_message_iter_open_container(&lDBusMsgIterDictArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrIfce);
+                dbus_message_iter_append_basic(&lDBusMsgIterDictStrIfce, DBUS_TYPE_STRING, &lpcIfce);
+                dbus_message_iter_open_container(&lDBusMsgIterDictStrIfce,
+                                                 DBUS_TYPE_ARRAY,
+                                                 DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                                 DBUS_TYPE_STRING_AS_STRING
+                                                 DBUS_TYPE_VARIANT_AS_STRING
+                                                 DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                                 &lDBusMsgIterDictArrStr);
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterValue;
+                    char*   key = "UUID";
+                    int     type = DBUS_TYPE_STRING;
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                        dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                        dbus_message_iter_open_container(&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                            dbus_message_iter_append_basic(&lDBusMsgIterValue, type, &apBtSrvUUID);
+                        dbus_message_iter_close_container(&lDBusMsgIterDictStrUUID, &lDBusMsgIterValue);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+                {
+                    DBusMessageIter lDBusMsgIterDictBoolPri;
+                    DBusMessageIter lDBusMsgIterValue;
+                    char*   key = "Primary";
+                    int     type = DBUS_TYPE_BOOLEAN;
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictBoolPri);
+                        dbus_message_iter_append_basic (&lDBusMsgIterDictBoolPri, DBUS_TYPE_STRING, &key);
+                        dbus_message_iter_open_container (&lDBusMsgIterDictBoolPri, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                            dbus_message_iter_append_basic (&lDBusMsgIterValue, type, &lbBtPrimaryGatt);
+                        dbus_message_iter_close_container (&lDBusMsgIterDictBoolPri, &lDBusMsgIterValue);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictBoolPri);
+                }
+                dbus_message_iter_close_container(&lDBusMsgIterDictStrIfce, &lDBusMsgIterDictArrStr);
+              dbus_message_iter_close_container(&lDBusMsgIterDictArr, &lDBusMsgIterDictStrIfce);
+          }
+          dbus_message_iter_close_container (&lDBusMsgIterDictObjPath, &lDBusMsgIterDictArr);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictObjPath);
+    }
+    {   // Characteristic
+        DBusMessageIter lDBusMsgIterDictObjPath, lDBusMsgIterDictArr;
+
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictObjPath);
+          dbus_message_iter_append_basic (&lDBusMsgIterDictObjPath, DBUS_TYPE_OBJECT_PATH, &lpui8ChrGattPath);
+          dbus_message_iter_open_container(&lDBusMsgIterDictObjPath,
+                                           DBUS_TYPE_ARRAY,
+                                           DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                           DBUS_TYPE_STRING_AS_STRING
+                                           DBUS_TYPE_ARRAY_AS_STRING
+                                           DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                           DBUS_TYPE_STRING_AS_STRING
+                                           DBUS_TYPE_VARIANT_AS_STRING
+                                           DBUS_DICT_ENTRY_END_CHAR_AS_STRING
+                                           DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                           &lDBusMsgIterDictArr);
+          {
+              DBusMessageIter lDBusMsgIterDictStrIfce, lDBusMsgIterDictArrStr;
+              char* lpcIfce = BT_DBUS_BLUEZ_GATT_CHAR_PATH;
+
+              dbus_message_iter_open_container(&lDBusMsgIterDictArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrIfce);
+                dbus_message_iter_append_basic(&lDBusMsgIterDictStrIfce, DBUS_TYPE_STRING, &lpcIfce);
+                dbus_message_iter_open_container(&lDBusMsgIterDictStrIfce,
+                                                 DBUS_TYPE_ARRAY,
+                                                 DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                                 DBUS_TYPE_STRING_AS_STRING
+                                                 DBUS_TYPE_VARIANT_AS_STRING
+                                                 DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                                 &lDBusMsgIterDictArrStr);
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterValue;
+                    char*   key = "UUID";
+                    int     type = DBUS_TYPE_STRING;
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                        dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                        dbus_message_iter_open_container(&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                            dbus_message_iter_append_basic(&lDBusMsgIterValue, type, &apBtChrUUID);
+                        dbus_message_iter_close_container(&lDBusMsgIterDictStrUUID, &lDBusMsgIterValue);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterValue;
+                    char*   key = "Service";
+                    int     type = DBUS_TYPE_OBJECT_PATH;
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                      dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                      dbus_message_iter_open_container(&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                        dbus_message_iter_append_basic(&lDBusMsgIterValue, type, &lpui8SrvGattPath);
+                      dbus_message_iter_close_container(&lDBusMsgIterDictStrUUID, &lDBusMsgIterValue);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterVariant;
+                    DBusMessageIter lDBusMsgIterSubArray;
+                    char*   key = "Flags";
+                    int     type = DBUS_TYPE_STRING;
+
+                    char array_type[5] = "a";
+                    strncat (array_type, (char*)&type, sizeof(array_type) - sizeof(type));
+
+
+                    const char *lppui8Props[] = { "write-without-response", NULL };
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                      dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                      dbus_message_iter_open_container (&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, array_type, &lDBusMsgIterVariant);
+                        dbus_message_iter_open_container (&lDBusMsgIterVariant, DBUS_TYPE_ARRAY, (char *)&type, &lDBusMsgIterSubArray);
+                          dbus_message_iter_append_basic (&lDBusMsgIterSubArray, type, &lppui8Props);
+                        dbus_message_iter_close_container (&lDBusMsgIterVariant, &lDBusMsgIterSubArray);
+                      dbus_message_iter_close_container (&lDBusMsgIterDictStrUUID, &lDBusMsgIterVariant);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+
+
+                dbus_message_iter_close_container(&lDBusMsgIterDictStrIfce, &lDBusMsgIterDictArrStr);
+              dbus_message_iter_close_container(&lDBusMsgIterDictArr, &lDBusMsgIterDictStrIfce);
+          }
+          dbus_message_iter_close_container (&lDBusMsgIterDictObjPath, &lDBusMsgIterDictArr);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictObjPath);
+    }
+    {   // Descriptor
+        DBusMessageIter lDBusMsgIterDictObjPath, lDBusMsgIterDictArr;
+
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictObjPath);
+          dbus_message_iter_append_basic (&lDBusMsgIterDictObjPath, DBUS_TYPE_OBJECT_PATH, &lpui8DescGattPath);
+          dbus_message_iter_open_container(&lDBusMsgIterDictObjPath,
+                                           DBUS_TYPE_ARRAY,
+                                           DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                           DBUS_TYPE_STRING_AS_STRING
+                                           DBUS_TYPE_ARRAY_AS_STRING
+                                           DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                           DBUS_TYPE_STRING_AS_STRING
+                                           DBUS_TYPE_VARIANT_AS_STRING
+                                           DBUS_DICT_ENTRY_END_CHAR_AS_STRING
+                                           DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                           &lDBusMsgIterDictArr);
+          {
+              DBusMessageIter lDBusMsgIterDictStrIfce, lDBusMsgIterDictArrStr;
+              char* lpcIfce = BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH;
+
+              dbus_message_iter_open_container(&lDBusMsgIterDictArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrIfce);
+                dbus_message_iter_append_basic(&lDBusMsgIterDictStrIfce, DBUS_TYPE_STRING, &lpcIfce);
+                dbus_message_iter_open_container(&lDBusMsgIterDictStrIfce,
+                                                 DBUS_TYPE_ARRAY,
+                                                 DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                                 DBUS_TYPE_STRING_AS_STRING
+                                                 DBUS_TYPE_VARIANT_AS_STRING
+                                                 DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                                 &lDBusMsgIterDictArrStr);
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterValue;
+                    char*   key = "UUID";
+                    int     type = DBUS_TYPE_STRING;
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                        dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                        dbus_message_iter_open_container(&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                            dbus_message_iter_append_basic(&lDBusMsgIterValue, type, &apBtDescUUID);
+                        dbus_message_iter_close_container(&lDBusMsgIterDictStrUUID, &lDBusMsgIterValue);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterValue;
+                    char*   key = "Characteristic";
+                    int     type = DBUS_TYPE_OBJECT_PATH;
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                      dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                      dbus_message_iter_open_container(&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                        dbus_message_iter_append_basic(&lDBusMsgIterValue, type, &lpui8ChrGattPath);
+                      dbus_message_iter_close_container(&lDBusMsgIterDictStrUUID, &lDBusMsgIterValue);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+                {
+                    DBusMessageIter lDBusMsgIterDictStrUUID;
+                    DBusMessageIter lDBusMsgIterVariant;
+                    DBusMessageIter lDBusMsgIterSubArray;
+                    char*   key = "Flags";
+                    int     type = DBUS_TYPE_STRING;
+
+                    char array_type[5] = "a";
+                    strncat (array_type, (char*)&type, sizeof(array_type) - sizeof(type));
+
+
+                    const char *lppui8Props[] = { "read", "write", NULL };
+
+                    dbus_message_iter_open_container(&lDBusMsgIterDictArrStr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStrUUID);
+                      dbus_message_iter_append_basic(&lDBusMsgIterDictStrUUID, DBUS_TYPE_STRING, &key);
+                      dbus_message_iter_open_container (&lDBusMsgIterDictStrUUID, DBUS_TYPE_VARIANT, array_type, &lDBusMsgIterVariant);
+                        dbus_message_iter_open_container (&lDBusMsgIterVariant, DBUS_TYPE_ARRAY, (char *)&type, &lDBusMsgIterSubArray);
+                          dbus_message_iter_append_basic (&lDBusMsgIterSubArray, type, &lppui8Props);
+                        dbus_message_iter_close_container (&lDBusMsgIterVariant, &lDBusMsgIterSubArray);
+                      dbus_message_iter_close_container (&lDBusMsgIterDictStrUUID, &lDBusMsgIterVariant);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictArrStr, &lDBusMsgIterDictStrUUID);
+                }
+
+
+                dbus_message_iter_close_container(&lDBusMsgIterDictStrIfce, &lDBusMsgIterDictArrStr);
+              dbus_message_iter_close_container(&lDBusMsgIterDictArr, &lDBusMsgIterDictStrIfce);
+          }
+          dbus_message_iter_close_container (&lDBusMsgIterDictObjPath, &lDBusMsgIterDictArr);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictObjPath);
+    }
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+
+
+    free((void*)lpui8DescGattPath);
+    free((void*)lpui8ChrGattPath);
+    free((void*)lpui8SrvGattPath);
+
+    BTRCORELOG_ERROR ("RETURNING - %p\n", lpDBusReply);
+    return lpDBusReply;
+}
+
+
+static int
+btrCore_BTUnRegisterGattService (
+    DBusConnection* apDBusConn,
+    const char*     apui8SCDGattPath
+) {
+    dbus_bool_t     lDBusOp;
+
+    (void)lDBusOp;
+    BTRCORELOG_TRACE("Inside btrCore_BTUnRegisterGattService\n");
+
     return 0;
 }
 
@@ -2178,10 +2779,10 @@ BtrCore_BTGetProp (
     const char*         lDBusKey = NULL;
     int                 lDBusType = DBUS_TYPE_INVALID;
 
-    const char*         pInterface          = NULL;
-    const char*         pAdapterInterface   = BT_DBUS_BLUEZ_ADAPTER_PATH;
-    const char*         pDeviceInterface    = BT_DBUS_BLUEZ_DEVICE_PATH;
-    const char*         pMediaTransInterface= BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH;
+    const char*         pInterface            = NULL;
+    const char*         pAdapterInterface     = BT_DBUS_BLUEZ_ADAPTER_PATH;
+    const char*         pDeviceInterface      = BT_DBUS_BLUEZ_DEVICE_PATH;
+    const char*         pMediaTransInterface  = BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH;
     const char*         pGattServiceInterface = BT_DBUS_BLUEZ_GATT_SERVICE_PATH;
     const char*         pGattCharInterface    = BT_DBUS_BLUEZ_GATT_CHAR_PATH;
     const char*         pGattDescInterface    = BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH;
@@ -2705,6 +3306,10 @@ BtrCore_BTStopDiscovery (
     }
 
     dbus_connection_flush(gpDBusConn);
+    // for now, adding a 1s sleep to prevent stop discovery from being interrupted
+    // by an LE connect request that immediately follows the stop discovery request
+    // TODO: avoid sleep. handle correctly by listening for "Discovering" events from Adapter interface
+    sleep (1);
 
     return 0;
 }
@@ -2719,10 +3324,7 @@ BtrCore_BTStartLEDiscovery (
     DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
     DBusMessageIter lDBusMsgIter;
-    DBusMessageIter lDBusMsgIterDict, lDBusMsgIterDictStr, lDBusMsgIterVariant;
-    char*   lpcKey      = "Transport";
-    char*   lpcValue    = "le";
-    int     i32DBusType = DBUS_TYPE_STRING;
+    DBusMessageIter lDBusMsgIterDict;
 
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
@@ -2746,12 +3348,19 @@ BtrCore_BTStartLEDiscovery (
                                      DBUS_TYPE_VARIANT_AS_STRING
                                      DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
                                      &lDBusMsgIterDict);
+   {
+        DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+        char*   lpcKey      = "Transport";
+        char*   lpcValue    = "le";
+        int     i32DBusType = DBUS_TYPE_STRING;
+
         dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
             dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
             dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
                 dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
             dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
         dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+    }
     dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
 
 
@@ -2786,20 +3395,16 @@ BtrCore_BTStopLEDiscovery (
         BTRCORELOG_WARN ("Failed to Stop Discovery\n");
     }
 
-    // for now, adding a 1s sleep to prevent stop discovery from being interrupted
-    // by an LE connect request that immediately follows the stop discovery request
-    // TODO: avoid sleep. handle correctly by listening for "Discovering" events from Adapter interface
-    sleep (1);
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apBtAdapter,
                                              BT_DBUS_BLUEZ_ADAPTER_PATH,
                                              "SetDiscoveryFilter");
-
     if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
     }
+
 
     dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
     dbus_message_iter_open_container(&lDBusMsgIter,
@@ -2809,6 +3414,9 @@ BtrCore_BTStopLEDiscovery (
                                      DBUS_TYPE_VARIANT_AS_STRING
                                      DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
                                      &lDBusMsgIterDict);
+    {
+        // Empty
+    }
     dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
 
 
@@ -3692,7 +4300,6 @@ BtrCore_BTRegisterMedia (
                                              apBtAdapter,
                                              BT_DBUS_BLUEZ_MEDIA_PATH,
                                              "RegisterEndpoint");
-
     if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("Can't allocate new method call\n");
         return -1;
@@ -4080,8 +4687,11 @@ BtrCore_BTSetMediaProperty (
     DBusError       lDBusErr;
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterValue;
-    char*           mediaPlayerObjectPath = NULL;
+    const char*     mediaPlayerPath = BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH;
     const char*     lDBusTypeAsString = DBUS_TYPE_STRING_AS_STRING;
+
+    char*           mediaPlayerObjectPath = NULL;
+
 
     if (!gpDBusConn || (gpDBusConn != apBtConn) || !pValue)
         return -1;
@@ -4104,7 +4714,7 @@ BtrCore_BTSetMediaProperty (
     }
 
     dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
+    dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &mediaPlayerPath);
     dbus_message_iter_append_basic(&lDBusMsgIter, DBUS_TYPE_STRING, &mediaProperty);
     dbus_message_iter_open_container(&lDBusMsgIter, DBUS_TYPE_VARIANT, lDBusTypeAsString, &lDBusMsgIterValue);
     dbus_message_iter_append_basic(&lDBusMsgIterValue, DBUS_TYPE_STRING, pValue);
@@ -4281,6 +4891,590 @@ BtrCore_BTGetTrackInformation (
 
 
 int
+BtrCore_BTRegisterLeGatt (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apcBtSrvUUID,
+    const char* apcBtCharUUID,
+    const char* apcBtDescUUID,
+    int         ai32BtCapabilities,
+    int         ai32CapabilitiesSize
+) {
+    DBusMessage*        lpDBusMsg   = NULL;
+    DBusPendingCall*    lpDBusPendC = NULL;
+    DBusPendingCall*    lpDBusPendCAdv = NULL;
+
+    DBusError           lDBusErr;
+    DBusMessageIter     lDBusMsgIter;
+    DBusMessageIter     lDBusMsgIterDict;
+    DBusMessageIter     lDBusMsgIterAdv;
+    DBusMessageIter     lDBusMsgIterDictAdv;
+    dbus_bool_t         lDBusOp;
+
+    const char*         lpBtLeGattSrvEpPath = BT_LE_GATT_SERVER_ENDPOINT;
+    const char*         lpBtLeGattAdvEpPath = BT_LE_GATT_SERVER_ADVERTISEMENT;
+
+    char                lpui8SrvGattPath[BT_MAX_STR_LEN] = {'\0'};
+    char                lpui8ChrGattPath[BT_MAX_STR_LEN] = {'\0'};
+    char                lpui8DscGattPath[BT_MAX_STR_LEN] = {'\0'};
+
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter)
+        return -1;
+
+
+    snprintf (lpui8SrvGattPath, BT_MAX_STR_LEN - 1, "%s/%s", lpBtLeGattSrvEpPath, "service00");
+    strncpy(gpui8ServiceGattPath, lpui8SrvGattPath, BT_MAX_STR_LEN - 1);
+
+    strncpy(gpui8ServiceGattUUID, apcBtSrvUUID, BT_MAX_STR_LEN - 1);
+
+
+    snprintf (lpui8ChrGattPath, BT_MAX_STR_LEN - 1, "%s/%s", lpui8SrvGattPath, "char0000");
+    strncpy(gpui8CharGattPath, lpui8ChrGattPath, BT_MAX_STR_LEN - 1);
+
+    strncpy(gpui8CharGattUUID, apcBtCharUUID, BT_MAX_STR_LEN - 1);
+
+
+    snprintf (lpui8DscGattPath, BT_MAX_STR_LEN - 1, "%s/%s", lpui8ChrGattPath, "descriptor000");
+    strncpy(gpui8DescGattPath, lpui8DscGattPath, BT_MAX_STR_LEN - 1);
+
+    strncpy(gpui8DescGattUUID, apcBtDescUUID, BT_MAX_STR_LEN - 1);
+
+
+    dbus_error_init(&lDBusErr);
+    lDBusOp = dbus_connection_try_register_object_path(gpDBusConn, lpBtLeGattSrvEpPath, &gDBusLeGattEndpointVTable, NULL, &lDBusErr);
+    if (!lDBusOp) {
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR ("Can't Register Le Gatt Object - %s\n", lpBtLeGattSrvEpPath);
+
+        if (strcmp(lDBusErr.name, DBUS_ERROR_OBJECT_PATH_IN_USE) != 0)
+            return -1;
+    }
+
+
+    dbus_error_init(&lDBusErr);
+    lDBusOp = dbus_connection_try_register_object_path(gpDBusConn, lpui8SrvGattPath, &gDBusLeGattSCDVTable, NULL, &lDBusErr);
+    if (!lDBusOp) {
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR("Can't register object path %s for Gatt!", lpui8SrvGattPath);
+
+        if (strcmp(lDBusErr.name, DBUS_ERROR_OBJECT_PATH_IN_USE) != 0)
+            return -1;
+    }
+
+
+    dbus_error_init(&lDBusErr);
+    lDBusOp = dbus_connection_try_register_object_path(gpDBusConn, lpui8ChrGattPath, &gDBusLeGattSCDVTable, NULL, &lDBusErr);
+    if (!lDBusOp) {
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR("Can't register object path %s for Gatt!", lpui8ChrGattPath);
+
+        if (strcmp(lDBusErr.name, DBUS_ERROR_OBJECT_PATH_IN_USE) != 0)
+            return -1;
+    }
+
+
+    dbus_error_init(&lDBusErr);
+    lDBusOp = dbus_connection_try_register_object_path(gpDBusConn, lpui8DscGattPath, &gDBusLeGattSCDVTable, NULL, &lDBusErr);
+    if (!lDBusOp) {
+        btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+        BTRCORELOG_ERROR("Can't register object path %s for Gatt!", lpui8ChrGattPath);
+
+        if (strcmp(lDBusErr.name, DBUS_ERROR_OBJECT_PATH_IN_USE) != 0)
+            return -1;
+    }
+
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_GATT_MGR_PATH,
+                                             "RegisterApplication");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_OBJECT_PATH, &lpBtLeGattSrvEpPath);
+
+    dbus_message_iter_open_container(&lDBusMsgIter,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDict);
+    {
+        // Empty
+    }
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+
+
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) { //Send and expect lpDBusReply using pending call object
+        BTRCORELOG_ERROR ("failed to send message!\n");
+    }
+
+
+    dbus_pending_call_set_notify(lpDBusPendC, btrCore_BTPendingCallCheckReply, NULL, NULL);
+
+    dbus_connection_flush(gpDBusConn);
+    dbus_message_unref(lpDBusMsg);
+
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_LE_ADV_MGR_PATH,
+                                             "RegisterAdvertisement");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIterAdv);
+    dbus_message_iter_append_basic (&lDBusMsgIterAdv, DBUS_TYPE_OBJECT_PATH, &lpBtLeGattAdvEpPath);
+
+    dbus_message_iter_open_container(&lDBusMsgIterAdv,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDictAdv);
+    {
+        dbus_bool_t     lbBtPrimaryGatt = TRUE;
+
+        {
+            DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+            char*   lpcKey = "Type";
+            char*   lui8Value = "peripheral";
+            int     i32DBusType = DBUS_TYPE_STRING;
+
+            dbus_message_iter_open_container(&lDBusMsgIterDictAdv, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+                dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+                dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                    dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lui8Value);
+                dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+            dbus_message_iter_close_container (&lDBusMsgIterDictAdv, &lDBusMsgIterDictStr);
+        }
+
+
+        {
+            DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant, lDBusMsgIterSubArray;
+            char*   key = "ServiceUUIDs";
+            int     type = DBUS_TYPE_STRING;
+
+            char array_type[5] = "a";
+            strncat (array_type, (char*)&type, sizeof(array_type) - sizeof(type));
+
+            const char *lppui8Props[] = { apcBtSrvUUID, NULL };
+
+            dbus_message_iter_open_container(&lDBusMsgIterDictAdv, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+                dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &key);
+                dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, array_type, &lDBusMsgIterVariant);
+                    dbus_message_iter_open_container (&lDBusMsgIterVariant, DBUS_TYPE_ARRAY, (char *)&type, &lDBusMsgIterSubArray);
+                        dbus_message_iter_append_basic (&lDBusMsgIterSubArray, type, &lppui8Props);
+                    dbus_message_iter_close_container (&lDBusMsgIterVariant, &lDBusMsgIterSubArray);
+                dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+            dbus_message_iter_close_container (&lDBusMsgIterDictAdv, &lDBusMsgIterDictStr);
+        }
+        {
+            DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant, lDBusMsgIterSubArray;
+            char*   key = "SolicitUUIDs";
+            int     type = DBUS_TYPE_STRING;
+
+            char array_type[5] = "a";
+            strncat (array_type, (char*)&type, sizeof(array_type) - sizeof(type));
+
+            const char *lppui8Props[] = { apcBtSrvUUID, NULL };
+
+            dbus_message_iter_open_container(&lDBusMsgIterDictAdv, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+                dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &key);
+                dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, array_type, &lDBusMsgIterVariant);
+                    dbus_message_iter_open_container (&lDBusMsgIterVariant, DBUS_TYPE_ARRAY, (char *)&type, &lDBusMsgIterSubArray);
+                        dbus_message_iter_append_basic (&lDBusMsgIterSubArray, type, &lppui8Props);
+                    dbus_message_iter_close_container (&lDBusMsgIterVariant, &lDBusMsgIterSubArray);
+                dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+            dbus_message_iter_close_container (&lDBusMsgIterDictAdv, &lDBusMsgIterDictStr);
+        }
+        {
+            DBusMessageIter lDBusMsgIterDictBoolPri;
+            DBusMessageIter lDBusMsgIterValue;
+            char*   key = "IncludeTxPower";
+            int     type = DBUS_TYPE_BOOLEAN;
+
+            dbus_message_iter_open_container(&lDBusMsgIterDictAdv, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictBoolPri);
+                dbus_message_iter_append_basic (&lDBusMsgIterDictBoolPri, DBUS_TYPE_STRING, &key);
+                dbus_message_iter_open_container (&lDBusMsgIterDictBoolPri, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterValue);
+                    dbus_message_iter_append_basic (&lDBusMsgIterValue, type, &lbBtPrimaryGatt);
+                dbus_message_iter_close_container (&lDBusMsgIterDictBoolPri, &lDBusMsgIterValue);
+            dbus_message_iter_close_container (&lDBusMsgIterDictAdv, &lDBusMsgIterDictBoolPri);
+        }
+    }
+
+    dbus_message_iter_close_container (&lDBusMsgIterAdv, &lDBusMsgIterDictAdv);
+
+
+    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendCAdv, -1)) { //Send and expect lpDBusReply using pending call object
+        BTRCORELOG_ERROR ("failed to send message!\n");
+    }
+
+
+    dbus_pending_call_set_notify(lpDBusPendCAdv, btrCore_BTPendingCallCheckReply, NULL, NULL);
+
+    dbus_connection_flush(gpDBusConn);
+    dbus_message_unref(lpDBusMsg);
+
+
+    BTRCORELOG_ERROR ("Exiting!!!!\n");
+
+    return 0;
+}
+
+
+int
+BtrCore_BTUnRegisterLeGatt (
+    void*           apBtConn,
+    const char*     apBtAdapter
+) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    dbus_bool_t     lDBusOp;
+
+    const char*     lpui8DscGattPath = strdup(gpui8DescGattPath);
+    const char*     lpui8ChrGattPath = strdup(gpui8CharGattPath);
+    const char*     lpui8SrvGattPath = strdup(gpui8ServiceGattPath);
+    const char*     lpBtLeGattSrvEpPath = BT_LE_GATT_SERVER_ENDPOINT;
+    const char*     lpBtLeGattAdvEpPath = BT_LE_GATT_SERVER_ADVERTISEMENT;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !apBtAdapter)
+        return -1;
+
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_LE_ADV_MGR_PATH,
+                                             "UnregisterAdvertisement");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &lpBtLeGattAdvEpPath, DBUS_TYPE_INVALID);
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
+        return -1;
+    }
+
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_GATT_MGR_PATH,
+                                             "UnregisterApplication");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &lpBtLeGattSrvEpPath, DBUS_TYPE_INVALID);
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
+        return -1;
+    }
+
+
+    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpui8DscGattPath);
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Can't unregister object path %s for Gatt!\n", lpui8DscGattPath);
+        return -1;
+    }
+    free((void*)lpui8DscGattPath);
+
+
+    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpui8ChrGattPath);
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Can't unregister object path %s for Gatt!\n", lpui8ChrGattPath);
+        return -1;
+    }
+    free((void*)lpui8ChrGattPath);
+
+
+    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpui8SrvGattPath);
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Can't unregister object path %s for Gatt!\n", lpui8SrvGattPath);
+        return -1;
+    }
+    free((void*)lpui8SrvGattPath);
+
+
+    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpBtLeGattSrvEpPath);
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Can't Unregister Object\n");
+        return -1;
+    }
+
+
+    dbus_connection_flush(gpDBusConn);
+
+    btrCore_BTUnRegisterGattService(gpDBusConn, NULL);
+
+    return 0;
+}
+
+
+int
+BtrCore_BTPerformLeGattOp (
+    void*           apBtConn,
+    const char*     apBtGattPath,
+    enBTOpIfceType  aenBTOpIfceType,
+    enBTLeGattOp    aenBTLeGattOp,
+    char*           apLeGatOparg1,
+    char*           apLeGatOparg2,
+    char*           rpLeOpRes
+) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    DBusMessage*    lpDBusReply = NULL;
+    DBusError       lDBusErr;
+    char            lcBtGattOpString[64] = "\0";
+    char*           lpBtGattInterface    = NULL;
+    int             rc = 0;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn)) {
+       BTRCORELOG_ERROR ("DBus Connection Failure!!!");
+       return -1;
+    }
+
+    if (!apBtGattPath) {
+       BTRCORELOG_ERROR ("LE Gatt Path is NULL!!!");
+       return -1;
+    }
+
+    if (aenBTOpIfceType == enBTGattCharacteristic) {
+        lpBtGattInterface = BT_DBUS_BLUEZ_GATT_CHAR_PATH;
+    } else if (aenBTOpIfceType == enBTGattDescriptor) {
+        lpBtGattInterface = BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH;
+    }
+
+    switch (aenBTLeGattOp) {
+    case enBTLeGattOpReadValue:
+        strcpy(lcBtGattOpString, "ReadValue");
+        break;
+    case enBTLeGattOpWriteValue:
+        strcpy(lcBtGattOpString, "WriteValue");
+        break;
+    case enBTLeGattOpStartNotify:
+        strcpy(lcBtGattOpString, "StartNotify");
+        break;
+    case enBTLeGattOpStopNotify:
+        strcpy(lcBtGattOpString, "StopNotify");
+        break;
+    case enBTLeGattOpUnknown:
+        default:
+        rc = -1;
+        break;
+    }
+
+    if (rc == -1){
+        BTRCORELOG_ERROR ("Invalid enBTLeGattOp Option %d !!!", aenBTLeGattOp);
+        return rc;
+    }
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtGattPath,
+                                             lpBtGattInterface,
+                                             lcBtGattOpString);
+    if (!lpDBusMsg) {
+       BTRCORELOG_ERROR ("Can't allocate new method call\n");
+       return -1;
+    }
+
+    if (aenBTLeGattOp == enBTLeGattOpWriteValue && apLeGatOparg2) {
+
+        BTRCORELOG_TRACE ("apLeGatOparg2 : %s \n", apLeGatOparg2);
+        unsigned char lpcLeWriteByteData[BT_MAX_STR_LEN];
+        int lWriteByteDataLen  = 0;
+        unsigned short u16idx  = 0;
+        unsigned char u8val    = 0;
+        unsigned char *laptr   = (unsigned char*)apLeGatOparg2;
+
+        memset (lpcLeWriteByteData, 0, BT_MAX_STR_LEN);
+
+        while (*laptr) {
+            // Below logic is to map literals in a string to Hex values. Ex: hexOf_a = 'a' - 87 | hexOf_B = 'B' - 55 | hexOf_0 = '0' - 48
+            // TODO : May be we should check apLeGatOparg2 in upper layer, if it has only [a..f] | [A..F] | [0..9]
+            u8val = *laptr - ((*laptr <= 'f' && *laptr >= 'a')? ('a'-10) : (*laptr <= 'F' && *laptr >= 'A')? ('A'-10) : '0');
+
+            if (u16idx % 2) {
+                lpcLeWriteByteData[u16idx++/2] |= u8val;
+            }
+            else {
+                lpcLeWriteByteData[u16idx++/2]  = u8val << 4;
+            }
+
+            laptr++;
+        }
+
+        lpcLeWriteByteData[u16idx] = '\0';
+        lWriteByteDataLen          = u16idx/2;
+
+        for(int i = 0; i <= lWriteByteDataLen; i++ ) {
+            BTRCORELOG_TRACE ("lpcLeWriteByteData[%d] : %02x\n", i, lpcLeWriteByteData[i]);
+        }
+
+        const unsigned char* lpcLeWriteByteDataC = ((unsigned char*)lpcLeWriteByteData);
+
+        dbus_message_append_args (lpDBusMsg, DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE, &lpcLeWriteByteDataC, lWriteByteDataLen, DBUS_TYPE_INVALID);
+  
+        {
+            DBusMessageIter lDBusMsgIter, lDBusMsgIterDict;
+            dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+            dbus_message_iter_open_container(&lDBusMsgIter,
+                                            DBUS_TYPE_ARRAY,
+                                            DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                            DBUS_TYPE_STRING_AS_STRING
+                                            DBUS_TYPE_VARIANT_AS_STRING
+                                            DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                            &lDBusMsgIterDict);
+            {
+                DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+                char*  lpcKey = "offset";
+                unsigned short lus16Value = 0;
+                int    i32DBusType = DBUS_TYPE_UINT16;
+
+                dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+                    dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+                    dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                        dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lus16Value);
+                    dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+                dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+            }
+#if 0
+            {
+              DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+              char*  lpcKey   = "device";
+              char*  lpcValue = apLeGatOparg1;
+              int    i32DBusType = DBUS_TYPE_OBJECT_PATH;
+
+              dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+                  dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+                  dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                      dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
+                  dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+              dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+           }
+#endif
+           dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+        }
+    }
+    else if (aenBTLeGattOp == enBTLeGattOpReadValue) {
+
+        DBusMessageIter lDBusMsgIter, lDBusMsgIterDict;
+        dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+        dbus_message_iter_open_container(&lDBusMsgIter,
+                                        DBUS_TYPE_ARRAY,
+                                        DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                        DBUS_TYPE_STRING_AS_STRING
+                                        DBUS_TYPE_VARIANT_AS_STRING
+                                        DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                        &lDBusMsgIterDict);
+        {
+          DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+          char*  lpcKey = "offset";
+          unsigned short lus16Value = 0;
+          int    i32DBusType = DBUS_TYPE_UINT16;
+  
+          dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+              dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+              dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                  dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lus16Value);
+              dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant); 
+          dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);        
+       }
+       {
+          DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+          char*  lpcKey   = "device";
+          char*  lpcValue = apLeGatOparg1;      // "/org/bluez/hci0/dev_D3_DE_82_9A_7F_1E";
+          int    i32DBusType = DBUS_TYPE_OBJECT_PATH;
+
+          dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+              dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+              dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                  dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
+              dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+          dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+       }
+       dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+    }
+
+    if (aenBTLeGattOp == enBTLeGattOpReadValue) {
+
+       dbus_error_init(&lDBusErr);
+       lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
+       dbus_message_unref(lpDBusMsg);
+
+       if (!lpDBusReply) {
+          BTRCORELOG_ERROR ("Send Reply Block Method Failed!!!\n");
+          btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
+          return -1;
+       }
+
+       DBusMessageIter arg_i, element_i;
+       if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
+          BTRCORELOG_ERROR ("lpDBusReply has no information.");
+          return -1;
+       }
+
+       int dbus_type = DBUS_TYPE_INVALID;
+       char byteValue[BT_MAX_STR_LEN] = "\0";
+       char hexValue[] = "0123456789abcdef";
+       unsigned short u16idx = 0;
+       char ch = '\0';
+
+       memset (byteValue, 0, sizeof(byteValue));
+
+       dbus_message_iter_recurse(&arg_i, &element_i);
+
+       while ((dbus_type = dbus_message_iter_get_arg_type(&element_i)) != DBUS_TYPE_INVALID) {
+
+            if (dbus_type == DBUS_TYPE_BYTE) {
+               dbus_message_iter_get_basic(&element_i, &ch);
+               byteValue[u16idx++] = hexValue[ch >> 4];
+               byteValue[u16idx++] = hexValue[ch &  0x0F];
+            }
+            if (!dbus_message_iter_next(&element_i)) {
+               break;
+            }
+       }
+       byteValue[u16idx] = '\0';
+       strncpy (rpLeOpRes, byteValue, BT_MAX_STR_LEN-1);
+       BTRCORELOG_DEBUG ("rpLeOpRes : %s\n", rpLeOpRes);
+       dbus_message_unref(lpDBusReply);
+
+    } else {
+       dbus_bool_t  lDBusOp;
+
+       lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+       dbus_message_unref(lpDBusMsg);
+
+       if (!lDBusOp) {
+          BTRCORELOG_ERROR ("Not enough memory for message send\n");
+          return -1;
+       }
+    
+       dbus_connection_flush(gpDBusConn);
+    }
+
+    return 0;
+}
+
+
+int
 BtrCore_BTSendReceiveMessages (
     void*   apBtConn
 ) {
@@ -4296,6 +5490,25 @@ BtrCore_BTSendReceiveMessages (
 
 
 // Outgoing callbacks Registration Interfaces
+int
+BtrCore_BTRegisterAdapterStatusUpdateCb (
+    void*                               apBtConn,
+    fPtr_BtrCore_BTAdapterStatusUpdateCb    afpcBAdapterStatusUpdate,
+    void*                               apUserData
+) {
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (!afpcBAdapterStatusUpdate)
+        return -1;
+
+    gfpcBAdapterStatusUpdate    = afpcBAdapterStatusUpdate;
+    gpcBAdapterStatusUserData   = apUserData;
+
+    return 0;
+}
+
+
 int
 BtrCore_BTRegisterDevStatusUpdateCb (
     void*                               apBtConn,
@@ -4470,6 +5683,7 @@ btrCore_BTDBusConnectionFilterCb (
     void*           apvUserData
 ) {
     int             i32OpRet = -1;
+    stBTAdapterInfo lstBTAdapterInfo;
     stBTDeviceInfo  lstBTDeviceInfo;
     stBTMediaInfo   lstBTMediaInfo;
     int             li32MessageType;
@@ -4477,6 +5691,7 @@ btrCore_BTDBusConnectionFilterCb (
     const char*     lpcDestination;
 
 
+    memset(&lstBTAdapterInfo, 0, sizeof(stBTDeviceInfo));
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
     memset(&lstBTMediaInfo, 0, sizeof(stBTMediaInfo));
     lstBTDeviceInfo.i32RSSI = INT_MIN;
@@ -4492,12 +5707,12 @@ btrCore_BTDBusConnectionFilterCb (
     lpcSender       = dbus_message_get_sender(apDBusMsg);
     lpcDestination  = dbus_message_get_destination(apDBusMsg);
   
-    BTRCORELOG_INFO ("%s Sender=%s -> Dest=%s Path=%s; Interface=%s; Member=%s\n", 
+    BTRCORELOG_INFO ("%s Sender=%s -> Dest=%s Path=%s; Interface=%s; Member=%s\n",
                     btrCore_DBusType2Name(li32MessageType),
                     lpcSender ? lpcSender : "Null",
                     lpcDestination ? lpcDestination : "Null",
-                    dbus_message_get_path(apDBusMsg), 
-                    dbus_message_get_interface(apDBusMsg), 
+                    dbus_message_get_path(apDBusMsg),
+                    dbus_message_get_interface(apDBusMsg),
                     dbus_message_get_member(apDBusMsg));
 
 
@@ -4519,39 +5734,93 @@ btrCore_BTDBusConnectionFilterCb (
             if (lpcDBusIface) {
                 if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_ADAPTER_PATH)) {
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_ADAPTER_PATH);
+
+                    const char* adapter_path = dbus_message_get_path(apDBusMsg);
+                    strncpy (lstBTAdapterInfo.pcPath, adapter_path, BT_MAX_STR_LEN-1);
+                    i32OpRet = btrCore_BTGetAdapterInfo(&lstBTAdapterInfo, adapter_path);
+
+                    gui32IsAdapterDiscovering = lstBTAdapterInfo.bDiscovering;
+                    if (lstBTAdapterInfo.bDiscovering) {
+                        BTRCORELOG_INFO ("Adapter Started Discovering | %d\n", gui32IsAdapterDiscovering);
+                    }
+                    else {
+                        BTRCORELOG_INFO ("Adapter Stopped Discovering | %d\n", gui32IsAdapterDiscovering);
+                    }
+
+                    if (!i32OpRet) {
+                        if (gfpcBAdapterStatusUpdate) {
+                            if(gfpcBAdapterStatusUpdate(enBTAdPropDiscoveryStatus, &lstBTAdapterInfo, gpcBAdapterStatusUserData)) {
+                            }
+                        }
+                    }
                 }
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_DEVICE_PATH)) {
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_DEVICE_PATH);
+                    DBusMessageIter lDBusMsgIterDict;
+                    int settingRSSItoZero = 0;
+
                     i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, dbus_message_get_path(apDBusMsg));
-                    
+
+                    dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                    if (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_INVALID) {
+                        settingRSSItoZero = 1;
+                        BTRCORELOG_INFO ("Setting Dev %s RSSI to 0...\n", lstBTDeviceInfo.pcAddress);
+                    }
+#if 0
+                    DBusMessageIter lDBusMsgIter1, lDBusMsgIter2;
+                    while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                        dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+                        if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                            char *str="\0";
+                            dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+
+                            if (!strcmp(str, "RSSI")) {
+                            }
+                            else if (!strcmp(str, "ServicesResolved")) {
+                            }
+                            else if (!strcmp(str, "Connected")) {
+                            }
+                            else if (!strcmp(str, "ManufacturerData")) {
+                            }
+                        }
+                        dbus_message_iter_next(&lDBusMsgIterDict);
+                    }
+#endif
+
                     if (!i32OpRet) {
                         enBTDeviceState lenBtDevState = enBTDevStUnknown; 
                         enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
                         if (lstBTDeviceInfo.bPaired) {
-                            if (lstBTDeviceInfo.bConnected) {
-                                const char* value = "connected";
-
-                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-
-                                lenBtDevState = enBTDevStPropChanged;
+                            if (gui32IsAdapterDiscovering && settingRSSItoZero) {
+                                lenBtDevState = enBTDevStRSSIUpdate;
                             }
-                            else if (!lstBTDeviceInfo.bConnected) {
-                                const char* value = "disconnected";
+                            else {
+                                if (lstBTDeviceInfo.bConnected) {
+                                    const char* value = "connected";
 
-                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                                lenBtDevState = enBTDevStPropChanged;
-        
-                                if (enBTDevAudioSink == lenBTDevType && gui32DevLost) {
-                                   lenBtDevState = enBTDevStLost;
+                                    lenBtDevState = enBTDevStPropChanged;
                                 }
+                                else if (!lstBTDeviceInfo.bConnected) {
+                                    const char* value = "disconnected";
+
+                                    strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+                                    lenBtDevState = enBTDevStPropChanged;
+
+                                    if (enBTDevAudioSink == lenBTDevType && gui32DevLost) {
+                                        lenBtDevState = enBTDevStLost;
+                                    }
+                                }
+                                gui32DevLost = 0;
                             }
-                            gui32DevLost = 0;
  
                             if (enBTDevAudioSource != lenBTDevType || strcmp(gpcDeviceCurrState, "connected")) {
 
@@ -4702,7 +5971,7 @@ btrCore_BTDBusConnectionFilterCb (
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_GATT_CHAR_PATH )) {
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_GATT_CHAR_PATH);
                     const char* pCharIface = dbus_message_get_path(apDBusMsg);
-                    unsigned int ui32DeviceIfceLen = strstr(lpcDBusIface, "/service") - pCharIface;
+                    unsigned int ui32DeviceIfceLen = strstr(pCharIface, "/service") - pCharIface;
                     char apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
 
                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
@@ -4711,7 +5980,7 @@ btrCore_BTDBusConnectionFilterCb (
                         i32OpRet = btrCore_BTGetDeviceInfo(&lstBTDeviceInfo, apcDeviceIfce);
                         if (!i32OpRet) {
                             if (gfpcBTLeGattPath) {
-                                gfpcBTLeGattPath(enBTGattCharacteristic, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, gpDBusConn, gpcBLePathUserData);
+                                gfpcBTLeGattPath(enBTGattCharacteristic, pCharIface, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, gpDBusConn, gpcBLePathUserData);
                             }
                         }
                     }
@@ -4724,6 +5993,9 @@ btrCore_BTDBusConnectionFilterCb (
                 }
             }
         }
+    }
+    else if (dbus_message_is_method_call(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects")) {
+        BTRCORELOG_INFO ("org.freedesktop.DBus.ObjectManager - GetManagedObjects\n");
     }
     else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "InterfacesAdded")) {
         DBusMessageIter lDBusMsgIter;
@@ -5047,13 +6319,12 @@ btrCore_BTMediaEndpointHandlerCb (
     void*           apvUserData
 ) {
     DBusMessage*    lpDBusReply = NULL;
-    const char*     lpcPath;
+    const char*     lpcPath = NULL;
 
     lpcPath = dbus_message_get_path(apDBusMsg);
 
-    (void)lpcPath;
 
-    BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1\n");
+    BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1 - %s\n", lpcPath);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_MEDIA_ENDPOINT_PATH, "SelectConfiguration")) {
         BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1-SelectConfiguration\n");
@@ -5111,166 +6382,121 @@ btrCore_BTAgentMessageHandlerCb (
 }
 
 
-
-int
-BtrCore_BTPerformLeGattOp (
-    void*           apBtConn,
-    const char*     apBtGattPath,
-    enBTOpIfceType  aenBTOpIfceType,
-    enBTLeGattOp    aenBTLeGattOp,
-    void*           apLeGatOparg,
-    void*           rpLeOpRes
+static DBusHandlerResult
+btrCore_BTLeGattEndpointHandlerCb (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           apvUserData
 ) {
-    DBusMessage*    lpDBusMsg   = NULL;
     DBusMessage*    lpDBusReply = NULL;
-    DBusError       lDBusErr;
-    char            lcBtGattOpString[64] = "\0";
-    char*           lpBtGattInterface    = NULL;
-    int             rc = 0;
+    const char*     lpcPath = NULL;
 
-    if (!gpDBusConn || (gpDBusConn != apBtConn)) {
-       BTRCORELOG_ERROR ("DBus Connection Failure!!!");
-       return -1;
-    }
+    int             li32MessageType;
+    const char*     lpcSender;
+    const char*     lpcDestination;
 
-    if (!apBtGattPath) {
-       BTRCORELOG_ERROR ("LE Gatt Path is NULL!!!");
-       return -1;
-    }
 
-    if (aenBTOpIfceType == enBTGattCharacteristic) {
-        lpBtGattInterface = BT_DBUS_BLUEZ_GATT_CHAR_PATH;
-    } else if (aenBTOpIfceType == enBTGattDescriptor) {
-        lpBtGattInterface = BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH;
-    }
-
-    switch (aenBTLeGattOp) {
-    case enBTLeGattOpReadValue:
-        strcpy(lcBtGattOpString, "ReadValue");
-        break;
-    case enBTLeGattOpWriteValue:
-        strcpy(lcBtGattOpString, "WriteValue");
-        break;
-    case enBTLeGattOpStartNotify:
-        strcpy(lcBtGattOpString, "StartNotify");
-        break;
-    case enBTLeGattOpStopNotify:
-        strcpy(lcBtGattOpString, "StopNotify");
-        break;
-    case enBTLeGattOpUnknown:
-        default:
-        rc = -1;
-        break;
-    }
-
-    if (rc == -1){
-        BTRCORELOG_ERROR ("Invalid enBTLeGattOp Option %d !!!", aenBTLeGattOp);
-        return rc;
-    }
-
-    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apBtGattPath,
-                                             lpBtGattInterface,
-                                             lcBtGattOpString);
-    if (!lpDBusMsg) {
-       BTRCORELOG_ERROR ("Can't allocate new method call\n");
-       return -1;
-    }
-
-    if (aenBTLeGattOp == enBTLeGattOpReadValue) {
-       DBusMessageIter lDBusMsgIter, lDBusMsgIterDict;
-
-       dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
-       dbus_message_iter_open_container(&lDBusMsgIter,
-                                        DBUS_TYPE_ARRAY,
-                                        DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
-                                        DBUS_TYPE_STRING_AS_STRING
-                                        DBUS_TYPE_VARIANT_AS_STRING
-                                        DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
-                                        &lDBusMsgIterDict);
-       {
-          DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
-          char*  lpcKey = "offset";
-          unsigned short lus16Value = 0;
-          int    i32DBusType = DBUS_TYPE_UINT16;
+    li32MessageType = dbus_message_get_type(apDBusMsg);
+    lpcSender       = dbus_message_get_sender(apDBusMsg);
+    lpcDestination  = dbus_message_get_destination(apDBusMsg);
   
-          dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
-              dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
-              dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
-                  dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lus16Value);
-              dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant); 
-          dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);        
-       }
-       {
-          DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
-          char*  lpcKey   = "device";
-          char*  lpcValue = (char*)apLeGatOparg;      // "/org/bluez/hci0/dev_D3_DE_82_9A_7F_1E";
-          int    i32DBusType = DBUS_TYPE_OBJECT_PATH;
+    BTRCORELOG_INFO ("%s Sender=%s -> Dest=%s Path=%s; Interface=%s; Member=%s\n",
+                    btrCore_DBusType2Name(li32MessageType),
+                    lpcSender ? lpcSender : "Null",
+                    lpcDestination ? lpcDestination : "Null",
+                    dbus_message_get_path(apDBusMsg),
+                    dbus_message_get_interface(apDBusMsg),
+                    dbus_message_get_member(apDBusMsg));
 
-          dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
-              dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
-              dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
-                  dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
-              dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
-          dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
-       }
-       dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
 
-       dbus_error_init(&lDBusErr);
-       lpDBusReply = dbus_connection_send_with_reply_and_block(gpDBusConn, lpDBusMsg, -1, &lDBusErr);
-       dbus_message_unref(lpDBusMsg);
+    lpcPath = dbus_message_get_path(apDBusMsg);
+    if (!lpcPath)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-       if (!lpDBusReply) {
-          BTRCORELOG_ERROR ("Send Reply Block Method Failed!!!\n");
-          btrCore_BTHandleDusError(&lDBusErr, __LINE__, __FUNCTION__);
-          return -1;
-       }
 
-       DBusMessageIter arg_i, element_i;
-       if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
-          BTRCORELOG_ERROR ("lpDBusReply has no information.");
-          return -1;
-       }
+    BTRCORELOG_INFO ("leGatt: /LeEndpoint/Gatt - %s\n", lpcPath);
+   
+    if (dbus_message_is_method_call(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects")) {
 
-       int dbus_type = DBUS_TYPE_INVALID;
-       char byteValue[BT_MAX_STR_LEN] = "\0";
-       char hexValue[] = "0123456789abcdef";
-       unsigned short u16idx = 0;
-       char ch = '\0';
-
-       memset (byteValue, 0, sizeof(byteValue));
-
-       dbus_message_iter_recurse(&arg_i, &element_i);
-
-       while ((dbus_type = dbus_message_iter_get_arg_type(&element_i)) != DBUS_TYPE_INVALID) {
-
-            if (dbus_type == DBUS_TYPE_BYTE) {
-               dbus_message_iter_get_basic(&element_i, &ch);
-               byteValue[u16idx++] = hexValue[ch >> 4];
-               byteValue[u16idx++] = hexValue[ch &  0x0F];
+        BTRCORELOG_INFO ("leGatt: /LeEndpoint/Gatt - %s GetManagedObjects\n", lpcPath);
+        if (!strcmp(lpcPath, BT_LE_GATT_SERVER_ENDPOINT)) {
+            lpDBusReply = btrCore_BTRegisterGattService(apDBusConn, apDBusMsg, gpui8ServiceGattPath, gpui8ServiceGattUUID, gpui8CharGattPath, gpui8CharGattUUID, gpui8DescGattPath, gpui8DescGattUUID);
+            if (!lpDBusReply) {
+                BTRCORELOG_ERROR ("Can't Register Le Gatt Object Paths\n");
             }
-            if (!dbus_message_iter_next(&element_i)) {
-               break;
-            }
-       }
-       byteValue[u16idx] = '\0';
-       strncpy ((char*)rpLeOpRes, byteValue, BT_MAX_STR_LEN-1);
-       BTRCORELOG_DEBUG ("rpLeOpRes : %s\n", (char*)rpLeOpRes);
-       dbus_message_unref(lpDBusReply);
+        }
 
-    } else {
-       dbus_bool_t  lDBusOp;
-
-       lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
-       dbus_message_unref(lpDBusMsg);
-
-       if (!lDBusOp) {
-          BTRCORELOG_ERROR ("Not enough memory for message send\n");
-          return -1;
-       }
-    
-       dbus_connection_flush(gpDBusConn);
+        BTRCORELOG_INFO ("leGatt: /LeEndpoint/GattServer-GetManagedObjects\n");
+    }
+    else {
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
-    return 0;
+
+    if (!lpDBusReply) {
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+
+
+    dbus_connection_send(gpDBusConn, lpDBusReply, NULL);
+    dbus_connection_flush(gpDBusConn);
+
+    dbus_message_unref(lpDBusReply);
+
+
+    return DBUS_HANDLER_RESULT_HANDLED;
+}
+
+
+static DBusHandlerResult
+btrCore_BTLeGattMessageHandlerCb (
+    DBusConnection* apDBusConn,
+    DBusMessage*    apDBusMsg,
+    void*           apvUserData
+) {
+    DBusMessage*    lpDBusReply = NULL;
+    const char*     lpcPath     = NULL;
+
+    lpcPath = dbus_message_get_path(apDBusMsg);
+    if (!lpcPath)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+    BTRCORELOG_INFO ("leGatt: /LeEndpoint/GattServer - %s\n", lpcPath);
+
+
+    if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_GATT_CHAR_PATH, "ReadValue"))  {
+        BTRCORELOG_INFO ("leGatt: LeEndpoint/GattServer-Characteristic-ReadValue\n");
+    }
+    else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_GATT_CHAR_PATH, "WriteValue"))  {
+        BTRCORELOG_INFO ("leGatt: LeEndpoint/GattServer-Characteristic-WriteValue\n");
+    }
+    else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_GATT_CHAR_PATH, "StartNotify"))  {
+        BTRCORELOG_INFO ("leGatt: LeEndpoint/GattServer-Characteristic-StartNotify\n");
+    }
+    else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_GATT_CHAR_PATH, "StopNotify"))  {
+        BTRCORELOG_INFO ("leGatt: LeEndpoint/GattServer-Characteristic-StopNotify\n");
+    }
+    else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH, "ReadValue")) {
+        BTRCORELOG_INFO ("leGatt: LeEndpoint/GattServer-Descriptor-ReadValue\n");
+    }
+    else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH, "WriteValue")) {
+        BTRCORELOG_INFO ("leGatt: LeEndpoint/GattServer-Descriptor-WriteValue\n");
+    }
+    else {
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+
+
+    if (!lpDBusReply) {
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    }
+
+
+    dbus_connection_send(apDBusConn, lpDBusReply, NULL);
+    dbus_connection_flush(gpDBusConn);
+
+    dbus_message_unref(lpDBusReply);
+
+
+    return DBUS_HANDLER_RESULT_HANDLED;
 }

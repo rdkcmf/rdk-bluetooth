@@ -66,8 +66,8 @@ typedef enum _enBTRCoreLEGattOp {
 
 
 /* Fptr callback types */
-    //typedef enBTRCoreRet (*fPtr_BTRCore_LeDevStatusUpdateCb) ( DevType, LeInfo, void* apUserData);
-    // can it be mapped to btrCore_BTDeviceStatusUpdateCb()?
+//TODO:  char* apBtLeInfo ->  apstBtLeInfo | define a struct based on future need
+typedef enBTRCoreRet (*fPtr_BTRCore_LeStatusUpdateCb) (char* apBtLeInfo, const char* apBtDevAddr, void* apUserData);
 
 
 /* Interfaces */
@@ -125,9 +125,11 @@ enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, void* apBtCon
  * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
  */
 enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId atBTRCoreDevId,
-                                       const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp, void* rpLeOpRes);
+                                       const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp, char* apLeOpArg, char* rpLeOpRes);
 
 /* Outgoing callbacks Registration Interfaces */
+/* BTRCore_LE_RegisterStatusUpdateCb - Callback for LE dev notifications and state changes */
+enBTRCoreRet BTRCore_LE_RegisterStatusUpdateCb (tBTRCoreLeHdl hBTRCoreLe, fPtr_BTRCore_LeStatusUpdateCb afPtr_BTRCore_LeStatusUpdateCb, void* apUserData);
 /* @} */ // End of group BLUETOOTH_APIS
 
 #endif // __BTR_CORE_LE_H__

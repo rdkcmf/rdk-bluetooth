@@ -1015,15 +1015,21 @@ main (
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 devnum = getChoice();
                 char *leUuidString = getLeUuidString(); 
+                char writeArg[BTRCORE_MAX_STR_LEN] = "\0";
 
                 fprintf(stderr, "%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
                 fprintf(stderr, "\t[0 - ReadValue | 1 - WriteValue | 2 - StartNotify | 3 - StopNotify]\n");
 
                 enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
 
+                if (aenBTRCoreLeOp == enBTRCoreLeOpGWriteValue) {
+                    fprintf(stderr, "\tEnter the Value to Write : ");
+                    scanf("%s", writeArg);
+                }
+                    
                 if (leUuidString) {
                    char val[BTRCORE_MAX_STR_LEN] = "\0";
-                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, (void*)&val);
+                   BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, writeArg, val);
                    free(leUuidString);
                    leUuidString = NULL; 
                    if (aenBTRCoreLeOp == 0) {

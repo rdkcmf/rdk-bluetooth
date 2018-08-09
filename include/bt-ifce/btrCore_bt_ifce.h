@@ -134,6 +134,7 @@ typedef enum _enBTDeviceState {
     enBTDevStConnected,
     enBTDevStDisconnected,
     enBTDevStPropChanged,
+    enBTDevStRSSIUpdate,
     enBTDevStUnknown
 } enBTDeviceState;
 
@@ -173,6 +174,7 @@ typedef enum _enBTAdapterProp {
     enBTAdPropPowered,
     enBTAdPropDiscoverable,
     enBTAdPropDiscoverableTimeOut,
+    enBTAdPropDiscoveryStatus,
     enBTAdPropUnknown
 } enBTAdapterProp;
 
@@ -293,6 +295,22 @@ typedef union _unBTOpIfceProp {
 
 
 /* Structure Types */
+typedef struct _stBTAdapterInfo {
+    char            pcAddress[BT_MAX_STR_LEN];                              // Bluetooth device address
+    char            pcName[BT_MAX_STR_LEN];                                 // Bluetooth system name (pretty hostname)
+    char            pcAlias[BT_MAX_STR_LEN];                                // Bluetooth friendly name
+    unsigned int    ui32Class;                                              // Bluetooth class of device
+    int             bPowered;                                               // Bluetooth adapter 'powered' state
+    int             bDiscoverable;                                          // Bluetooth adapter visible/hidden
+    int             bPairable;                                              // Bluetooth adapter pairable or non-pairable
+    unsigned int    ui32PairableTimeout;                                    // 0 (default) = timeout disabled; stays in pairable mode forever
+    unsigned int    ui32DiscoverableTimeout;                                // default = 180s (3m). 0 = timeout disabled; stays in discoverable/limited mode forever
+    int             bDiscovering;                                           // device discovery procedure active?
+    char            ppcUUIDs[BT_MAX_DEVICE_PROFILE][BT_MAX_UUID_STR_LEN];   // List of 128-bit UUIDs that represents the available local services
+    char            pcModalias[BT_MAX_STR_LEN];                             // Local Device ID information in modalias format used by the kernel and udev
+    char            pcPath[BT_MAX_STR_LEN];                                 // Bluetooth adapter path
+} stBTAdapterInfo;
+
 typedef struct _stBTDeviceInfo {
     int             bPaired;
     int             bConnected;
@@ -356,6 +374,7 @@ typedef struct _stBTMediaStatusUpdate {
 
 
 /* Fptr Callbacks types */
+typedef int (*fPtr_BtrCore_BTAdapterStatusUpdateCb)(enBTAdapterProp aeBtAdapterProp, stBTAdapterInfo* apstBTAdapterInfo, void* apUserData);
 typedef int (*fPtr_BtrCore_BTDevStatusUpdateCb)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef int (*fPtr_BtrCore_BTMediaStatusUpdateCb)(enBTDeviceType aeBtDeviceType, stBTMediaStatusUpdate* apstBtMediaStUpdate, const char* apcBtDevAddr, void* apUserData);
 typedef int (*fPtr_BtrCore_BTNegotiateMediaCb)(void* apBtMediaCapsInput, void** appBtMediaCapsOutput, void* apUserData);
@@ -738,7 +757,19 @@ int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, i
  * @retval Returns 0 on success, appropriate error code otherwise.
  */
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
+
 // AVRCP Interfaces
+
+/**
+ * @brief  A Path is assigned to Media player using  Bluetooth device path.
+ *
+ * @param[in]  apBtConn            The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                 NULL is valid for this API.
+ * @param[in]  apBtDevPath         Bluetooth device path.
+ *
+ * @return  assigned Media player path is returned.
+ */
+char* BtrCore_BTGetMediaPlayerPath (void* apBtConn, const char* apBtDevPath);
 
 /**
  * @brief  This API is used to control the media device.
@@ -753,15 +784,17 @@ int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
 int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, enBTMediaControl  aenBTMediaOper);
 
 /**
- * @brief  A Path is assigned to Media player using  Bluetooth device path.
+ * @brief  This API is used to get the state of the BT device .
  *
- * @param[in]  apBtConn            The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
- *                                 NULL is valid for this API.
- * @param[in]  apBtDevPath         Bluetooth device path.
+ * @param[in]  apBtConn           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                NULL is valid for this API.
+ * @param[in]  apBtDataPath       Bt Data path.
+ * @param[out] state              Transport state of the BT device.
  *
- * @return  assigned Media player path is returned.
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
  */
-char* BtrCore_BTGetMediaPlayerPath (void* apBtConn, const char* apBtDevPath);
+int   BtrCore_BTGetTransportState (void* apBtConn, const char* apBtDataPath, void* state);
 
 /**
  * @brief  This API is used to get media player property value using the object path of BT device and media property.
@@ -776,19 +809,6 @@ char* BtrCore_BTGetMediaPlayerPath (void* apBtConn, const char* apBtDevPath);
  * @retval Returns 0 on success, appropriate error code otherwise.
  */
 int   BtrCore_BTGetMediaPlayerProperty (void* apBtConn, const char* apBtObjectPath, const char* mediaProperty, void* mediaPropertyValue);
-
-/**
- * @brief  This API is used to get the state of the BT device .
- *
- * @param[in]  apBtConn           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
- *                                NULL is valid for this API.
- * @param[in]  apBtDataPath       Bt Data path.
- * @param[out] state              Transport state of the BT device.
- *
- * @return Returns the status of the operation.
- * @retval Returns 0 on success, appropriate error code otherwise.
- */
-int   BtrCore_BTGetTransportState (void* apBtConn, const char* apBtDataPath, void* state);
 
 /**
  * @brief  This API is used to set the media property of the BT device .
@@ -817,6 +837,32 @@ int   BtrCore_BTSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, c
  */
 int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* lpstBTMediaTrackInfo);
 
+/******************************************
+*    LE Functions
+*******************************************/
+
+int BtrCore_BTRegisterLeGatt (void* apBtConn, const char* apBtAdapter, const char* apcBtSrvUUID, const char* apcBtCharUUID, const char* apcBtDescUUID, int ai32BtCapabilities, int ai32CapabilitiesSize);
+
+
+int BtrCore_BTUnRegisterLeGatt (void* apBtConn, const char* apBtAdapter);
+
+/**
+ * @brief  This API is used to perform gatt services of the BT device .
+ *
+ * @param[in]  apBtConn           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                NULL is valid for this API.
+ * @param[in]  apBtLePath         LE Blue tooth device path.
+ * @param[in]  aenBTOpIfceType    Bluetooth interface type.
+ * @param[in]  aenBTLeGattOp      Bluetooth interface property whose propert value has to be fetched.
+ * @param[in]  apUserdata1        LE gatt operation userdata.
+ * @param[in]  apUserdata2        LE gatt operation userdata.
+ * @param[out] rpLeOpRes          LE operation result.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTPerformLeGattOp (void* apBtConn, const char* apBtLePath, enBTOpIfceType aenBTOpIfceType, enBTLeGattOp aenBTLeGattOp, char* apLeGatOparg1, char* apLeGatOparg2, char* rpLeOpRes);
+
 /**
  * @brief  This API is used to read, write and dispatch BT device information.
  *
@@ -827,7 +873,9 @@ int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayer
  * @retval Returns 0 on success, appropriate error code otherwise.
  */
 int   BtrCore_BTSendReceiveMessages (void* apBtConn);
+
 // Outgoing callbacks Registration Interfaces
+int   BtrCore_BTRegisterAdapterStatusUpdateCb (void* apBtConn, fPtr_BtrCore_BTAdapterStatusUpdateCb afpcBAdapterStatusUpdate, void* apUserData);
 int   BtrCore_BTRegisterDevStatusUpdateCb (void* apBtConn, fPtr_BtrCore_BTDevStatusUpdateCb afpcBDevStatusUpdate, void* apUserData);
 int   BtrCore_BTRegisterMediaStatusUpdateCb (void* apBtConn, fPtr_BtrCore_BTMediaStatusUpdateCb afpcBMediaStatusUpdate, void* apUserData);
 int   BtrCore_BTRegisterConnIntimationCb (void* apBtConn, fPtr_BtrCore_BTConnIntimCb afpcBConnIntim, void* apUserData);
@@ -838,24 +886,6 @@ int   BtrCore_BTRegisterTransportPathMediaCb (void* apBtConn, const char* apBtAd
                                                 fPtr_BtrCore_BTTransportPathMediaCb afpcBTransportPathMedia, void* apUserData);
 int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTMediaPlayerPathCb afpcBTMediaPlayerPath, void* apUserData); 
-/******************************************
-*    LE Functions
-*******************************************/
-
-/**
- * @brief  This API is used to perform gatt services of the BT device .
- *
- * @param[in]  apBtConn           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
- *                                NULL is valid for this API.
- * @param[in]  apBtLePath         LE Blue tooth device path.
- * @param[in]  aenBTOpIfceType    Bluetooth interface type.
- * @param[in]  aenBTLeGattOp      Bluetooth interface property whose propert value has to be fetched.
- * @param[in]  apUserdata         LE gatt operation userdata.
- * @param[out] rpLeOpRes          LE operation result.
- *
- * @return Returns the status of the operation.
- * @retval Returns 0 on success, appropriate error code otherwise.
- */
-int   BtrCore_BTPerformLeGattOp (void* apBtConn, const char* apBtLePath, enBTOpIfceType aenBTOpIfceType, enBTLeGattOp aenBTLeGattOp, void* apLeGatOparg, void* rpLeOpRes);
 int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
+
 #endif // __BTR_CORE_BT_IFCE_H__

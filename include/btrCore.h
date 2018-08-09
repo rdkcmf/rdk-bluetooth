@@ -59,12 +59,17 @@ extern "C" {
  */
 
 #define BTRCORE_MAX_NUM_BT_ADAPTERS 4   // TODO:Better to make this configurable at runtime
-#define BTRCORE_MAX_NUM_BT_DEVICES  32  // TODO:Better to make this configurable at runtime
+#define BTRCORE_MAX_NUM_BT_DEVICES  64  // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_DEVICE_PROFILE  32
 
 #define BTRCORE_STRINGS_MAX_LEN     BTRCORE_STR_LEN
 #define BTRCORE_UUID_LEN            64
 
+
+typedef enum _enBTRCoreOpType {
+    enBTRCoreOpTypeAdapter,
+    enBTRCoreOpTypeDevice
+} enBTRCoreOpType;
 
 typedef enum _enBTRCoreDeviceType {
     enBTRCoreSpeakers,
@@ -115,6 +120,7 @@ typedef enum _enBTRCoreDeviceState {
     enBTRCoreDevStDisconnected,
     enBTRCoreDevStPlaying,
     enBTRCoreDevStLost,
+    enBTRCoreDevStOpInfo,
     enBTRCoreDevStUnknown
 } enBTRCoreDeviceState;
 
@@ -220,7 +226,8 @@ typedef struct _stBTRCoreDevStatusCBInfo {
     enBTRCoreDeviceState    eDevicePrevState;
     enBTRCoreDeviceState    eDeviceCurrState;
     unsigned char           isPaired;
-    unsigned int            ui32DevClassBtSpec;  
+    unsigned int            ui32DevClassBtSpec;
+    char                    devOpResponse[BTRCORE_MAX_STR_LEN];
 } stBTRCoreDevStatusCBInfo;
 
 typedef struct _stBTRCoreSupportedService {
@@ -242,6 +249,7 @@ typedef struct _stBTRCoreAdapter {
     BOOLEAN         discoverable;
     BOOLEAN         bFirstAvailable; /*search for first available BT adapater*/
     unsigned int    DiscoverableTimeout;
+    BOOLEAN         bDiscovering;
 } stBTRCoreAdapter;
 
 
@@ -355,10 +363,16 @@ typedef struct _stBTRCoreUUIDList {
     stBTRCoreUUID   uuidList[BTRCORE_MAX_DEVICE_PROFILE];
 } stBTRCoreUUIDList;
 
+typedef struct _stBTRCoreDiscoveryCBInfo {
+    enBTRCoreOpType type;
+    stBTRCoreAdapter adapter;
+    stBTRCoreBTDevice device;
+} stBTRCoreDiscoveryCBInfo;
+
 
 
 /* Fptr Callbacks types */
-typedef enBTRCoreRet (*fPtr_BTRCore_DeviceDiscCb) (stBTRCoreBTDevice astBTRCoreScannedDevice, void* apvUserData);
+typedef enBTRCoreRet (*fPtr_BTRCore_DeviceDiscCb) (stBTRCoreDiscoveryCBInfo* astBTRCoreDiscoveryCbInfo, void* apvUserData);
 typedef enBTRCoreRet (*fPtr_BTRCore_StatusCb) (stBTRCoreDevStatusCBInfo* apstDevStatusCbInfo, void* apvUserData);
 typedef enBTRCoreRet (*fPtr_BTRCore_MediaStatusCb) (stBTRCoreMediaStatusCBInfo* apstMediaStatusCbInfo, void* apvUserData);
 typedef enBTRCoreRet (*fPtr_BTRCore_ConnIntimCb) (stBTRCoreConnCBInfo* apstConnCbInfo, int* api32ConnInIntimResp, void* apvUserData);
@@ -959,7 +973,7 @@ enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCo
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, void* rpLeOpRes);
+enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, char* apLeOpArg, char* rpLeOpRes);
 
 // Outgoing callbacks Registration Interfaces
 /* BTRCore_RegisterDiscoveryCb - Callback to notify the application every time when a new device is found and added to discovery list */

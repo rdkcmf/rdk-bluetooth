@@ -278,14 +278,16 @@ btrCore_AVMedia_PlaybackPositionPolling (
     pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData;
 
     if (!pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate || !pstlhBTRCoreAVM->pvThreadData) {
-        BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaHdl Data!!! | pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate : %p | pstlhBTRCoreAVM->pvThreadData : %p", pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate, pstlhBTRCoreAVM->pvThreadData);
+        BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaHdl Data!!! | pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate : %p | pstlhBTRCoreAVM->pvThreadData : %p"
+                        , pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate, pstlhBTRCoreAVM->pvThreadData);
         return NULL;
     }
 
     pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData; 
 
     if (!pstAVMediaStUserData->apvAVMUserData || !pstAVMediaStUserData->apcAVMDevAddress) {
-        BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaStatusUserData Data!!! | pstAVMediaStUserData->apvAVMUserData : %p | pstAVMediaStUserData->apcAVMDevAddress : %s" , pstAVMediaStUserData->apvAVMUserData, pstAVMediaStUserData->apcAVMDevAddress);
+        BTRCORELOG_ERROR("Exiting.. Invalid stBTRCoreAVMediaStatusUserData Data!!! | pstAVMediaStUserData->apvAVMUserData : %p | pstAVMediaStUserData->apcAVMDevAddress : %s"
+                        , pstAVMediaStUserData->apvAVMUserData, pstAVMediaStUserData->apcAVMDevAddress);
         return NULL;
     }
 
@@ -297,8 +299,9 @@ btrCore_AVMedia_PlaybackPositionPolling (
         threadExit = pstlhBTRCoreAVM->mediaPollingThreadExit;
         g_mutex_unlock(&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
 
-        if (threadExit)
+        if (threadExit || (mediaState && (!strcmp(mediaState, "ended")))) {
             break;
+        }
 
         if (pstlhBTRCoreAVM->pcAVMediaTransportPath && pstlhBTRCoreAVM->pcAVMediaPlayerPath) {     /* a better way to synchronization has to be deviced */
             statusRet = BtrCore_BTGetMediaPlayerProperty(apBtConn, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Status",   (void*)&mediaState);
@@ -394,8 +397,6 @@ btrCore_AVMedia_PlaybackPositionPolling (
 
     free ((void*)pstAVMediaStUserData->apcAVMDevAddress);
     free ((void*)pstAVMediaStUserData);
-
-    pstlhBTRCoreAVM->pMediaPollingThread = NULL;
 
     return NULL;
 }
@@ -1060,6 +1061,8 @@ BTRCore_AVMedia_ExitMediaPositionPolling (
 
         g_thread_join (pstlhBTRCoreAVM->pMediaPollingThread);
         g_mutex_clear (&pstlhBTRCoreAVM->mediaPollingThreadExitMutex);
+
+        pstlhBTRCoreAVM->pMediaPollingThread = NULL;
 
         BTRCORELOG_INFO ("Successfully Exited Media Position Polling Thread");
     }
