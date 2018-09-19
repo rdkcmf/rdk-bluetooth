@@ -18,7 +18,8 @@
 */
 //btrCore.c
 
-/* System Headers */
+/* System Headers 
+*/
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>     //for strtoll
@@ -461,6 +462,9 @@ btrCore_MapDevClassToDevType (
     else if (aenBTRCoreDevCl == enBTRCore_DC_Tablet) {
        lenBTRCoreDevType = enBTRCorePCAudioIn;
     }
+    else if (aenBTRCoreDevCl == enBTRCore_DC_HID) {
+       lenBTRCoreDevType = enBTRCoreHID;
+    }
     else if (aenBTRCoreDevCl == enBTRCore_DC_Tile) {
         lenBTRCoreDevType = enBTRCoreLE;
         //TODO: May be use should have AudioDeviceClass & LE DeviceClass 
@@ -543,6 +547,10 @@ btrCore_AddDeviceToScannedDevicesArr (
             else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_1, NULL, 16) ||
                      lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_2, NULL, 16) ){
                 lstFoundDevice.enDeviceType = enBTRCore_DC_Tile;
+            }
+            else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_1, NULL, 16) ||
+                     lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_2, NULL, 16) ){
+                lstFoundDevice.enDeviceType = enBTRCore_DC_HID;
             }
         }
     }
@@ -1087,6 +1095,24 @@ btrCore_BTParseUUIDValue (
 
         else if (!strcasecmp(aUUID, BTR_CORE_GATT_TILE_2))
             strcpy(pServiceNameOut, BTR_CORE_GATT_TILE_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_GEN_ACCESS))
+            strcpy(pServiceNameOut, BTR_CORE_GEN_ACCESS_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_GEN_ATTRIBUTE))
+            strcpy(pServiceNameOut, BTR_CORE_GEN_ATTRIBUTE_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_DEVICE_INFO))
+            strcpy(pServiceNameOut, BTR_CORE_DEVICE_INFO_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_BATTERY_SERVICE))
+            strcpy(pServiceNameOut, BTR_CORE_BATTERY_SERVICE_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_HID_1))
+            strcpy(pServiceNameOut, BTR_CORE_HID_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_HID_2))
+            strcpy(pServiceNameOut, BTR_CORE_HID_TEXT);
 
         else
             strcpy (pServiceNameOut, "Not Identified");
@@ -3623,7 +3649,6 @@ BTRCore_GetDeviceTypeClass (
 
     *apenBTRCoreDevCl = pstBTDevice->enDeviceType;
     *apenBTRCoreDevTy = btrCore_MapDevClassToDevType(pstBTDevice->enDeviceType);
-
 
     return enBTRCoreSuccess;
 }

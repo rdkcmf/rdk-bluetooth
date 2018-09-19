@@ -85,6 +85,22 @@ includes information for query of available services
 #define BTR_CORE_GATT_TILE_1    "0xfeed"
 #define BTR_CORE_GATT_TILE_2    "0xfeec"
 
+#define BTR_CORE_GEN_ACCESS_TEXT        "Generic Access Profile"
+#define BTR_CORE_GEN_ACCESS             "0x1800"
+
+#define BTR_CORE_GEN_ATTRIBUTE_TEXT    "Generic Attribute Profile"
+#define BTR_CORE_GEN_ATTRIBUTE          "0x1801"
+
+#define BTR_CORE_DEVICE_INFO_TEXT      "Device Information"
+#define BTR_CORE_DEVICE_INFO           "0x180a"
+
+#define BTR_CORE_BATTERY_SERVICE_TEXT  "Battery Service"
+#define BTR_CORE_BATTERY_SERVICE       "0x180f"
+
+#define BTR_CORE_HID_TEXT              "Human Interface Device"
+#define BTR_CORE_HID_1                 "0x1812"
+#define BTR_CORE_HID_2                 "0x1124"
+
 /* @} */ // End of group BLUETOOTH_TYPES
 
 #endif // __BTR_CORE_SERVICE_H__

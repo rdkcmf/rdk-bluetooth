@@ -72,6 +72,7 @@ typedef enum _enBTRCoreDeviceType {
     enBTRCoreMobileAudioIn,
     enBTRCorePCAudioIn,
     enBTRCoreLE,
+    enBTRCoreHID,
     enBTRCoreUnknown
 } enBTRCoreDeviceType;
 
@@ -97,8 +98,8 @@ typedef enum _enBTRCoreDeviceClass {
     enBTRCore_DC_VideoConference    = 0x440u,
 
     /* LE DeviceClass */
-    enBTRCore_DC_Tile               = 0xfeedu,
-                                    //0xfeecu
+    enBTRCore_DC_Tile               = 0xfeedu, //0xfeecu
+    enBTRCore_DC_HID                = 0x555u,
 
     enBTRCore_DC_Unknown            = 0x000u
 } enBTRCoreDeviceClass;
