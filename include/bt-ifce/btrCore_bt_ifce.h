@@ -594,6 +594,32 @@ int   BtrCore_BTStartLEDiscovery (void* apBtConn, const char* apBtAdapter, const
 int   BtrCore_BTStopLEDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
 
 /**
+ * @brief  This API is used to discover the Classic Bluetooth Devices.
+ *
+ * @param[in]  apBtConn         The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                              NULL is valid for this API.
+ * @param[in] apBtAdapter       Bluetooth adapter.
+ * @param[in] apBtAgentPath     Bluetooth agent path.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTStartClassicDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
+
+/**
+ * @brief  This API is used to stop discovering Classic Bluetooth Devices.
+ *
+ * @param[in]  apBtConn          The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                               NULL is valid for this API.
+ * @param[in] apBtAdapter        Bluetooth adapter.
+ * @param[in] apBtAgentPath      Bluetooth agent path.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTStopClassicDiscovery (void* apBtConn, const char* apBtAdapter, const char* apBtAgentPath);
+
+/**
  * @brief  This API fetches all the paired devices' paths and number of paired devices.
  *
  * @param[in]  apBtConn             The Dbus connection handle as returned by BtrCore_BTInitGetConnection. 

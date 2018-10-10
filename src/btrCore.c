@@ -3039,6 +3039,19 @@ BTRCore_StartDiscovery (
             }
         }
     }
+    else if ((aenBTRCoreDevType == enBTRCoreSpeakers) || (aenBTRCoreDevType == enBTRCoreHeadSet) ||
+             (aenBTRCoreDevType == enBTRCoreMobileAudioIn) || (aenBTRCoreDevType == enBTRCorePCAudioIn)) {
+        if (BtrCore_BTStartClassicDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+            return enBTRCoreDiscoveryFailure;
+        }
+
+        if (aui32DiscDuration) {
+            sleep(aui32DiscDuration); //TODO: Better to setup a timer which calls BTStopDiscovery
+            if (BtrCore_BTStopClassicDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+                return enBTRCoreDiscoveryFailure;
+            }
+        }
+    }
     else {
         if (BtrCore_BTStartDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
             return enBTRCoreDiscoveryFailure;
@@ -3078,6 +3091,12 @@ BTRCore_StopDiscovery (
 
     if (aenBTRCoreDevType == enBTRCoreLE)  {
         if (BtrCore_BTStopLEDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
+            return enBTRCoreDiscoveryFailure;
+        }
+    }
+    else if ((aenBTRCoreDevType == enBTRCoreSpeakers) || (aenBTRCoreDevType == enBTRCoreHeadSet) ||
+             (aenBTRCoreDevType == enBTRCoreMobileAudioIn) || (aenBTRCoreDevType == enBTRCorePCAudioIn)) {
+        if (BtrCore_BTStopClassicDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
             return enBTRCoreDiscoveryFailure;
         }
     }

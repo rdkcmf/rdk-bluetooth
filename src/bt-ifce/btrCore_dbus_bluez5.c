@@ -3435,6 +3435,126 @@ BtrCore_BTStopLEDiscovery (
 
 
 int
+BtrCore_BTStartClassicDiscovery (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    dbus_bool_t     lDBusOp;
+    DBusMessageIter lDBusMsgIter;
+    DBusMessageIter lDBusMsgIterDict;
+
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_ADAPTER_PATH,
+                                             "SetDiscoveryFilter");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+
+    dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_open_container(&lDBusMsgIter,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDict);
+   {
+        DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+        char*   lpcKey      = "Transport";
+        char*   lpcValue    = "bredr";
+        int     i32DBusType = DBUS_TYPE_STRING;
+
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+            dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+            dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
+            dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+    }
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return BtrCore_BTStartDiscovery(apBtConn, apBtAdapter, apBtAgentPath);
+}
+
+
+int
+BtrCore_BTStopClassicDiscovery (
+    void*       apBtConn,
+    const char* apBtAdapter,
+    const char* apBtAgentPath
+) {
+    DBusMessage*    lpDBusMsg   = NULL;
+    dbus_bool_t     lDBusOp;
+    DBusMessageIter lDBusMsgIter, lDBusMsgIterDict;
+
+    if (!gpDBusConn || (gpDBusConn != apBtConn))
+        return -1;
+
+    if (BtrCore_BTStopDiscovery(apBtConn, apBtAdapter, apBtAgentPath)) {
+        BTRCORELOG_WARN ("Failed to Stop Discovery\n");
+    }
+
+
+    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
+                                             apBtAdapter,
+                                             BT_DBUS_BLUEZ_ADAPTER_PATH,
+                                             "SetDiscoveryFilter");
+    if (!lpDBusMsg) {
+        BTRCORELOG_ERROR ("Can't allocate new method call\n");
+        return -1;
+    }
+
+
+    dbus_message_iter_init_append(lpDBusMsg, &lDBusMsgIter);
+    dbus_message_iter_open_container(&lDBusMsgIter,
+                                     DBUS_TYPE_ARRAY,
+                                     DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
+                                     DBUS_TYPE_STRING_AS_STRING
+                                     DBUS_TYPE_VARIANT_AS_STRING
+                                     DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
+                                     &lDBusMsgIterDict);
+    {
+        // Empty
+    }
+    dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
+
+
+    lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
+    dbus_message_unref(lpDBusMsg);
+
+    if (!lDBusOp) {
+        BTRCORELOG_ERROR ("Not enough memory for message send\n");
+        return -1;
+    }
+
+    dbus_connection_flush(gpDBusConn);
+
+    return 0;
+}
+
+
+
+int
 BtrCore_BTGetPairedDeviceInfo (
     void*                   apBtConn,
     const char*             apBtAdapter,
