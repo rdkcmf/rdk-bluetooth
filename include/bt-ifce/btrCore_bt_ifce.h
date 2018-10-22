@@ -58,6 +58,57 @@
 #define BT_MAX_DEVICE_PROFILE    32
 
 
+/**
+ * @brief Bluetooth A2DP Source UUID
+ */
+#define BT_UUID_A2DP_SOURCE     "0000110a-0000-1000-8000-00805f9b34fb"
+
+/**
+ * @brief Bluetooth A2DP Sink UUID
+ */
+#define BT_UUID_A2DP_SINK       "0000110b-0000-1000-8000-00805f9b34fb"
+
+/**
+ * @brief Bluetooth Hands Free Audio Gateway UUID
+ */
+#define BT_UUID_HFP_AG          "0000111f-0000-1000-8000-00805f9b34fb"
+
+/**
+ * @brief Bluetooth Hands Free Headset UUID
+ */
+#define BT_UUID_HFP_HS          "0000111e-0000-1000-8000-00805f9b34fb"
+
+
+/**
+ * @brief Bluetooth Media Codec SBC - Must be same as the Ifce
+ */
+#define BT_MEDIA_CODEC_SBC      0x00
+
+/**
+ * @brief  Bluetooth Media Codec MPEG12 - Must be same as the Ifce
+ */
+#define BT_MEDIA_CODEC_MPEG12   0x01
+
+/**
+ * @brief  Bluetooth Media Codec MPEG24 - Must be same as the Ifce
+ */
+#define BT_MEDIA_CODEC_MPEG24   0x02
+
+/**
+ * @brief  Bluetooth Media Codec ATRAC - Must be same as the Ifce
+ */
+#define BT_MEDIA_CODEC_ATRAC    0x03
+/**
+ * @brief  Bluetooth Media Codec Vendor - Must be same as the Ifce
+ */
+#define BT_MEDIA_CODEC_VENDOR   0xFF
+
+/**
+ * @brief  Bluetooth Media Codec PCM - Must be same as the Ifce
+ */
+#define BT_MEDIA_CODEC_PCM      0x00
+
+
 /* Enum Types */
 /**
  * @brief Bluetooth device types.
@@ -68,7 +119,7 @@ typedef enum _enBTDeviceType {
     enBTDevAudioSink,
     enBTDevAudioSource,
     enBTDevHFPHeadset,
-    enBTDevHFPHeadsetGateway,
+    enBTDevHFPAudioGateway,
     enBTDevLE,
     enBTDevUnknown
 } enBTDeviceType;
@@ -197,6 +248,8 @@ typedef enum _enBTDeviceProp {
  */
 typedef enum _enBTMediaTransportProp {
     enBTMedTPropDelay,
+    enBTMedTPropState,
+    enBTMedTPropVol,
     enBTMedTPropUnknown
 } enBTMediaTransportProp;
 
@@ -238,6 +291,19 @@ typedef enum _enBTGattDescProp {
     enBTGattDPropFlags,
     enBTGattDPropUnknown
 } enBTGattDescProp;
+
+/**
+ * @brief Bluetooth Media types.
+ *
+ * This enumeration lists different Bluetooth Media types.
+ */
+typedef enum _enBTMediaType {
+    enBTMediaTypePCM,
+    enBTMediaTypeSBC,
+    enBTMediaTypeMP3,
+    enBTMediaTypeAAC,
+    enBTMediaTypeUnknown
+} enBTMediaType;
 
 /**
  * @brief Bluetooth Media transport states.
@@ -377,8 +443,8 @@ typedef struct _stBTMediaStatusUpdate {
 typedef int (*fPtr_BtrCore_BTAdapterStatusUpdateCb)(enBTAdapterProp aeBtAdapterProp, stBTAdapterInfo* apstBTAdapterInfo, void* apUserData);
 typedef int (*fPtr_BtrCore_BTDevStatusUpdateCb)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef int (*fPtr_BtrCore_BTMediaStatusUpdateCb)(enBTDeviceType aeBtDeviceType, stBTMediaStatusUpdate* apstBtMediaStUpdate, const char* apcBtDevAddr, void* apUserData);
-typedef int (*fPtr_BtrCore_BTNegotiateMediaCb)(void* apBtMediaCapsInput, void** appBtMediaCapsOutput, void* apUserData);
-typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTransportPath, void* apBtMediaCaps, void* apUserData);
+typedef int (*fPtr_BtrCore_BTNegotiateMediaCb)(void* apBtMediaCapsInput, void** appBtMediaCapsOutput, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType, void* apUserData);
+typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTransportPath, const char* apBtMediaUUID, void* apBtMediaCaps, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType, void* apUserData);
 typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
@@ -732,8 +798,9 @@ int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDev
  * @param[in] apBtConn                    The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
  *                                        NULL is valid for this API.
  * @param[in] apBtAdapter                 Bluetooth device path.
+ * @param[in] aenBTDevType                Device type.
+ * @param[in] aenMediaType                Media codec type.
  * @param[in] apBtUUID                    Bluetooth UUID
- * @param[in] apBtMediaCodec              Media codec type.
  * @param[in] apBtMediaCapabilities       Media capabilities like frequency, block length, Min bitpool, Max bitpool etc.
  * @param[in] apBtMediaCapabilitiesSize   size of apBtMediaCapabilities.
  * @param[in] abBtMediaDelayReportEnable  Flag that indicates if any delay.
@@ -741,8 +808,8 @@ int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDev
  * @return Returns the status of the operation.
  * @retval Returns 0 on success, appropriate error code otherwise.
 */
-int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType, void* apBtUUID,
-                                void* apBtMediaCodec, void* apBtMediaCapabilities, int apBtMediaCapabilitiesSize,int abBtMediaDelayReportEnable);
+int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType, enBTMediaType aenBTMediaType,
+                                const char* apBtUUID, void* apBtMediaCapabilities, int apBtMediaCapabilitiesSize,int abBtMediaDelayReportEnable);
 
 /**
  * @brief  This API is used to unregister the media device.
@@ -751,11 +818,12 @@ int   BtrCore_BTRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDevi
  *                              NULL is valid for this API.
  * @param[in] apBtAdapter       Bluetooth device path.
  * @param[in] aenBTDevType      Bluetooth device type.
+ * @param[in] aenMediaType      Media codec type.
  *
  * @return Returns the status of the operation.
  * @retval Returns 0 on success, appropriate error code otherwise.
  */
-int   BtrCore_BTUnRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType);
+int   BtrCore_BTUnRegisterMedia (void* apBtConn, const char* apBtAdapter, enBTDeviceType aenBTDevType, enBTMediaType aenBTMediaType);
 
 /**
  * @brief  This API is used to acquire device data path.

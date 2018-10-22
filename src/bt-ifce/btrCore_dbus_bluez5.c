@@ -41,6 +41,8 @@
 
 #define BD_NAME_LEN                         248
 
+#define DBUS_INTERFACE_OBJECT_MANAGER       "org.freedesktop.DBus.ObjectManager"
+
 #define BT_DBUS_BLUEZ_PATH                  "org.bluez"
 #define BT_DBUS_BLUEZ_ADAPTER_PATH          "org.bluez.Adapter1"
 #define BT_DBUS_BLUEZ_DEVICE_PATH           "org.bluez.Device1"
@@ -60,8 +62,15 @@
 #define BT_DBUS_BLUEZ_LE_ADV_PATH           "org.bluez.LEAdvertisement1"
 #define BT_DBUS_BLUEZ_LE_ADV_MGR_PATH       "org.bluez.LEAdvertisingManager1"
 
-#define BT_MEDIA_A2DP_SINK_ENDPOINT         "/MediaEndpoint/A2DPSink"
-#define BT_MEDIA_A2DP_SOURCE_ENDPOINT       "/MediaEndpoint/A2DPSource"
+#define BT_MEDIA_SBC_A2DP_SINK_ENDPOINT     "/MediaEndpoint/SBC/A2DP/Sink"
+#define BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT   "/MediaEndpoint/SBC/A2DP/Source"
+#define BT_MEDIA_MP3_A2DP_SINK_ENDPOINT     "/MediaEndpoint/Mp3/A2DP/Sink"
+#define BT_MEDIA_MP3_A2DP_SOURCE_ENDPOINT   "/MediaEndpoint/Mp3/A2DP/Source"
+#define BT_MEDIA_AAC_A2DP_SINK_ENDPOINT     "/MediaEndpoint/AAC/A2DP/Sink"
+#define BT_MEDIA_AAC_A2DP_SOURCE_ENDPOINT   "/MediaEndpoint/AAC/A2DP/Source"
+#define BT_MEDIA_PCM_HFP_AG_ENDPOINT        "/MediaEndpoint/PCM/HFP/AudioGateway"
+#define BT_MEDIA_SBC_HFP_AG_ENDPOINT        "/MediaEndpoint/SBC/HFP/AudioGateway"
+#define BT_MEDIA_PCM_HFP_HS_ENDPOINT        "/MediaEndpoint/PCM/HFP/Headset"
 
 #define BT_LE_GATT_SERVER_ENDPOINT          "/LeGattEndpoint/Server"
 #define BT_LE_GATT_SERVER_ADVERTISEMENT     "/LeGattEndpoint/Advert"
@@ -94,8 +103,7 @@ static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusCon
 static DBusMessage* btrCore_BTSendMethodCall (const char* objectpath, const char* interfacename, const char* methodname);
 static void btrCore_BTPendingCallCheckReply (DBusPendingCall* apDBusPendC, void* apvUserData);
 
-static int btrCore_BTGetAdapterInfo (stBTAdapterInfo* apstBTAdapterInfo, const char* apcIface);
-static int btrCore_BTParseAdapter (DBusMessage* apDBusMsg, stBTAdapterInfo* apstBTAdapterInfo);
+static int btrCore_BTParseAdapter (DBusMessageIter* apDBusMsgIter, stBTAdapterInfo* apstBTAdapterInfo);
 static int btrCore_BTGetDeviceInfo (stBTDeviceInfo* apstBTDeviceInfo, const char* apcIface);
 static int btrCore_BTParseDevice (DBusMessage* apDBusMsg, stBTDeviceInfo* apstBTDeviceInfo);
 
@@ -107,9 +115,9 @@ static int btrCore_BTGetGattInfo (enBTOpIfceType aenBTOpIfceType, void* apvGattI
 static int btrCore_BTGetMediaInfo (stBTMediaInfo* apstBTDeviceInfo, const char* apcIface);
 static int btrCore_BTParseMediaTransport (DBusMessage* apDBusMsg, stBTMediaInfo*  apstBTMediaInfo); 
 
-static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage* apDBusMsg);
-static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage* apDBusMsg);
-static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDBusMsg);
+static DBusMessage* btrCore_BTMediaEndpointSelectConfiguration (DBusMessage* apDBusMsg, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType);
+static DBusMessage* btrCore_BTMediaEndpointSetConfiguration (DBusMessage* apDBusMsg, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType);
+static DBusMessage* btrCore_BTMediaEndpointClearConfiguration (DBusMessage* apDBusMsg, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType);
 
 static int btrCore_BTGetMediaIfceProperty (void* apBtConn, const char* apBtObjectPath, const char* apBtInterfacePath, const char* mediaProperty, void* mediaPropertyValue);
 
@@ -351,7 +359,7 @@ btrCore_BTGetDefaultAdapterPath (
     char            objectData[256] = {'\0'};
 
 
-    lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    lpDBusReply = btrCore_BTSendMethodCall("/", DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects");
 
     if (lpDBusReply && 
         dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
@@ -814,93 +822,21 @@ btrCore_BTPendingCallCheckReply (
 
 
 static int
-btrCore_BTGetAdapterInfo (
-    stBTAdapterInfo* apstBTAdapterInfo,
-    const char*     apcIface
-) {
-    char*               pAdapterInterface = BT_DBUS_BLUEZ_ADAPTER_PATH;
-    DBusMessage*        lpDBusMsg   = NULL;
-    DBusMessage*        lpDBusReply = NULL;
-    DBusMessageIter     args;
-    DBusError           lDBusErr;
-    DBusPendingCall*    lpDBusPendC;
-
-
-    if (!apcIface || !apstBTAdapterInfo)
-        return -1;
-
-    BTRCORELOG_DEBUG ("Getting properties for adapter %s\n", apcIface);
-
-    lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
-                                             apcIface,
-                                             "org.freedesktop.DBus.Properties",
-                                             "GetAll");
-
-    dbus_message_iter_init_append(lpDBusMsg, &args);
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pAdapterInterface, DBUS_TYPE_INVALID);
-
-    dbus_error_init(&lDBusErr);
-    if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1)) {
-        BTRCORELOG_ERROR ("failed to send message");
-        return -1;
-    }
-
-    dbus_connection_flush(gpDBusConn);
-    dbus_message_unref(lpDBusMsg);
-    lpDBusMsg = NULL;
-
-    dbus_pending_call_block(lpDBusPendC);
-    lpDBusReply =  dbus_pending_call_steal_reply(lpDBusPendC);
-    dbus_pending_call_unref(lpDBusPendC);
-
-    if (lpDBusReply != NULL) {
-        if (0 != btrCore_BTParseAdapter(lpDBusReply, apstBTAdapterInfo)) {
-            BTRCORELOG_ERROR ("Parsing adapter %s failed..\n", apcIface);
-            dbus_message_unref(lpDBusReply);
-            return -1;
-        }
-        else {
-//            strncpy(apstBTAdapterInfo->acAdapterPath, apcIface, BT_MAX_STR_LEN);
-            dbus_message_unref(lpDBusReply);
-            return 0;
-        }
-    }
-
-    dbus_message_unref(lpDBusReply);
-    return 0;
-}
-
-
-static int
 btrCore_BTParseAdapter (
-    DBusMessage*    apDBusMsg,
-    stBTAdapterInfo* apstBTAdapterInfo
+    DBusMessageIter*    apDBusMsgIter,
+    stBTAdapterInfo*    apstBTAdapterInfo
 ) {
-    DBusMessageIter msg_iter;
     DBusMessageIter dict_iter;
     DBusMessageIter dict_entry_iter;
     DBusMessageIter dict_entry_value_iter;
-    int dbus_type;
-    const char* pcKey = NULL;
-    const char *pcVal = NULL;
-
-    if (!dbus_message_iter_init(apDBusMsg, &msg_iter)) {
-        BTRCORELOG_ERROR ("dbus_message_iter_init Failed\n");
-        return -1;
-    }
-
-    if (dbus_message_iter_get_arg_type(&msg_iter) != DBUS_TYPE_ARRAY) {
-        dbus_message_iter_next(&msg_iter);
-        if (dbus_message_iter_get_arg_type(&msg_iter) != DBUS_TYPE_ARRAY) {
-            BTRCORELOG_ERROR ("Unknown Prop structure from Bluez\n");
-            return -1;
-        }
-    }
+    int             dbus_type;
+    const char*     pcKey = NULL;
+    const char*     pcVal = NULL;
 
     // 'out' parameter of org.freedesktop.DBus.Properties.GetAll call has format 'DICT<STRING,VARIANT> props'
-    for (dbus_message_iter_recurse(&msg_iter, &dict_iter); // recurse into array (of dictionary entries)
+    for (dbus_message_iter_recurse(apDBusMsgIter, &dict_iter); // recurse into array (of dictionary entries)
             (dbus_type = dbus_message_iter_get_arg_type(&dict_iter)) != DBUS_TYPE_INVALID;
-            dbus_message_iter_next(&dict_iter)) {
+                dbus_message_iter_next(&dict_iter)) {
 
         if (dbus_type == DBUS_TYPE_DICT_ENTRY) {
             dbus_message_iter_recurse(&dict_iter, &dict_entry_iter); // recurse into dictionary entry at this position in dictionary
@@ -991,7 +927,6 @@ btrCore_BTGetDeviceInfo (
     char*               pdeviceInterface = BT_DBUS_BLUEZ_DEVICE_PATH;
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
-    DBusMessageIter     args;
     DBusError           lDBusErr;
     DBusPendingCall*    lpDBusPendC;
 
@@ -1003,10 +938,9 @@ btrCore_BTGetDeviceInfo (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcIface,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "GetAll");
 
-    dbus_message_iter_init_append(lpDBusMsg, &args);
     dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
@@ -1293,7 +1227,6 @@ btrCore_BTGetGattInfo (
     char*               pGattInterface = NULL;
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
-    DBusMessageIter     args;
     DBusError           lDBusErr;
     DBusPendingCall*    lpDBusPendC;
 
@@ -1304,7 +1237,7 @@ btrCore_BTGetGattInfo (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcIface,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "GetAll");
 
     if (aenBTOpIfceType == enBTGattService) {
@@ -1315,7 +1248,6 @@ btrCore_BTGetGattInfo (
        pGattInterface = BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH;
     }
 
-    dbus_message_iter_init_append(lpDBusMsg, &args);
     dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pGattInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
@@ -1521,7 +1453,6 @@ btrCore_BTGetMediaInfo (
     char*               pdeviceInterface = BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH;
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
-    DBusMessageIter     args;
     DBusError           lDBusErr;
     DBusPendingCall*    lpDBusPendC;
 
@@ -1533,10 +1464,9 @@ btrCore_BTGetMediaInfo (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcIface,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "GetAll");
 
-    dbus_message_iter_init_append(lpDBusMsg, &args);
     dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
@@ -1663,7 +1593,9 @@ btrCore_BTParseMediaTransport (
 
 static DBusMessage*
 btrCore_BTMediaEndpointSelectConfiguration (
-    DBusMessage*    apDBusMsg
+    DBusMessage*    apDBusMsg,
+    enBTDeviceType  aenBTDeviceType,
+    enBTMediaType   aenBTMediaType
 ) {
     DBusMessage*    lpDBusReply      = NULL;
     DBusError       lDBusErr;
@@ -1680,7 +1612,7 @@ btrCore_BTMediaEndpointSelectConfiguration (
     }
 
     if (gfpcBNegotiateMedia) {
-        if(gfpcBNegotiateMedia(lpMediaCapsInput, &lpMediaCapsOutput, gpcBNegMediaUserData)) {
+        if(gfpcBNegotiateMedia(lpMediaCapsInput, &lpMediaCapsOutput, aenBTDeviceType, aenBTMediaType, gpcBNegMediaUserData)) {
             return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint1.Error.InvalidArguments", "Unable to select configuration");
         }
     }
@@ -1694,13 +1626,15 @@ btrCore_BTMediaEndpointSelectConfiguration (
 
 static DBusMessage*
 btrCore_BTMediaEndpointSetConfiguration (
-    DBusMessage*    apDBusMsg
+    DBusMessage*    apDBusMsg,
+    enBTDeviceType  aenBTDeviceType,
+    enBTMediaType   aenBTMediaType
 ) {
-    const char*     lDevTransportPath = NULL;
-    const char*     dev_path = NULL;
-    const char*     uuid = NULL;
-    unsigned char*  config = NULL;
-    int             size = 0;
+    const char*     lpcDevTransportPath = NULL;
+    const char*     lpcDevPath = NULL;
+    const char*     lpcUuid = NULL;
+    unsigned char*  lpui8Config = NULL;
+    int             i32ConfSize = 0;
 
     DBusMessageIter lDBusMsgIter;
     DBusMessageIter lDBusMsgIterProp;
@@ -1710,7 +1644,7 @@ btrCore_BTMediaEndpointSetConfiguration (
 
 
     dbus_message_iter_init(apDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_get_basic(&lDBusMsgIter, &lDevTransportPath);
+    dbus_message_iter_get_basic(&lDBusMsgIter, &lpcDevTransportPath);
     if (!dbus_message_iter_next(&lDBusMsgIter))
         return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint1.Error.InvalidArguments", "Unable to set configuration");
 
@@ -1733,36 +1667,38 @@ btrCore_BTMediaEndpointSetConfiguration (
             if (ldBusType != DBUS_TYPE_STRING)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint1.Error.InvalidArguments", "Unable to set configuration");
 
-            dbus_message_iter_get_basic(&lDBusMsgIterValue, &uuid);
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &lpcUuid);
         }
         else if (strcasecmp(key, "Device") == 0) {
             if (ldBusType != DBUS_TYPE_OBJECT_PATH)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint1.Error.InvalidArguments", "Unable to set configuration");
 
-            dbus_message_iter_get_basic(&lDBusMsgIterValue, &dev_path);
+            dbus_message_iter_get_basic(&lDBusMsgIterValue, &lpcDevPath);
         }
         else if (strcasecmp(key, "Configuration") == 0) {
             if (ldBusType != DBUS_TYPE_ARRAY)
                 return dbus_message_new_error(apDBusMsg, "org.bluez.MediaEndpoint1.Error.InvalidArguments", "Unable to set configuration");
 
             dbus_message_iter_recurse(&lDBusMsgIterValue, &lDBusMsgIterArr);
-            dbus_message_iter_get_fixed_array(&lDBusMsgIterArr, &config, &size);
+            dbus_message_iter_get_fixed_array(&lDBusMsgIterArr, &lpui8Config, &i32ConfSize);
         }
         dbus_message_iter_next(&lDBusMsgIterProp);
     }
 
-    BTRCORELOG_INFO ("Set configuration - Transport Path %s\n", lDevTransportPath);
+    BTRCORELOG_INFO ("Set configuration - Transport Path %s\n", lpcDevTransportPath);
+    BTRCORELOG_INFO ("Set configuration - Transport Path UUID %s\n", lpcUuid);
+    BTRCORELOG_TRACE("Set configuration - Device Path %s\n", lpcDevPath);
 
     if (gpcDevTransportPath) {
         free(gpcDevTransportPath);
         gpcDevTransportPath = NULL;
     }
 
-    gpcDevTransportPath = strdup(lDevTransportPath);
+    gpcDevTransportPath = strdup(lpcDevTransportPath);
 
     if (gfpcBTransportPathMedia) {
-        if(!gfpcBTransportPathMedia(lDevTransportPath, config, gpcBTransPathMediaUserData)) {
-            BTRCORELOG_INFO ("Stored - Transport Path: %s\n", lDevTransportPath);
+        if(!gfpcBTransportPathMedia(lpcDevTransportPath, lpcUuid, lpui8Config, aenBTDeviceType, aenBTMediaType, gpcBTransPathMediaUserData)) {
+            BTRCORELOG_INFO ("Stored - Transport Path: %s\n", lpcDevTransportPath);
         }
     }
 
@@ -1772,7 +1708,9 @@ btrCore_BTMediaEndpointSetConfiguration (
 
 static DBusMessage*
 btrCore_BTMediaEndpointClearConfiguration (
-    DBusMessage*    apDBusMsg
+    DBusMessage*    apDBusMsg,
+    enBTDeviceType  aenBTDeviceType,
+    enBTMediaType   aenBTMediaType
 ) {
 
     DBusMessage*    lpDBusReply;
@@ -1791,7 +1729,7 @@ btrCore_BTMediaEndpointClearConfiguration (
     }
 
     if (gfpcBTransportPathMedia) {
-        if(!gfpcBTransportPathMedia(lDevTransportPath, NULL, gpcBTransPathMediaUserData)) {
+        if(!gfpcBTransportPathMedia(lDevTransportPath, NULL, NULL, aenBTDeviceType, aenBTMediaType, gpcBTransPathMediaUserData)) {
             BTRCORELOG_INFO ("Cleared - Transport Path %s\n", lDevTransportPath);
         }
     }
@@ -1826,7 +1764,7 @@ btrCore_BTGetMediaIfceProperty (
   
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apBtObjectPath,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "Get");
     if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("Can't allocate new method call\n");
@@ -2225,22 +2163,6 @@ BtrCore_BTInitGetConnection (
     strncpy (gpcLeDeviceAddress, "none", BT_MAX_STR_LEN - 1);
     strncpy(gpcMediaCurrState, "none", BT_MAX_STR_LEN - 1); 
 
-    if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusConnectionFilterCb, NULL, NULL)) {
-        BTRCORELOG_ERROR ("Can't add signal filter - BtrCore_BTInitGetConnection\n");
-        BtrCore_BTDeInitReleaseConnection(lpDBusConn);
-        return NULL;
-    }
-
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged'"",arg0='" BT_DBUS_BLUEZ_PATH "'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesRemoved'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_DEVICE_PATH "'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH "'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_SERVICE_PATH"'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_CHAR_PATH "'", NULL);
-    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH "'", NULL);
- 
 
     gui32cBConnAuthPassKey          = 0;
 
@@ -2261,6 +2183,28 @@ BtrCore_BTInitGetConnection (
     gfpcBConnectionIntimation       = NULL;
     gfpcBConnectionAuthentication   = NULL;
     gfpcBTLeGattPath                = NULL;
+
+
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" DBUS_SERVICE_DBUS "',interface='" DBUS_INTERFACE_DBUS "',member='NameOwnerChanged'"",arg0='" BT_DBUS_BLUEZ_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesAdded'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesRemoved'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_DEVICE_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_CTRL_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_ITEM_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_SERVICE_PATH"'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_CHAR_PATH "'", NULL);
+    dbus_bus_add_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH "'", NULL);
+ 
+
+    if (!dbus_connection_add_filter(gpDBusConn, btrCore_BTDBusConnectionFilterCb, NULL, NULL)) {
+        BTRCORELOG_ERROR ("Can't add signal filter - BtrCore_BTInitGetConnection\n");
+        BtrCore_BTDeInitReleaseConnection(lpDBusConn);
+        return NULL;
+    }
 
     return (void*)gpDBusConn;
 }
@@ -2309,15 +2253,19 @@ BtrCore_BTDeInitReleaseConnection (
 
     gui32cBConnAuthPassKey          = 0;
 
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH "'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_CHAR_PATH "'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_SERVICE_PATH"'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH "'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_DEVICE_PATH "'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesRemoved'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'", NULL);
-    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged'"",arg0='" BT_DBUS_BLUEZ_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_DESCRIPTOR_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_CHAR_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_GATT_SERVICE_PATH"'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_ITEM_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_CTRL_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_DEVICE_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesRemoved'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesAdded'", NULL);
+    dbus_bus_remove_match(gpDBusConn, "type='signal',sender='" DBUS_SERVICE_DBUS "',interface='" DBUS_INTERFACE_DBUS "',member='NameOwnerChanged'"",arg0='" BT_DBUS_BLUEZ_PATH "'", NULL);
 
     dbus_connection_remove_filter(gpDBusConn, btrCore_BTDBusConnectionFilterCb, NULL);
 
@@ -2514,7 +2462,7 @@ BtrCore_BTGetAdapterList (
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
-    lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    lpDBusReply = btrCore_BTSendMethodCall("/", DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects");
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("org.bluez.Manager.ListAdapters returned an error\n");
         return rc;
@@ -2764,7 +2712,6 @@ BtrCore_BTGetProp (
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
     DBusPendingCall*    lpDBusPendC = NULL;
-    DBusMessageIter     args;
     DBusMessageIter     arg_i;
     DBusMessageIter     element_i;
     DBusMessageIter     variant_i;
@@ -2853,6 +2800,14 @@ BtrCore_BTGetProp (
         case enBTMedTPropDelay:
             lDBusType = DBUS_TYPE_UINT16;
             lDBusKey  = "Delay";
+            break;
+        case enBTMedTPropVol:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Volume";
+            break;
+        case enBTMedTPropState:
+            lDBusType = DBUS_TYPE_STRING;
+            lDBusKey  = "State";
             break;
         case enBTMedTPropUnknown:
         default:
@@ -2950,16 +2905,15 @@ BtrCore_BTGetProp (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcBtOpIfcePath,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "GetAll");
 
-    dbus_message_iter_init_append(lpDBusMsg, &args);
     dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pInterface, DBUS_TYPE_INVALID);
 
     dbus_error_init(&lDBusErr);
     if (!dbus_connection_send_with_reply(gpDBusConn, lpDBusMsg, &lpDBusPendC, -1))
     {
-        BTRCORELOG_ERROR ("failed to send message");
+        BTRCORELOG_ERROR ("failed to send message\n");
     }
 
 
@@ -2978,11 +2932,11 @@ BtrCore_BTGetProp (
     }
     else {
         if (!dbus_message_iter_init(lpDBusReply, &arg_i)) {
-            BTRCORELOG_ERROR ("GetProperties lpDBusReply has no arguments.");
+            BTRCORELOG_ERROR ("GetProperties lpDBusReply has no arguments.\n");
             rc = -1;
         }
         else if (dbus_message_iter_get_arg_type(&arg_i) != DBUS_TYPE_ARRAY) {
-            BTRCORELOG_ERROR ("GetProperties argument is not an array.");
+            BTRCORELOG_ERROR ("GetProperties argument is not an array.\n");
             rc = -1;
         }
         else {
@@ -3167,6 +3121,11 @@ BtrCore_BTSetProp (
             lDBusType = DBUS_TYPE_UINT16;
             lDBusKey  = "Delay";
             break;
+        case enBTMedTPropVol:
+            lDBusType = DBUS_TYPE_UINT16;
+            lDBusKey  = "Volume";
+            break;
+        case enBTMedTPropState:
         case enBTMedTPropUnknown:
         default:
             BTRCORELOG_ERROR ("Invalid MediaTransport Property\n");
@@ -3206,7 +3165,7 @@ BtrCore_BTSetProp (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcBtOpIfcePath,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "Set");
     if (!lpDBusMsg) {
         BTRCORELOG_ERROR ("Can't allocate new method call\n");
@@ -3563,7 +3522,6 @@ BtrCore_BTGetPairedDeviceInfo (
     DBusMessage*        lpDBusMsg   = NULL;
     DBusMessage*        lpDBusReply = NULL;
     DBusMessageIter     rootIter;
-    DBusMessageIter     args;
     DBusError           lDBusErr;
     DBusPendingCall*    lpDBusPendC;
     bool                adapterFound = FALSE;
@@ -3591,7 +3549,7 @@ BtrCore_BTGetPairedDeviceInfo (
     memset (pPairedDeviceInfo, 0, sizeof (stBTPairedDeviceInfo));
 
     dbus_error_init(&lDBusErr);
-    lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    lpDBusReply = btrCore_BTSendMethodCall("/", DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects");
     if (!lpDBusReply) {
         BTRCORELOG_ERROR ("org.bluez.Manager.ListAdapters returned an error: '%s'\n", lDBusErr.message);
         dbus_error_free(&lDBusErr);
@@ -3716,9 +3674,8 @@ BtrCore_BTGetPairedDeviceInfo (
     for ( i = 0; i < num; i++) {
         lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                                  pPairedDeviceInfo->devicePath[i],
-                                                 "org.freedesktop.DBus.Properties",
+                                                 DBUS_INTERFACE_PROPERTIES,
                                                  "GetAll");
-        dbus_message_iter_init_append(lpDBusMsg, &args);
         dbus_message_append_args(lpDBusMsg, DBUS_TYPE_STRING, &pdeviceInterface, DBUS_TYPE_INVALID);
 
         dbus_error_init(&lDBusErr);
@@ -3776,7 +3733,7 @@ BtrCore_BTDiscoverDeviceServices (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apcDevPath,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "GetAll");
 
     dbus_message_iter_init_append(lpDBusMsg, &args);
@@ -3980,7 +3937,7 @@ BtrCore_BTPerformAdapterOp (
 
 
     if (aenBTAdpOp == enBTAdpOpFindPairedDev) {
-        lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        lpDBusReply = btrCore_BTSendMethodCall("/", DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects");
 
         if (lpDBusReply && 
             dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
@@ -4114,7 +4071,7 @@ BtrCore_BTPerformAdapterOp (
     }
 
     else if (aenBTAdpOp == enBTAdpOpCreatePairedDev) {
-        lpDBusReply = btrCore_BTSendMethodCall("/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+        lpDBusReply = btrCore_BTSendMethodCall("/", DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects");
 
         if (lpDBusReply &&
             dbus_message_iter_init(lpDBusReply, &rootIter) &&               //point iterator to lpDBusReply message
@@ -4369,8 +4326,8 @@ BtrCore_BTRegisterMedia (
     void*           apBtConn,
     const char*     apBtAdapter,
     enBTDeviceType  aenBTDevType,
-    void*           apBtUUID,
-    void*           apBtMediaCodec,
+    enBTMediaType   aenBTMediaType,
+    const char*     apBtUUID,
     void*           apBtMediaCapabilities,
     int             apBtMediaCapabilitiesSize,
     int             abBtMediaDelayReportEnable
@@ -4383,34 +4340,85 @@ BtrCore_BTRegisterMedia (
     dbus_bool_t     lDBusOp;
     dbus_bool_t     lBtMediaDelayReport = FALSE;
 
-    const char*     lpBtMediaType;
+    const char*     lpBtMediaEpObjPath;
+    char            lBtMediaCodec;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
+    switch (aenBTMediaType) {
+    case enBTMediaTypePCM:
+        lBtMediaCodec = BT_MEDIA_CODEC_PCM;
+        break;
+    case enBTMediaTypeSBC:
+        lBtMediaCodec = BT_MEDIA_CODEC_SBC;
+        break;
+    case enBTMediaTypeMP3:
+        lBtMediaCodec = BT_MEDIA_CODEC_MPEG12;
+        break;
+    case enBTMediaTypeAAC:
+        lBtMediaCodec = BT_MEDIA_CODEC_MPEG24;
+        break;
+    case enBTMediaTypeUnknown:
+    default:
+        lBtMediaCodec = BT_MEDIA_CODEC_SBC;
+        break;
+    }
+
+
     switch (aenBTDevType) {
     case enBTDevAudioSink:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        if (lBtMediaCodec == BT_MEDIA_CODEC_SBC) {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG12) {
+            lpBtMediaEpObjPath = BT_MEDIA_MP3_A2DP_SOURCE_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG24) {
+            lpBtMediaEpObjPath = BT_MEDIA_AAC_A2DP_SOURCE_ENDPOINT;
+        }
+        else {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT;
+        }
         break;
     case enBTDevAudioSource:
-        lpBtMediaType = BT_MEDIA_A2DP_SINK_ENDPOINT;
+        if (lBtMediaCodec == BT_MEDIA_CODEC_SBC) {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SINK_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG12) {
+            lpBtMediaEpObjPath = BT_MEDIA_MP3_A2DP_SINK_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG24) {
+            lpBtMediaEpObjPath = BT_MEDIA_AAC_A2DP_SINK_ENDPOINT;
+        }
+        else {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SINK_ENDPOINT;
+        }
         break;
     case enBTDevHFPHeadset:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+        if (lBtMediaCodec == BT_MEDIA_CODEC_PCM) {
+            lpBtMediaEpObjPath = BT_MEDIA_PCM_HFP_AG_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_SBC) {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_HFP_AG_ENDPOINT;
+        }
+        else {
+            lpBtMediaEpObjPath = BT_MEDIA_PCM_HFP_AG_ENDPOINT;
+        }
         break;
-    case enBTDevHFPHeadsetGateway:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+    case enBTDevHFPAudioGateway:
+        lpBtMediaEpObjPath = BT_MEDIA_PCM_HFP_HS_ENDPOINT;
         break;
     case enBTDevUnknown:
     default:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT;
         break;
     }
 
     if (abBtMediaDelayReportEnable)
         lBtMediaDelayReport = TRUE;
 
-    lDBusOp = dbus_connection_register_object_path(gpDBusConn, lpBtMediaType, &gDBusMediaEndpointVTable, NULL);
+    lDBusOp = dbus_connection_register_object_path(gpDBusConn, lpBtMediaEpObjPath, &gDBusMediaEndpointVTable, NULL);
     if (!lDBusOp) {
         BTRCORELOG_ERROR ("Can't Register Media Object\n");
         return -1;
@@ -4426,7 +4434,7 @@ BtrCore_BTRegisterMedia (
     }
 
     dbus_message_iter_init_append (lpDBusMsg, &lDBusMsgIter);
-    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_OBJECT_PATH, &lpBtMediaType);
+    dbus_message_iter_append_basic (&lDBusMsgIter, DBUS_TYPE_OBJECT_PATH, &lpBtMediaEpObjPath);
     dbus_message_iter_open_container (&lDBusMsgIter, DBUS_TYPE_ARRAY, "{sv}", &lDBusMsgIterArr);
     {
         DBusMessageIter lDBusMsgIterDict, lDBusMsgIterVariant;
@@ -4448,7 +4456,7 @@ BtrCore_BTRegisterMedia (
         dbus_message_iter_open_container (&lDBusMsgIterArr, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDict);
             dbus_message_iter_append_basic (&lDBusMsgIterDict, DBUS_TYPE_STRING, &key);
             dbus_message_iter_open_container (&lDBusMsgIterDict, DBUS_TYPE_VARIANT, (char *)&type, &lDBusMsgIterVariant);
-                dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &apBtMediaCodec);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, type, &lBtMediaCodec);
             dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterVariant);
         dbus_message_iter_close_container (&lDBusMsgIterArr, &lDBusMsgIterDict);
     }
@@ -4506,32 +4514,85 @@ int
 BtrCore_BTUnRegisterMedia (
     void*           apBtConn,
     const char*     apBtAdapter,
-    enBTDeviceType  aenBTDevType
+    enBTDeviceType  aenBTDevType,
+    enBTMediaType   aenBTMediaType
 ) {
     DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
 
-    const char*      lpBtMediaType;
+    const char*     lpBtMediaEpObjPath;
+    int             lBtMediaCodec;
 
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
 
+
+    switch (aenBTMediaType) {
+    case enBTMediaTypePCM:
+        lBtMediaCodec = BT_MEDIA_CODEC_PCM;
+        break;
+    case enBTMediaTypeSBC:
+        lBtMediaCodec = BT_MEDIA_CODEC_SBC;
+        break;
+    case enBTMediaTypeMP3:
+        lBtMediaCodec = BT_MEDIA_CODEC_MPEG12;
+        break;
+    case enBTMediaTypeAAC:
+        lBtMediaCodec = BT_MEDIA_CODEC_MPEG24;
+        break;
+    case enBTMediaTypeUnknown:
+    default:
+        lBtMediaCodec = BT_MEDIA_CODEC_SBC;
+        break;
+    }
+
+
     switch (aenBTDevType) {
     case enBTDevAudioSink:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        if (lBtMediaCodec == BT_MEDIA_CODEC_SBC) {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG12) {
+            lpBtMediaEpObjPath = BT_MEDIA_MP3_A2DP_SOURCE_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG24) {
+            lpBtMediaEpObjPath = BT_MEDIA_AAC_A2DP_SOURCE_ENDPOINT;
+        }
+        else {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT;
+        }
         break;
     case enBTDevAudioSource:
-        lpBtMediaType = BT_MEDIA_A2DP_SINK_ENDPOINT;
+        if (lBtMediaCodec == BT_MEDIA_CODEC_SBC) {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SINK_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG12) {
+            lpBtMediaEpObjPath = BT_MEDIA_MP3_A2DP_SINK_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_MPEG24) {
+            lpBtMediaEpObjPath = BT_MEDIA_AAC_A2DP_SINK_ENDPOINT;
+        }
+        else {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SINK_ENDPOINT;
+        }
         break;
     case enBTDevHFPHeadset:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+        if (lBtMediaCodec == BT_MEDIA_CODEC_PCM) {
+            lpBtMediaEpObjPath = BT_MEDIA_PCM_HFP_AG_ENDPOINT;
+        }
+        else if (lBtMediaCodec == BT_MEDIA_CODEC_SBC) {
+            lpBtMediaEpObjPath = BT_MEDIA_SBC_HFP_AG_ENDPOINT;
+        }
+        else {
+            lpBtMediaEpObjPath = BT_MEDIA_PCM_HFP_AG_ENDPOINT;
+        }
         break;
-    case enBTDevHFPHeadsetGateway:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT; //TODO: Check if this is correct
+    case enBTDevHFPAudioGateway:
+        lpBtMediaEpObjPath = BT_MEDIA_PCM_HFP_HS_ENDPOINT;
         break;
     case enBTDevUnknown:
     default:
-        lpBtMediaType = BT_MEDIA_A2DP_SOURCE_ENDPOINT;
+        lpBtMediaEpObjPath = BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT;
         break;
     }
 
@@ -4546,7 +4607,7 @@ BtrCore_BTUnRegisterMedia (
         return -1;
     }
 
-    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &lpBtMediaType, DBUS_TYPE_INVALID);
+    dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &lpBtMediaEpObjPath, DBUS_TYPE_INVALID);
 
     lDBusOp = dbus_connection_send(gpDBusConn, lpDBusMsg, NULL);
     dbus_message_unref(lpDBusMsg);
@@ -4556,7 +4617,7 @@ BtrCore_BTUnRegisterMedia (
         return -1;
     }
 
-    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpBtMediaType);
+    lDBusOp = dbus_connection_unregister_object_path(gpDBusConn, lpBtMediaEpObjPath);
     if (!lDBusOp) {
         BTRCORELOG_ERROR ("Can't Register Media Object\n");
         return -1;
@@ -4681,6 +4742,11 @@ BtrCore_BTGetMediaPlayerPath (
        return NULL;
     }
 
+    if (!apBtDevPath) {
+        BTRCORELOG_ERROR ("Invalid args!!!");
+        return NULL;
+    }
+
     if (btrCore_BTGetMediaIfceProperty(apBtConn, apBtDevPath, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH, "Connected", (void*)&isConnected)) {
        BTRCORELOG_ERROR ("Failed to get %s property : Connected!!!", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
        return NULL;
@@ -4715,6 +4781,11 @@ BtrCore_BTDevMediaControl (
     if (!gpDBusConn || (gpDBusConn != apBtConn)) {
        BTRCORELOG_ERROR ("DBus Connection Failure!!!");
        return -1;
+    }
+
+    if (!apMediaPlayerPath) {
+        BTRCORELOG_ERROR ("Invalid args!!!");
+        return -1;
     }
 
     switch (aenBTMediaOper) {
@@ -4813,7 +4884,7 @@ BtrCore_BTSetMediaProperty (
     char*           mediaPlayerObjectPath = NULL;
 
 
-    if (!gpDBusConn || (gpDBusConn != apBtConn) || !pValue)
+    if (!gpDBusConn || (gpDBusConn != apBtConn) || !pValue || !apBtAdapterPath)
         return -1;
 
     mediaPlayerObjectPath = BtrCore_BTGetMediaPlayerPath (gpDBusConn, apBtAdapterPath);
@@ -4825,7 +4896,7 @@ BtrCore_BTSetMediaProperty (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              mediaPlayerObjectPath,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "Set");
 
     if (!lpDBusMsg) {
@@ -4894,7 +4965,7 @@ BtrCore_BTGetTrackInformation (
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                              apBtmediaPlayerObjectPath,
-                                             "org.freedesktop.DBus.Properties",
+                                             DBUS_INTERFACE_PROPERTIES,
                                              "Get");
 
     if (!lpDBusMsg) {
@@ -5612,9 +5683,9 @@ BtrCore_BTSendReceiveMessages (
 // Outgoing callbacks Registration Interfaces
 int
 BtrCore_BTRegisterAdapterStatusUpdateCb (
-    void*                               apBtConn,
+    void*                                   apBtConn,
     fPtr_BtrCore_BTAdapterStatusUpdateCb    afpcBAdapterStatusUpdate,
-    void*                               apUserData
+    void*                                   apUserData
 ) {
     if (!gpDBusConn || (gpDBusConn != apBtConn))
         return -1;
@@ -5840,7 +5911,7 @@ btrCore_BTDBusConnectionFilterCb (
         const char* lpcError = dbus_message_get_error_name(apDBusMsg);
         BTRCORELOG_ERROR ("Error = %s\n", lpcError ? lpcError : NULL);
     }
-    else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.Properties", "PropertiesChanged")) {
+    else if (dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_PROPERTIES, "PropertiesChanged")) {
         BTRCORELOG_DEBUG ("Property Changed!\n");
 
         DBusMessageIter lDBusMsgIter;
@@ -5855,9 +5926,40 @@ btrCore_BTDBusConnectionFilterCb (
                 if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_ADAPTER_PATH)) {
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_ADAPTER_PATH);
 
+                    {
+                        DBusMessageIter lDBusMsgIterDict, lDBusMsgIter1;
+                        dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_ADAPTER_PATH, str);
+
+                                /* Can listen on below events if required
+                                Discovering
+                                Name
+                                Alias
+                                Class
+                                Powered
+                                UUIDs
+                                Discoverable
+                                Pairable
+                                Connectable
+                                DiscoverableTimeout
+                                PairableTimeout
+                                */
+                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
+                        }
+                    }
+
                     const char* adapter_path = dbus_message_get_path(apDBusMsg);
                     strncpy (lstBTAdapterInfo.pcPath, adapter_path, BT_MAX_STR_LEN-1);
-                    i32OpRet = btrCore_BTGetAdapterInfo(&lstBTAdapterInfo, adapter_path);
+                    i32OpRet = btrCore_BTParseAdapter(&lDBusMsgIter, &lstBTAdapterInfo);
 
                     gui32IsAdapterDiscovering = lstBTAdapterInfo.bDiscovering;
                     if (lstBTAdapterInfo.bDiscovering) {
@@ -5887,26 +5989,42 @@ btrCore_BTDBusConnectionFilterCb (
                         settingRSSItoZero = 1;
                         BTRCORELOG_INFO ("Setting Dev %s RSSI to 0...\n", lstBTDeviceInfo.pcAddress);
                     }
-#if 0
-                    DBusMessageIter lDBusMsgIter1, lDBusMsgIter2;
-                    while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
-                        dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
-                        if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
-                            char *str="\0";
-                            dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                    else {
+                        DBusMessageIter lDBusMsgIter1;
 
-                            if (!strcmp(str, "RSSI")) {
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_DEVICE_PATH, str);
+
+                                /* Can listen on below events if required
+                                Name
+                                Alias
+                                Class
+                                Address
+                                Appearance
+                                Icon
+                                UUIDs
+                                Trusted
+                                Paired
+                                Connected
+                                ServicesResolved
+                                ServiceData
+                                ManufacturerData
+                                RSSI
+                                TxPower
+                                Modalias
+                                Blocked
+                                LegacyPairing
+                                */
                             }
-                            else if (!strcmp(str, "ServicesResolved")) {
-                            }
-                            else if (!strcmp(str, "Connected")) {
-                            }
-                            else if (!strcmp(str, "ManufacturerData")) {
-                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
                         }
-                        dbus_message_iter_next(&lDBusMsgIterDict);
                     }
-#endif
 
                     if (!i32OpRet) {
                         enBTDeviceState lenBtDevState = enBTDevStUnknown; 
@@ -5989,13 +6107,48 @@ btrCore_BTDBusConnectionFilterCb (
                     }
                 }
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH)) {
-                    const char*     apcMediaTransIface = dbus_message_get_path(apDBusMsg);
-                    char            apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
-                    unsigned int    ui32DeviceIfceLen = strstr(apcMediaTransIface, "/fd") - apcMediaTransIface;
-                    enBTDeviceType  lenBTDevType = enBTDevUnknown;
-                    char*           apcDevAddr   = 0;
+                    const char*             apcMediaTransIface = dbus_message_get_path(apDBusMsg);
+                    char                    apcDeviceIfce[BT_MAX_STR_LEN] = {'\0'};
+                    unsigned int            ui32DeviceIfceLen = strstr(apcMediaTransIface, "/fd") - apcMediaTransIface;
+                    enBTDeviceType          lenBTDevType = enBTDevUnknown;
+                    char*                   apcDevAddr  = NULL;
+                    enBTMediaTransportProp  lenBTMedTransProp = enBTMedTPropUnknown;
 
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH);
+                    {
+                        DBusMessageIter lDBusMsgIterDict, lDBusMsgIter1;
+                        dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH, str);
+
+                                /* Can listen on below events if required
+                                State
+                                Volume
+                                Delay
+                                */
+                                if (!strncmp(str, "State", strlen("State"))) {
+                                    lenBTMedTransProp = enBTMedTPropState;
+                                }
+                                else if (!strncmp(str, "Volume", strlen("Volume"))) {
+                                    lenBTMedTransProp = enBTMedTPropVol;
+                                }
+                                else if (!strncmp(str, "Delay", strlen("Delay"))) {
+                                    lenBTMedTransProp = enBTMedTPropDelay;
+                                }
+                                else {
+                                    lenBTMedTransProp = enBTMedTPropUnknown;
+                                }
+                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
+                        }
+                    }
                     
                     i32OpRet = btrCore_BTGetMediaInfo(&lstBTMediaInfo, apcMediaTransIface);
  
@@ -6008,79 +6161,200 @@ btrCore_BTDBusConnectionFilterCb (
                         }
                     }
 
-                    if ((!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "pending"))) {
-                        strcpy(gpcMediaCurrState, lstBTMediaInfo.pcState);
+                    switch (lenBTMedTransProp) {
+                    case enBTMedTPropState:
+                        if ((!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "pending"))) {
+                            strcpy(gpcMediaCurrState, lstBTMediaInfo.pcState);
 
-                        if (!i32OpRet && lstBTDeviceInfo.bConnected) {
-                            const char* value = "playing";
-                            enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
+                            if (!i32OpRet && lstBTDeviceInfo.bConnected) {
+                                const char* value = "playing";
+                                enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
-                            strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                            strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                            strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                            if (gfpcBDevStatusUpdate) {
-                                if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                if (gfpcBDevStatusUpdate) {
+                                    if(gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                    }
+                                }
+                                //if () {} t avmedia wiht device address info. from which id can be computed 
+                            }
+                        }
+                        else if (lenBTDevType == enBTDevAudioSource) { //Lets handle AudioIn case for media events for now
+                            char*  apcDevTransportPath = (char*)apcMediaTransIface;
+
+                            // TODO: Obtain this data path reAcquire call from BTRCore - do as part of next commit
+                            if (strcmp(gpcMediaCurrState, "none") && !strcmp(lstBTMediaInfo.pcState, "pending")) {
+                                int    dataPathFd   = 0;
+                                int    dataReadMTU  = 0;
+                                int    dataWriteMTU = 0;
+
+                                if (BtrCore_BTAcquireDevDataPath (gpDBusConn, apcDevTransportPath, &dataPathFd, &dataReadMTU, &dataWriteMTU)) {
+                                    BTRCORELOG_ERROR ("Failed to ReAcquire transport path %s\n", apcMediaTransIface);
+                                }
+                                else {
+                                    BTRCORELOG_INFO  ("Successfully ReAcquired transport path %s\n", apcMediaTransIface);
                                 }
                             }
-                            //if () {} t avmedia wiht device address info. from which id can be computed 
-                        }
-                    }
-                    else if (lenBTDevType == enBTDevAudioSource) { //Lets handle AudioIn case for media events for now
-                        char*  apcDevTransportPath = (char*)apcMediaTransIface;
 
-                        // TODO: Obtain this data path reAcquire call from BTRCore - do as part of next commit
-                        if (strcmp(gpcMediaCurrState, "none") && !strcmp(lstBTMediaInfo.pcState, "pending")) {
-                            int    dataPathFd   = 0;
-                            int    dataReadMTU  = 0;
-                            int    dataWriteMTU = 0;
+                            enBTMediaTransportState  lenBtMTransportSt = enBTMTransportStNone;
+                            stBTMediaStatusUpdate    mediaStatusUpdate; 
 
-                            if (BtrCore_BTAcquireDevDataPath (gpDBusConn, apcDevTransportPath, &dataPathFd, &dataReadMTU, &dataWriteMTU)) {
-                                 BTRCORELOG_ERROR ("Failed to ReAcquire transport path %s", apcMediaTransIface);
+                            if (!strcmp(lstBTMediaInfo.pcState, "idle")) {
+                                lenBtMTransportSt = enBTMTransportStIdle;
                             }
-                            else {
-                                 BTRCORELOG_INFO  ("Successfully ReAcquired transport path %s", apcMediaTransIface);
+                            else if (!strcmp(lstBTMediaInfo.pcState, "pending")) {
+                                lenBtMTransportSt = enBTMTransportStPending;
                             }
+                            else if (!strcmp(lstBTMediaInfo.pcState, "active")) {
+                                lenBtMTransportSt = enBTMTransportStActive;
+                            }
+
+                            mediaStatusUpdate.aeBtMediaStatus       = enBTMediaTransportUpdate;
+                            mediaStatusUpdate.m_mediaTransportState = lenBtMTransportSt;
+
+                            if (gfpcBMediaStatusUpdate) {
+                                //if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
+                                //}
+                            }
+
+                            (void)mediaStatusUpdate;
+                            (void)apcDevAddr;
                         }
+                        else if (lenBTDevType == enBTDevAudioSink) {    // Lets handle AudioOut case for media events for a Paired device which connects at Pairing
+                            if (!i32OpRet && lstBTDeviceInfo.bConnected && lstBTDeviceInfo.bPaired &&
+                                (!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "idle"))) {
+                                const char* value = "connected";
+                                enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
-                        enBTMediaTransportState  lenBtMTransportSt = enBTMTransportStNone;
-                        stBTMediaStatusUpdate    mediaStatusUpdate; 
+                                strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                        if (!strcmp(lstBTMediaInfo.pcState, "idle")) {
-                           lenBtMTransportSt = enBTMTransportStIdle;
-                        }
-                        else if (!strcmp(lstBTMediaInfo.pcState, "pending")) {
-                           lenBtMTransportSt = enBTMTransportStPending;
-                        }
-                        else if (!strcmp(lstBTMediaInfo.pcState, "active")) {
-                           lenBtMTransportSt = enBTMTransportStActive;
-                        }
-
-                        mediaStatusUpdate.aeBtMediaStatus       = enBTMediaTransportUpdate;
-                        mediaStatusUpdate.m_mediaTransportState = lenBtMTransportSt;
-
-                        if (gfpcBMediaStatusUpdate) {
-                            //if(gfpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, gpcBMediaStatusUserData)) {
-                            //}
-                        }
-
-                        (void)mediaStatusUpdate;
-                        (void)apcDevAddr;
-                    }
-                    else if (lenBTDevType == enBTDevAudioSink) {    // Lets handle AudioOut case for media events for a Paired device which connects at Pairing
-                        if (!i32OpRet && lstBTDeviceInfo.bConnected && lstBTDeviceInfo.bPaired &&
-                            (!strcmp(gpcMediaCurrState, "none")) && (!strcmp(lstBTMediaInfo.pcState, "idle"))) {
-                            const char* value = "connected";
-                            enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
-
-                            strncpy(lstBTDeviceInfo.pcDevicePrevState, gpcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                            strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                            strncpy(gpcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-
-                            if (gfpcBDevStatusUpdate) {
-                                if (gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                if (gfpcBDevStatusUpdate) {
+                                    if (gfpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, gpcBDevStatusUserData)) {
+                                    }
                                 }
                             }
+                        }
+                        break;
+                    case enBTMedTPropDelay:
+                        BTRCORELOG_DEBUG ("MediaTransport Property - Delay\n");
+                        break;
+                    case enBTMedTPropVol:
+                        BTRCORELOG_DEBUG ("MediaTransport Property - Volume\n");
+                        break;
+                    case enBTMedTPropUnknown:
+                    default:
+                        BTRCORELOG_ERROR ("MediaTransport Property - Unknown\n");
+                        break;
+                    }
+                }
+                else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH)) {
+                    BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
+                    {
+                        DBusMessageIter lDBusMsgIterDict, lDBusMsgIter1;
+                        dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH, str);
+
+                                /* Can listen on below events if required
+                                Connected
+                                Player
+                                */
+                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
+                        }
+                    }
+                }
+                else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH)) {
+                    BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
+                    {
+                        DBusMessageIter lDBusMsgIterDict, lDBusMsgIter1;
+                        dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH, str);
+
+                                /* Can listen on below events if required
+                                Name
+                                Type
+                                Subtype
+                                Status
+                                Position
+                                Track
+                                Browsable
+                                Searchable
+                                Playlist
+                                Equalizer
+                                Repeat
+                                Shuffle
+                                Scan
+                                */
+                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
+                        }
+                    }
+                }
+                else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH)) {
+                    BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_ITEM_PATH);
+                    {
+                        DBusMessageIter lDBusMsgIterDict, lDBusMsgIter1;
+                        dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_MEDIA_ITEM_PATH, str);
+
+                                /* Can listen on below events if required
+                                Playable
+                                Metadata
+                                */
+                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
+                        }
+                    }
+                }
+                else if (!strcmp(lpcDBusIface,  BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH)){
+                    BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH);
+                    {
+                        DBusMessageIter lDBusMsgIterDict, lDBusMsgIter1;
+                        dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
+
+                        while (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_DICT_ENTRY) {
+                            dbus_message_iter_recurse (&lDBusMsgIterDict, &lDBusMsgIter1);
+
+                            if (dbus_message_iter_get_arg_type(&lDBusMsgIter1) == DBUS_TYPE_STRING) {
+                                char *str="\0";
+
+                                dbus_message_iter_get_basic(&lDBusMsgIter1, &str);
+                                BTRCORELOG_DEBUG ("%s received event <%s>\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH, str);
+
+                                /* Can listen on below events if required
+                                NumberOfItems
+                                Name
+                                */
+                            }
+                            dbus_message_iter_next(&lDBusMsgIterDict);
                         }
                     }
                 }
@@ -6114,10 +6388,10 @@ btrCore_BTDBusConnectionFilterCb (
             }
         }
     }
-    else if (dbus_message_is_method_call(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects")) {
-        BTRCORELOG_INFO ("org.freedesktop.DBus.ObjectManager - GetManagedObjects\n");
+    else if (dbus_message_is_method_call(apDBusMsg, DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects")) {
+        BTRCORELOG_INFO ("%s - GetManagedObjects\n", DBUS_INTERFACE_OBJECT_MANAGER);
     }
-    else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "InterfacesAdded")) {
+    else if (dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_OBJECT_MANAGER, "InterfacesAdded")) {
         DBusMessageIter lDBusMsgIter;
         DBusMessageIter lDBusMsgIterDict;
         const char*     lpcDBusIface = NULL;
@@ -6290,7 +6564,7 @@ btrCore_BTDBusConnectionFilterCb (
             }
         }
     }
-    else if (dbus_message_is_signal(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved")) {
+    else if (dbus_message_is_signal(apDBusMsg, DBUS_INTERFACE_OBJECT_MANAGER, "InterfacesRemoved")) {
         BTRCORELOG_WARN ("Device Lost!\n");
 
         DBusMessageIter lDBusMsgIterStr;
@@ -6438,25 +6712,67 @@ btrCore_BTMediaEndpointHandlerCb (
     DBusMessage*    apDBusMsg,
     void*           apvUserData
 ) {
-    DBusMessage*    lpDBusReply = NULL;
-    const char*     lpcPath = NULL;
+    DBusMessage*    lpDBusReply     = NULL;
+    const char*     lpcPath         = NULL;
+    enBTDeviceType  lenBTDeviceType = enBTDevUnknown;
+    enBTMediaType   lenBTMediaType  = enBTMediaTypeUnknown;
 
     lpcPath = dbus_message_get_path(apDBusMsg);
+    if (!lpcPath)
+        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
 
     BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1 - %s\n", lpcPath);
 
+    if (!strcmp(lpcPath, BT_MEDIA_SBC_A2DP_SOURCE_ENDPOINT)) {
+        lenBTDeviceType = enBTDevAudioSink;
+        lenBTMediaType  = enBTMediaTypeSBC;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_SBC_A2DP_SINK_ENDPOINT)) {
+        lenBTDeviceType = enBTDevAudioSource;
+        lenBTMediaType  = enBTMediaTypeSBC;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_PCM_HFP_AG_ENDPOINT)) {
+        lenBTDeviceType = enBTDevHFPHeadset;
+        lenBTMediaType  = enBTMediaTypePCM;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_AAC_A2DP_SOURCE_ENDPOINT)) {
+        lenBTDeviceType = enBTDevAudioSink;
+        lenBTMediaType  = enBTMediaTypeAAC;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_AAC_A2DP_SINK_ENDPOINT)) {
+        lenBTDeviceType = enBTDevAudioSource;
+        lenBTMediaType  = enBTMediaTypeAAC;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_MP3_A2DP_SOURCE_ENDPOINT)) {
+        lenBTDeviceType = enBTDevAudioSink;
+        lenBTMediaType  = enBTMediaTypeMP3;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_MP3_A2DP_SINK_ENDPOINT)) {
+        lenBTDeviceType = enBTDevAudioSource;
+        lenBTMediaType  = enBTMediaTypeMP3;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_SBC_HFP_AG_ENDPOINT)) {
+        lenBTDeviceType = enBTDevHFPHeadset;
+        lenBTMediaType  = enBTMediaTypeSBC;
+    }
+    else if (!strcmp(lpcPath, BT_MEDIA_PCM_HFP_HS_ENDPOINT)) {
+        lenBTDeviceType = enBTDevHFPAudioGateway;
+        lenBTMediaType  = enBTMediaTypePCM;
+    }
+
+
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_MEDIA_ENDPOINT_PATH, "SelectConfiguration")) {
         BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1-SelectConfiguration\n");
-        lpDBusReply = btrCore_BTMediaEndpointSelectConfiguration(apDBusMsg);
+        lpDBusReply = btrCore_BTMediaEndpointSelectConfiguration(apDBusMsg, lenBTDeviceType, lenBTMediaType);
     }
     else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_MEDIA_ENDPOINT_PATH, "SetConfiguration"))  {
         BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1-SetConfiguration\n");
-        lpDBusReply = btrCore_BTMediaEndpointSetConfiguration(apDBusMsg);
+        lpDBusReply = btrCore_BTMediaEndpointSetConfiguration(apDBusMsg, lenBTDeviceType, lenBTMediaType);
     }
     else if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_MEDIA_ENDPOINT_PATH, "ClearConfiguration")) {
         BTRCORELOG_INFO ("endpoint_handler: MediaEndpoint1-ClearConfiguration\n");
-        lpDBusReply = btrCore_BTMediaEndpointClearConfiguration(apDBusMsg);
+        lpDBusReply = btrCore_BTMediaEndpointClearConfiguration(apDBusMsg, lenBTDeviceType, lenBTMediaType);
     }
     else {
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
@@ -6536,7 +6852,7 @@ btrCore_BTLeGattEndpointHandlerCb (
 
     BTRCORELOG_INFO ("leGatt: /LeEndpoint/Gatt - %s\n", lpcPath);
    
-    if (dbus_message_is_method_call(apDBusMsg, "org.freedesktop.DBus.ObjectManager", "GetManagedObjects")) {
+    if (dbus_message_is_method_call(apDBusMsg, DBUS_INTERFACE_OBJECT_MANAGER, "GetManagedObjects")) {
 
         BTRCORELOG_INFO ("leGatt: /LeEndpoint/Gatt - %s GetManagedObjects\n", lpcPath);
         if (!strcmp(lpcPath, BT_LE_GATT_SERVER_ENDPOINT)) {

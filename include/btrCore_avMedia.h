@@ -77,6 +77,13 @@ typedef enum _eBTRCoreAVMediaStatusUpdate {
 } eBTRCoreAVMediaStatusUpdate;
 
 
+typedef enum _eBTRCoreAVMediaFlow {
+    eBTRCoreAVMediaFlowIn,
+    eBTRCoreAVMediaFlowOut,
+    eBTRCoreAVMediaFlowInOut,
+    eBTRCoreAVMediaFlowUnknown
+} eBTRCoreAVMediaFlow;
+
 typedef struct _stBTRMgrAVMediaPcmInfo {
     eBTRCoreAVMAChan    eAVMAChan;
     unsigned int        ui32AVMAChan;           // num audio Channels
@@ -110,8 +117,9 @@ typedef struct _stBTRCoreAVMediaMpegInfo {
 } stBTRCoreAVMediaMpegInfo;
 
 typedef struct _stBTRCoreAVMediaInfo {
-    eBTRCoreAVMType eBtrCoreAVMType;
-    void*           pstBtrCoreAVMCodecInfo;
+    eBTRCoreAVMType     eBtrCoreAVMType;
+    eBTRCoreAVMediaFlow eBtrCoreAVMFlow;
+    void*               pstBtrCoreAVMCodecInfo;
 } stBTRCoreAVMediaInfo;
 
 typedef struct _stBTRCoreAVMediaTrackInfo {
