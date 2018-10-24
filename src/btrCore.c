@@ -18,8 +18,7 @@
 */
 //btrCore.c
 
-/* System Headers 
-*/
+/* System Headers */
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>     //for strtoll
@@ -309,7 +308,8 @@ btrCore_MapClassIDtoDevClass (
         BTRCORELOG_INFO ("enBTRCore_DC_Tile\n");
         rc = enBTRCore_DC_Tile;
     }
-    else if ((aui32ClassId & 0x100u) || (aui32ClassId & 0x200u) || (aui32ClassId & 0x400u)) {
+    else if (((aui32ClassId & 0x500u) == 0x500u) || ((aui32ClassId & 0x400u) == 0x400u) ||
+             ((aui32ClassId & 0x200u) == 0x200u) || ((aui32ClassId & 0x100u) == 0x100u)) {
         unsigned int ui32DevClassID = aui32ClassId & 0xFFFu;
         BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
 
@@ -384,6 +384,22 @@ btrCore_MapClassIDtoDevClass (
         else if (ui32DevClassID == enBTRCore_DC_VideoConference) {
             BTRCORELOG_INFO ("enBTRCore_DC_VideoConference\n");
             rc = enBTRCore_DC_TV;
+        }
+        else if (ui32DevClassID == enBTRCore_DC_HID_Keyboard) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Keyboard\n");
+            rc = enBTRCore_DC_HID_Keyboard;
+        }
+        else if (ui32DevClassID == enBTRCore_DC_HID_Mouse) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Mouse\n");
+            rc = enBTRCore_DC_HID_Mouse;
+        }
+        else if (ui32DevClassID == enBTRCore_DC_HID_MouseKeyBoard) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_MouseKeyBoard\n");
+            rc = enBTRCore_DC_HID_MouseKeyBoard;
+        }
+        else if (ui32DevClassID == enBTRCore_DC_HID_Joystick) {
+            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Joystick\n");
+            rc = enBTRCore_DC_HID_Joystick;
         }
     }
 
@@ -473,7 +489,16 @@ btrCore_MapDevClassToDevType (
     else if (aenBTRCoreDevCl == enBTRCore_DC_Tablet) {
        lenBTRCoreDevType = enBTRCorePCAudioIn;
     }
-    else if (aenBTRCoreDevCl == enBTRCore_DC_HID) {
+    else if (aenBTRCoreDevCl == enBTRCore_DC_HID_Keyboard) {
+       lenBTRCoreDevType = enBTRCoreHID;
+    }
+    else if (aenBTRCoreDevCl == enBTRCore_DC_HID_Mouse) {
+       lenBTRCoreDevType = enBTRCoreHID;
+    }
+    else if (aenBTRCoreDevCl == enBTRCore_DC_HID_MouseKeyBoard) {
+       lenBTRCoreDevType = enBTRCoreHID;
+    }
+    else if (aenBTRCoreDevCl == enBTRCore_DC_HID_Joystick) {
        lenBTRCoreDevType = enBTRCoreHID;
     }
     else if (aenBTRCoreDevCl == enBTRCore_DC_Tile) {
@@ -561,7 +586,7 @@ btrCore_AddDeviceToScannedDevicesArr (
             }
             else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_1, NULL, 16) ||
                      lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_2, NULL, 16) ){
-                lstFoundDevice.enDeviceType = enBTRCore_DC_HID;
+                lstFoundDevice.enDeviceType = enBTRCore_DC_HID_Keyboard;
             }
         }
     }
@@ -690,6 +715,10 @@ btrCore_MapKnownDeviceListFromPairedDeviceInfo (
             for (j_idx = 0; j_idx < knownDevicesArr[i_idx].stDeviceProfile.numberOfService; j_idx++) {
                 if (knownDevicesArr[i_idx].stDeviceProfile.profile[j_idx].uuid_value == strtol(BTR_CORE_A2SNK, NULL, 16)) {
                     knownDevicesArr[i_idx].enDeviceType = enBTRCore_DC_Loudspeaker;
+                }
+                else if ((knownDevicesArr[i_idx].stDeviceProfile.profile[j_idx].uuid_value == strtol(BTR_CORE_HID_1, NULL, 16)) ||
+                         (knownDevicesArr[i_idx].stDeviceProfile.profile[j_idx].uuid_value == strtol(BTR_CORE_HID_2, NULL, 16)) ){
+                    knownDevicesArr[i_idx].enDeviceType = enBTRCore_DC_HID_Keyboard;
                 }
             }
         }

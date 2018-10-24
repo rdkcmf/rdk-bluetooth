@@ -104,7 +104,10 @@ typedef enum _enBTRCoreDeviceClass {
 
     /* LE DeviceClass */
     enBTRCore_DC_Tile               = 0xfeedu, //0xfeecu
-    enBTRCore_DC_HID                = 0x555u,
+    enBTRCore_DC_HID_Keyboard       = 0x540u,
+    enBTRCore_DC_HID_Mouse          = 0x580u,
+    enBTRCore_DC_HID_MouseKeyBoard  = 0x5C0u,
+    enBTRCore_DC_HID_Joystick       = 0x504u,
 
     enBTRCore_DC_Unknown            = 0x000u
 } enBTRCoreDeviceClass;
