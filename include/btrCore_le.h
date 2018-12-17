@@ -50,12 +50,21 @@ typedef enum _enBTRCoreLEGattProp {
 } enBTRCoreLEGattProp;
 
 typedef enum _enBTRCoreLEGattOp {
+    enBTRCoreLEGOpReady,
     enBTRCoreLEGOpReadValue,
     enBTRCoreLEGOpWriteValue,
     enBTRCoreLEGOpStartNotify,
     enBTRCoreLEGOpStopNotify,
     enBTRCoreLEGOpUnknown
 } enBTRCoreLEGattOp;
+
+
+typedef struct _stBTRCoreLeGattInfo {
+    enBTRCoreLEGattOp    enLeOper;
+    enBTRCoreLEGattProp  enLeProp;
+    char*                pui8Uuid;
+    char*                pui8Value;
+} stBTRCoreLeGattInfo;
 
 /* @} */ // End of group BLUETOOTH_TYPES
 
@@ -67,7 +76,7 @@ typedef enum _enBTRCoreLEGattOp {
 
 /* Fptr callback types */
 //TODO:  char* apBtLeInfo ->  apstBtLeInfo | define a struct based on future need
-typedef enBTRCoreRet (*fPtr_BTRCore_LeStatusUpdateCb) (char* apBtLeInfo, const char* apBtDevAddr, void* apUserData);
+typedef enBTRCoreRet (*fPtr_BTRCore_LeStatusUpdateCb) (stBTRCoreLeGattInfo* apstBtrLeInfo, const char* apBtDevAddr, void* apUserData);
 
 
 /* Interfaces */
@@ -88,7 +97,7 @@ enBTRCoreRet BTRCore_LE_Init (tBTRCoreLeHdl* phBTRCoreLe, void* apBtConn, const 
  *
  * @param[in]  hBTRCoreLe               Handle to bluetooth low energy device interface.
  * @param[in]  apBtConn                 Dbus connection.
- * @param[in]  apBtAdapter               Bluetooth adapter address.
+ * @param[in]  apBtAdapter              Bluetooth adapter address.
 
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
@@ -99,7 +108,6 @@ enBTRCoreRet BTRCore_LE_DeInit (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const 
  * @brief  This API fetches the GATT property value that is supported.
  *
  * @param[in]  hBTRCoreLe               Handle to bluetooth low energy device interface.
- * @param[in]  apBtConn                 Dbus connection.
  * @param[in]  apBtDevPath              Device Id of the remote device.
  * @param[in]  apBtUuid                 UUID to distinguish the devices.
  * @param[in]  aenBTRCoreLEGattProp     Indicates the operation to be performed.
@@ -108,23 +116,22 @@ enBTRCoreRet BTRCore_LE_DeInit (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, const 
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
  */
-enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId atBTRCoreDevId,
+enBTRCoreRet BTRCore_LE_GetGattProperty (tBTRCoreLeHdl hBTRCoreLe, tBTRCoreDevId atBTRCoreDevId,
                                          const char* apBtUuid, enBTRCoreLEGattProp aenBTRCoreLEGattProp, void* apBtPropValue);
 
 /**
  * @brief  This API is used to perform read, write, notify operations on LE devices.
  *
  * @param[in]  hBTRCoreLe               Handle to bluetooth low energy device interface.
- * @param[in]  apBtConn                 Dbus connection.
  * @param[in]  apBtDevPath              Device Id of the remote device.
  * @param[in]  apBtUuid                 UUID to distinguish the devices.
  * @param[in]  aenBTRCoreLEGattOp       Indicates the operation to be performed.
- * @param[out] rpLeOpRes                                Indicates the result of the operation.
+ * @param[out] rpLeOpRes                Indicates the result of the operation.
  *
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
  */
-enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, void* apBtConn, tBTRCoreDevId atBTRCoreDevId,
+enBTRCoreRet BtrCore_LE_PerformGattOp (tBTRCoreLeHdl hBTRCoreLe, tBTRCoreDevId atBTRCoreDevId,
                                        const char* apBtUuid, enBTRCoreLEGattOp aenBTRCoreLEGattOp, char* apLeOpArg, char* rpLeOpRes);
 
 /* Outgoing callbacks Registration Interfaces */

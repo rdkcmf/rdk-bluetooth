@@ -123,6 +123,7 @@ typedef enum _enBTRCoreDeviceState {
     enBTRCoreDevStDisconnected,
     enBTRCoreDevStPlaying,
     enBTRCoreDevStLost,
+    enBTRCoreDevStOpReady,
     enBTRCoreDevStOpInfo,
     enBTRCoreDevStUnknown
 } enBTRCoreDeviceState;
@@ -170,6 +171,7 @@ typedef enum _eBTRCoreMediaStatusUpdate {
 } eBTRCoreMediaStatusUpdate;
 
 typedef enum _enBTRCoreLeOp {
+    enBTRCoreLeOpGReady,
     enBTRCoreLeOpGReadValue,    // G Referring to Gatt
     enBTRCoreLeOpGWriteValue,
     enBTRCoreLeOpGStartNotify,
@@ -203,7 +205,7 @@ typedef char *BD_NAME_PTR;                 /* Pointer to Device name */
 
 #define UUID_LEN 63
 typedef char UUID[UUID_LEN+1];
-      
+
 /*BT getAdapters*/
 typedef struct _stBTRCoreGetAdapters {
     unsigned char  number_of_adapters;
@@ -282,13 +284,13 @@ typedef struct _stBTRCorePairedDevicesCount {
 
 typedef struct _stBTRCoreConnCBInfo {
     unsigned int    ui32devPassKey;
+    unsigned char   ucIsReqConfirmation;
     char            cConnAuthDeviceName[BTRCORE_STRINGS_MAX_LEN];
     union {
         stBTRCoreBTDevice        stFoundDevice;
         stBTRCoreBTDevice        stKnownDevice;
     };
 } stBTRCoreConnCBInfo;
-
 
 typedef struct _stBTRCoreDevMediaPcmInfo {
     eBTRCoreDevMediaAChan   eDevMAChan;               // channel_mode
@@ -936,18 +938,6 @@ enBTRCoreRet BTRCore_GetMediaPositionInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevI
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
 enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue); 
-
-/**
- * @brief  This API reports the provided device id to set for position polling.
- *
- * @param[in]  hBTRCore                 Bluetooth core handle.
- * @param[in]  aBTRCoreDevId            Device Id of the remote device.
- * @param[in]  aenBTRCoreDevType        Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
- *
- * @return  Returns the status of the operation.
- * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
- */
-enBTRCoreRet BTRCore_ReportMediaPosition (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType);
 
 /**
  * @brief  This API returns the Low energy profile device name and address.

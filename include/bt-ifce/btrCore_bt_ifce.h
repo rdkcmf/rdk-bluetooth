@@ -136,6 +136,7 @@ typedef enum _enBTDeviceType {
     enBTDevHFPHeadset,
     enBTDevHFPAudioGateway,
     enBTDevLE,
+    enBTDevHID,
     enBTDevUnknown
 } enBTDeviceType;
 
@@ -164,6 +165,11 @@ typedef enum _enBTDeviceClass {
     enBTDCVideoMonitor       = 0x438u,
     enBTDCTV                 = 0x43Cu,
     enBTDCVideoConference    = 0x440u,
+    enBTDCKeyboard           = 0x540u,
+    enBTDCMouse              = 0x580u,
+    enBTDCMouseKeyBoard      = 0x5C0u,
+    enBTDCJoystick           = 0x504u,
+
     enBTDCUnknown            = 0x000u
 } enBTDeviceClass;
 
@@ -176,6 +182,10 @@ typedef enum _enBTOpType {
     enBTAdapter,
     enBTDevice,
     enBTMediaTransport,
+    enBTMediaControl,
+    enBTMediaPlayer,
+    enBTMediaItem,
+    enBTMediaFolder,
     enBTGattService,
     enBTGattCharacteristic,
     enBTGattDescriptor,
@@ -212,6 +222,7 @@ typedef enum _enBTDeviceState {
 typedef enum _enBTAdapterOp {
     enBTAdpOpFindPairedDev,
     enBTAdpOpCreatePairedDev,
+    enBTAdpOpCreatePairedDevASync,
     enBTAdpOpRemovePairedDev,
     enBTAdpOpUnknown
 } enBTAdapterOp;
@@ -253,6 +264,7 @@ typedef enum _enBTDeviceProp {
     enBTDevPropPaired,
     enBTDevPropConnected,
     enBTDevPropVendor,
+    enBTDevPropSrvRslvd,
     enBTDevPropUnknown
 } enBTDeviceProp;
 
@@ -267,6 +279,49 @@ typedef enum _enBTMediaTransportProp {
     enBTMedTPropVol,
     enBTMedTPropUnknown
 } enBTMediaTransportProp;
+
+/**
+ * @brief Bluetooth Media Control Properties.
+ *
+ * This enumeration lists the property updates of a bluetooth media control.
+ */
+typedef enum _enBTMediaControlProp {
+    enBTMedControlPropConnected,
+    enBTMedControlPropPath,
+    enBTMedControlUnknown
+} enBTMediaControlProp;
+
+/**
+ * @brief Bluetooth Media Player Properties.
+ *
+ * This enumeration lists the property updates of a bluetooth media player.
+ */
+typedef enum _enBTMediaPlayerProp {
+
+    enBTMedPlayerPropName,
+    enBTMedPlayerPropType,
+    enBTMedPlayerPropSubtype,
+    enBTMedPlayerPropEqualizer,
+    enBTMedPlayerPropShuffle,
+    enBTMedPlayerPropScan,
+    enBTMedPlayerPropRepeat,
+    enBTMedPlayerPropPosition,
+    enBTMedPlayerPropStatus,
+    enBTMedPlayerPropTrack,
+    enBTMedPlayerPropBrowsable,
+    enBTMedPlayerPropSearchable,
+    enBTMedPlayerPropUnknown
+} enBTMediaPlayerProp;
+
+/**
+ * @brief Bluetooth Media Folder Properties.
+ *
+ * This enumeration lists the property updates of a bluetooth media folder.
+ */
+typedef enum _enBTMediaFolderProp {
+    enBTMedFolderPropName,
+    enBTMedFolderPropNumberOfItems
+} enBTMediaFolderProp;
 
 /**
  * @brief Bluetooth Gatt service properties.
@@ -308,6 +363,71 @@ typedef enum _enBTGattDescProp {
 } enBTGattDescProp;
 
 /**
+ * @brief Bluetooth Media transport states.
+ *
+ * This enumeration lists the transport states of a bluetooth media.
+ */
+typedef enum _enBTMediaTransportState {
+    enBTMedTransportStNone,
+    enBTMedTransportStIdle,           /* Not Streaming and not Acquired                      */
+    enBTMedTransportStPending,        /* Streaming, but not acquire - acquire() to be called */
+    enBTMedTransportStActive          /* Streaming and Acquired                              */
+} enBTMediaTransportState;
+
+typedef enum _enBTMediaPlayerStatus {
+    enBTMedPlayerStPlaying,
+    enBTMedPlayerStStopped,
+    enBTMedPlayerStPaused,
+    enBTMedPlayerStForwardSeek,
+    enBTMedPlayerStReverseSeek,
+    enBTMedPlayerStError
+} enBTMediaPlayerStatus;
+
+typedef enum _enBTMediaPlayerShuffle {
+    enBTMedPlayerShuffleOff,
+    enBTMedPlayerShuffleAllTracks,
+    enBTMedPlayerShuffleGroup
+} enBTMediaPlayerShuffle;
+
+typedef enum _enBTMediaPlayerScan {
+    enBTMedPlayerScanOff,
+    enBTMedPlayerScanAllTracks,
+    enBTMedPlayerScanGroup
+} enBTMediaPlayerScan;
+
+typedef enum _enBTMediaPlayerRepeat {
+    enBTMedPlayerRpOff,
+    enBTMedPlayerRpSingleTrack,
+    enBTMedPlayerRpAllTracks,
+    enBTMedPlayerRpGroup
+} enBTMediaPlayerRepeat;
+
+typedef enum _enBTMediaPlayerType {
+    enBTMedPlayerTypAudio,
+    enBTMedPlayerTypVideo,
+    enBTMedPlayerTypAudioBroadcasting,
+    enBTMedPlayerTypVideoBroadcasting
+} enBTMediaPlayerType;
+
+typedef enum _enBTMediaPlayerSubtype {
+    enBTMedPlayerSbTypAudioBook,
+    enBTMedPlayerSbTypPodcast
+} enBTMediaPlayerSubtype;
+#if 0
+/**
+ * @brief Bluetooth Media Status updates.
+ *
+ * This enumeration lists the status updates of a bluetooth media.
+ */
+typedef enum _enBTMediaStatusUpdate { 
+    enBTMediaTransportUpdate,       /* Transport path  Add/Rem        */
+    enBTMediaPlayerUpdate,          /* MediaPlayer     Add/Rem        */
+    enBTMediaPlaylistUpdate,        /* NowPlaying list Add/Rem        */
+    enBTMediaBrowserUpdate          /* Media Browser   Add/Rem        */
+} enBTMediaStatusUpdate;
+#endif
+
+/**
  * @brief Bluetooth Media types.
  *
  * This enumeration lists different Bluetooth Media types.
@@ -321,36 +441,11 @@ typedef enum _enBTMediaType {
 } enBTMediaType;
 
 /**
- * @brief Bluetooth Media transport states.
- *
- * This enumeration lists the transport states of a bluetooth media.
- */
-typedef enum _enBTMediaTransportState {
-    enBTMTransportStNone,
-    enBTMTransportStIdle,           /* Not Streaming and not Acquired                      */
-    enBTMTransportStPending,        /* Streaming, but not acquire - acquire() to be called */
-    enBTMTransportStActive          /* Streaming and Acquired                              */
-} enBTMediaTransportState;
-
-/**
- * @brief Bluetooth Media Status updates.
- *
- * This enumeration lists the status updates of a bluetooth media.
- */
-typedef enum _enBTMediaStatusUpdate { 
-    enBTMediaTransportUpdate,       /* Transport path  Add/Rem        */
-    enBTMediaPlayerUpdate,          /* MediaPlayer     Add/Rem        */
-    enBTMediaTrackUpdate,           /* Track change    Add/Rem        */
-    enBTMediaPlaylistUpdate,        /* NowPlaying list Add/Rem        */
-    enBTMediaBrowserUpdate          /* Media Browser   Add/Rem        */
-} enBTMediaStatusUpdate;
-
-/**
  * @brief Bluetooth Media Controls.
  *
  * This enumeration lists the properties of a bluetooth media transport.
  */
-typedef enum _enBTMediaControl {
+typedef enum _enBTMediaControlCmd {
     enBTMediaCtrlPlay,
     enBTMediaCtrlPause,
     enBTMediaCtrlStop,
@@ -360,7 +455,7 @@ typedef enum _enBTMediaControl {
     enBTMediaCtrlRewind,
     enBTMediaCtrlVolumeUp,
     enBTMediaCtrlVolumeDown
-} enBTMediaControl;
+} enBTMediaControlCmd;
 
 
 /* Union Types */
@@ -368,6 +463,10 @@ typedef union _unBTOpIfceProp {
     enBTAdapterProp         enBtAdapterProp;
     enBTDeviceProp          enBtDeviceProp;
     enBTMediaTransportProp  enBtMediaTransportProp;
+    enBTMediaControlProp    enBtMediaControlProp;
+    enBTMediaPlayerProp     enBtMediaPlayerProp;
+    //enBTMediaItemProp       enBtMediaItemProp;
+    enBTMediaFolderProp     enBtMediaFolderProp;
     enBTGattServiceProp     enBtGattServiceProp;
     enBTGattCharProp        enBtGattCharProp;
     enBTGattDescProp        enBtGattDescProp;
@@ -397,6 +496,7 @@ typedef struct _stBTDeviceInfo {
     int             bConnected;
     int             bTrusted;
     int             bBlocked;
+    int             bServiceResolved;
     unsigned short  ui16Vendor;
     unsigned short  ui16VendorSource;
     unsigned short  ui16Product;
@@ -442,11 +542,27 @@ typedef struct _stBTMediaTrackInfo {
 } stBTMediaTrackInfo;
 
 typedef struct _stBTMediaStatusUpdate {
-    enBTMediaStatusUpdate  aeBtMediaStatus;
+    //enBTMediaStatusUpdate  aeBtMediaStatus;
+    enBTOpIfceType          aenBtOpIfceType;
+    unBTOpIfceProp          aunBtOpIfceProp;
 
     union {
-      enBTMediaTransportState m_mediaTransportState;
-      stBTMediaTrackInfo*     m_mediaTrackInfo;
+      enBTMediaTransportState   m_mediaTransportState;
+      unsigned short            m_mediaTransportVolume;
+      enBTMediaPlayerType       enMediaPlayerType;
+      enBTMediaPlayerSubtype    enMediaPlayerSubtype;
+      enBTMediaPlayerShuffle    enMediaPlayerShuffle;
+      enBTMediaPlayerScan       enMediaPlayerScan;
+      enBTMediaPlayerRepeat     enMediaPlayerRepeat;
+      enBTMediaPlayerStatus     enMediaPlayerStatus;
+      unsigned char             m_mediaPlayerEqualizer;
+      unsigned char             m_mediaPlayerBrowsable;
+      unsigned char             m_mediaPlayerSearchable;
+      unsigned char             m_mediaPlayerConnected;
+      unsigned int              m_mediaPlayerPosition;
+      stBTMediaTrackInfo        m_mediaTrackInfo;
+      char                      m_mediaPlayerPath[BT_MAX_STR_LEN];
+      char                      m_mediaPlayerName[BT_MAX_STR_LEN];
       //MediaBrowser
       //Playlist
     };
@@ -461,9 +577,9 @@ typedef int (*fPtr_BtrCore_BTMediaStatusUpdateCb)(enBTDeviceType aeBtDeviceType,
 typedef int (*fPtr_BtrCore_BTNegotiateMediaCb)(void* apBtMediaCapsInput, void** appBtMediaCapsOutput, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType, void* apUserData);
 typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTransportPath, const char* apBtMediaUUID, void* apBtMediaCaps, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType, void* apUserData);
 typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath, void* apUserData);
-typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, void* apUserData);
+typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, unsigned char ucIsReqConfirmation, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
-typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* apcBtDevAddr, enBTDeviceState aenBTDeviceState, void* apConnHdl, void* apUserData);
+typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* apcBtDevAddr, enBTDeviceState aenBTDeviceState, void* apUserData);
 
 /* @} */ // End of group BLUETOOTH_TYPES
 
@@ -890,7 +1006,7 @@ char* BtrCore_BTGetMediaPlayerPath (void* apBtConn, const char* apBtDevPath);
  *
  * @return  assigned Media player path is returned.
  */
-int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, enBTMediaControl  aenBTMediaOper);
+int   BtrCore_BTDevMediaControl (void* apBtConn, const char* apmediaPlayerPath, enBTMediaControlCmd  aenBTMediaOper);
 
 /**
  * @brief  This API is used to get the state of the BT device .
