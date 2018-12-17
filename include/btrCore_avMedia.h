@@ -61,21 +61,31 @@ typedef enum _enBTRCoreAVMediaCtrl {
     enBTRCoreAVMediaCtrlFastForward,
     enBTRCoreAVMediaCtrlRewind,
     enBTRCoreAVMediaCtrlVolumeUp,
-    enBTRCoreAVMediaCtrlVolumeDown
+    enBTRCoreAVMediaCtrlVolumeDown,
+    enBTRCoreAVMediaCtrlShflOff,
+    enBTRCoreAVMediaCtrlShflAllTracks,
+    enBTRCoreAVMediaCtrlShflGroup,
+    enBTRCoreAVMediaCtrlRptOff,
+    enBTRCoreAVMediaCtrlRptSingleTrack,
+    enBTRCoreAVMediaCtrlRptAllTracks,
+    enBTRCoreAVMediaCtrlRptGroup,
+    enBTRCoreAVMediaCtrlUnknown
 } enBTRCoreAVMediaCtrl;
 
 typedef enum _eBTRCoreAVMediaStatusUpdate {
     eBTRCoreAVMediaTrkStStarted,
     eBTRCoreAVMediaTrkStPlaying,
+    eBTRCoreAVMediaTrkStForwardSeek,
+    eBTRCoreAVMediaTrkStReverseSeek,
     eBTRCoreAVMediaTrkStPaused,
     eBTRCoreAVMediaTrkStStopped,
     eBTRCoreAVMediaTrkStChanged,
     eBTRCoreAVMediaTrkPosition,
     eBTRCoreAVMediaPlaybackEnded,
+    eBTRCoreAVMediaPlaybackError,
     eBTRCoreAVMediaPlaylistUpdate,
     eBTRCoreAVMediaBrowserUpdate
 } eBTRCoreAVMediaStatusUpdate;
-
 
 typedef enum _eBTRCoreAVMediaFlow {
     eBTRCoreAVMediaFlowIn,
@@ -109,7 +119,9 @@ typedef struct _stBTRCoreAVMediaMpegInfo {
     unsigned int        ui32AVMAChan;           // num audio Channels
     unsigned int        ui32AVMSFreq;           // frequency
     unsigned char       ui8AVMMpegCrc;          // crc
+    unsigned char       ui8AVMMpegVersion;      // version
     unsigned char       ui8AVMMpegLayer;        // layer
+    unsigned char       ui8AVMMpegType;         // type
     unsigned char       ui8AVMMpegMpf;          // mpf
     unsigned char       ui8AVMMpegRfa;          // rfa
     unsigned short      ui16AVMMpegFrameLen;    // frameLength
@@ -187,7 +199,6 @@ enBTRCoreRet BTRCore_AVMedia_DeInit (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtC
  * @brief This API gets current media information of the media device by unregistering both source and sink.
  *
  * @param[in]  hBTRCoreAVM     Bluetooth core AV media handle.
- * @param[in]  apBtConn        The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in]  apBtDevAddr     Bluetooth device address..
  * @param[out] apstBtrCoreAVMediaInfo  A structure pointer that fetches media information.
  *
@@ -195,12 +206,11 @@ enBTRCoreRet BTRCore_AVMedia_DeInit (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtC
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaInfo* apstBtrCoreAVMediaInfo);
+enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, stBTRCoreAVMediaInfo* apstBtrCoreAVMediaInfo);
 /**
  * @brief This API acquires the data path and MTU of a media device.
  *
  * @param[in] hBTRCoreAVM      Bluetooth core AV media handle.
- * @param[in] apBtConn         The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in] apBtDevAddr      Bluetooth device address.
  * @param[out] apDataPath      Data path that has to be fetched.
  * @param[out] apDataReadMTU   Fetches MTU of data reading.
@@ -210,23 +220,21 @@ enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, vo
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
+enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
 /**
  * @brief This API releases the acquired data path of the media device.
  *
  * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
- * @param[in] apBtConn        The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in] apBtDevAddr     Bluetooth device address.
  *
  * @return Returns the status of the operation.
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr);
+enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr);
 /**
  * @brief  This API is used to control the media device. BTRCore_MediaControl() invokes this API.
  *
  * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
- * @param[in] apBtConn        The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in] apBtDevAddr     Bluetooth device address.
  * @param[in] aenBTRCoreAVMediaCtrl    Indicates which operation needs to be performed.
  *
@@ -234,38 +242,35 @@ enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, vo
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl);
+enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl);
 /**
  * @brief  This API is used to retrieve the information about the track that is being played on the media device.
  *
  * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
- * @param[in] apBtConn        The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in] apBtDevAddr     Bluetooth device address.
  * @param[out] apstBTAVMediaTrackInfo   Track information that has to be retrieved.
  *
  * @return Returns the status of the operation.
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaTrackInfo* apstBTAVMediaTrackInfo);
+enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, stBTRCoreAVMediaTrackInfo* apstBTAVMediaTrackInfo);
 
 /**
  * @brief  This API is used to retrieve the position information about the media device.
  *
  * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
- * @param[in] apBtConn        The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in] apBtDevAddr     Bluetooth device address.
  * @param[out] apstBTAVMediaPositionInfo   Position information that has to be retrieved.
  *
  * @return Returns the status of the operation.
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, stBTRCoreAVMediaPositionInfo* apstBTAVMediaPositionInfo);
+enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, const char* apBtDevAddr, stBTRCoreAVMediaPositionInfo* apstBTAVMediaPositionInfo);
 
 /**
  * @brief  This API is used to get media property value using the device address and media property key.
  *
  * @param[in] hBTRCoreAVM      Bluetooth core AV media handle.
- * @param[in] apBtConn         The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
  * @param[in] apBtDevAddr      Bluetooth device address.
  * @param[in] mediaPropertyKey     Property key of the Mediaplayer.
  * @param[out] mediaPropertyValue  Property keyvalue of media player.
@@ -273,28 +278,8 @@ enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, v
  * @return Returns the status of the operation.
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
 */
-enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, void* apBtConn, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue);
-/**
- * @brief  This API is used to set the position polling of media play back.
- *
- * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
- * @param[in] apBtConn        The Dbus connection handle as returned by BtrCore_BTDeInitReleaseConnection. NULL is valid for this API.
- * @param[in] apBtDevPath     Bluetooth device path.
- * @param[in] apBtDevAddr     Bluetooth device address.
- *
- * @return Returns the status of the operation.
- * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
-*/
-enBTRCoreRet BTRCore_AVMedia_StartMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM, void* apBtConn, const char* apBtDevPath, const char* apBtDevAddr);
-/**
- * @brief  This API is used to exit from position polling of media play back.
- *
- * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
- *
- * @return Returns the status of the operation.
- * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
-*/
-enBTRCoreRet BTRCore_AVMedia_ExitMediaPositionPolling (tBTRCoreAVMediaHdl  hBTRCoreAVM);
+enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue);
+
 
 // Outgoing callbacks Registration Interfaces
 /** Callback to notify the BT Core about Mediaplayer path and its Userdata */
