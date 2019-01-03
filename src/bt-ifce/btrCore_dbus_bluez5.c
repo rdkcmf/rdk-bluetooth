@@ -88,6 +88,7 @@ typedef struct _stBTMediaInfo {
 /* Static Function Prototypes */
 static int btrCore_BTHandleDusError (DBusError* aDBusErr, int aErrline, const char* aErrfunc);
 static const char* btrCore_DBusType2Name (int ai32DBusMessageType);
+static enBTDeviceType btrCore_BTMapServiceClasstoDevType(unsigned int aui32Class);
 static enBTDeviceType btrCore_BTMapDevClasstoDevType(unsigned int aui32Class);
 static char* btrCore_BTGetDefaultAdapterPath (void);
 static int btrCore_BTReleaseDefaultAdapterPath (void);
@@ -281,6 +282,46 @@ btrCore_DBusType2Name (
     }
 }
 
+static enBTDeviceType
+btrCore_BTMapServiceClasstoDevType (
+    unsigned int aui32Class
+) {
+    enBTDeviceType lenBtDevType = enBTDevUnknown;
+
+    /* Refer https://www.bluetooth.com/specifications/assigned-numbers/baseband
+     * The bit 18 set to represent AUDIO OUT service Devices.
+     * The bit 19 can be set to represent AUDIO IN Service devices
+     * The bit 21 set to represent AUDIO Services (Mic, Speaker, headset).
+     * The bit 22 set to represent Telephone Services (headset).
+     */
+
+    if (0x40000u & aui32Class) {
+        BTRCORELOG_DEBUG ("Its a enBTDevAudioSink : Rendering Class of Service\n");
+        lenBtDevType = enBTDevAudioSink;
+    }
+    else if (0x80000u & aui32Class) {
+        if (enBTDCMicrophone && aui32Class) {
+            BTRCORELOG_DEBUG ("Its a enBTDevAudioSource : Capturing Service and Mic Device\n");
+            lenBtDevType = enBTDevAudioSource;
+        }
+    }
+    else if (0x200000u & aui32Class) {
+        if (enBTDCMicrophone && aui32Class) {
+            BTRCORELOG_DEBUG ("Its a enBTDevAudioSource : Audio Class of Service and Mic Device\n");
+            lenBtDevType = enBTDevAudioSource;
+        }
+        else {
+            BTRCORELOG_DEBUG ("Its a enBTDevAudioSink : Audio Class of Service. Not a Mic\n");
+            lenBtDevType = enBTDevAudioSink;
+        }
+    }
+    else if (0x400000u & aui32Class) {
+        BTRCORELOG_DEBUG ("Its a enBTDevAudioSink : Telephony Class of Service\n");
+        lenBtDevType = enBTDevAudioSink;
+    }
+
+    return lenBtDevType;
+}
 
 static enBTDeviceType
 btrCore_BTMapDevClasstoDevType (
@@ -288,12 +329,17 @@ btrCore_BTMapDevClasstoDevType (
 ) {
     enBTDeviceType lenBtDevType = enBTDevUnknown;
 
+    if ((lenBtDevType = btrCore_BTMapServiceClasstoDevType(aui32Class)) != enBTDevUnknown)
+        return lenBtDevType;
+
+
     if ((aui32Class & 0x100u) || (aui32Class & 0x200u) || (aui32Class & 0x400u)) {
         unsigned int ui32DevClassID = aui32Class & 0xFFFu;
 
         switch (ui32DevClassID){
         case enBTDCSmartPhone:
         case enBTDCTablet:
+        case enBTDCMicrophone:
             BTRCORELOG_DEBUG ("Its a enBTDevAudioSource\n");
             lenBtDevType = enBTDevAudioSource;
             break;

@@ -145,6 +145,8 @@ typedef struct _stBTRCoreHdl {
 /* Static Function Prototypes */
 static void btrCore_InitDataSt (stBTRCoreHdl* apsthBTRCore);
 static tBTRCoreDevId btrCore_GenerateUniqueDeviceID (const char* apcDeviceMac);
+static enBTRCoreDeviceClass btrCore_MapClassIDtoAVDevClass(unsigned int aui32ClassId);
+static enBTRCoreDeviceClass btrCore_MapServiceClasstoDevType(unsigned int aui32ClassId);
 static enBTRCoreDeviceClass btrCore_MapClassIDtoDevClass(unsigned int aui32ClassId);
 static enBTRCoreDeviceType btrCore_MapClassIDToDevType(unsigned int aui32ClassId, enBTDeviceType aeBtDeviceType);
 static enBTRCoreDeviceType btrCore_MapDevClassToDevType(enBTRCoreDeviceClass aenBTRCoreDevCl);
@@ -296,20 +298,13 @@ btrCore_GenerateUniqueDeviceID (
     return lBTRCoreDevId;
 }
 
-
 static enBTRCoreDeviceClass
-btrCore_MapClassIDtoDevClass (
+btrCore_MapClassIDtoAVDevClass (
     unsigned int aui32ClassId
 ) {
     enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
-    BTRCORELOG_DEBUG ("classID = 0x%x\n", aui32ClassId);
 
-    if (aui32ClassId == enBTRCore_DC_Tile) {
-        BTRCORELOG_INFO ("enBTRCore_DC_Tile\n");
-        rc = enBTRCore_DC_Tile;
-    }
-    else if (((aui32ClassId & 0x500u) == 0x500u) || ((aui32ClassId & 0x400u) == 0x400u) ||
-             ((aui32ClassId & 0x200u) == 0x200u) || ((aui32ClassId & 0x100u) == 0x100u)) {
+    if (((aui32ClassId & 0x400u) == 0x400u) || ((aui32ClassId & 0x200u) == 0x200u) || ((aui32ClassId & 0x100u) == 0x100u)) {
         unsigned int ui32DevClassID = aui32ClassId & 0xFFFu;
         BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
 
@@ -385,27 +380,99 @@ btrCore_MapClassIDtoDevClass (
             BTRCORELOG_INFO ("enBTRCore_DC_VideoConference\n");
             rc = enBTRCore_DC_TV;
         }
-        else if (ui32DevClassID == enBTRCore_DC_HID_Keyboard) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Keyboard\n");
-            rc = enBTRCore_DC_HID_Keyboard;
+    }
+
+    return rc;
+}
+
+static enBTRCoreDeviceClass
+btrCore_MapServiceClasstoDevType (
+    unsigned int aui32ClassId
+) {
+    enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
+
+    /* Refer https://www.bluetooth.com/specifications/assigned-numbers/baseband
+     * The bit 18 set to represent AUDIO OUT service Devices.
+     * The bit 19 can be set to represent AUDIO IN Service devices
+     * The bit 21 set to represent AUDIO Services (Mic, Speaker, headset).
+     * The bit 22 set to represent Telephone Services (headset).
+     */
+
+    if (0x40000u & aui32ClassId) {
+        BTRCORELOG_TRACE ("Its a Rendering Class of Service.\n");
+        if ((rc = btrCore_MapClassIDtoAVDevClass(aui32ClassId)) == enBTRCore_DC_Unknown) {
+            BTRCORELOG_TRACE ("Its a Rendering Class of Service. But no Audio Device Class defined\n");
         }
-        else if (ui32DevClassID == enBTRCore_DC_HID_Mouse) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Mouse\n");
-            rc = enBTRCore_DC_HID_Mouse;
+    }
+    else if (0x80000u & aui32ClassId) {
+        BTRCORELOG_TRACE ("Its a Capturing Service.\n");
+        if ((rc = btrCore_MapClassIDtoAVDevClass(aui32ClassId)) == enBTRCore_DC_Unknown) {
+            BTRCORELOG_TRACE ("Its a Capturing Service. But no Audio Device Class defined\n");
         }
-        else if (ui32DevClassID == enBTRCore_DC_HID_MouseKeyBoard) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_MouseKeyBoard\n");
-            rc = enBTRCore_DC_HID_MouseKeyBoard;
+    }
+    else if (0x200000u & aui32ClassId) {
+        BTRCORELOG_TRACE ("Its a Audio Class of Service.\n");
+        if ((rc = btrCore_MapClassIDtoAVDevClass(aui32ClassId)) == enBTRCore_DC_Unknown) {
+            BTRCORELOG_TRACE ("Its a Audio Class of Service. But no Audio Device Class defined; Lets assume its Loud Speaker\n");
+            rc = enBTRCore_DC_Loudspeaker;
         }
-        else if (ui32DevClassID == enBTRCore_DC_HID_Joystick) {
-            BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Joystick\n");
-            rc = enBTRCore_DC_HID_Joystick;
+    }
+    else if (0x400000u & aui32ClassId) {
+        BTRCORELOG_TRACE ("Its a Telephony Class of Service. So, enBTDevAudioSink\n");
+        if ((rc = btrCore_MapClassIDtoAVDevClass(aui32ClassId)) == enBTRCore_DC_Unknown) {
+            BTRCORELOG_TRACE ("Its a Telephony Class of Service. But no Audio Device Class defined;\n");
         }
     }
 
     return rc;
 }
 
+static enBTRCoreDeviceClass
+btrCore_MapClassIDtoDevClass (
+    unsigned int aui32ClassId
+) {
+    enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
+    BTRCORELOG_DEBUG ("classID = 0x%x\n", aui32ClassId);
+
+    if (aui32ClassId == enBTRCore_DC_Tile) {
+        BTRCORELOG_INFO ("enBTRCore_DC_Tile\n");
+        rc = enBTRCore_DC_Tile;
+    }
+
+    if (rc == enBTRCore_DC_Unknown)
+        rc = btrCore_MapServiceClasstoDevType(aui32ClassId);
+
+    /* If the Class of Service is not audio, lets parse the COD */
+    if (rc == enBTRCore_DC_Unknown) {
+        if ((aui32ClassId & 0x500u) == 0x500u) {
+            unsigned int ui32DevClassID = aui32ClassId & 0xFFFu;
+            BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
+
+            if (ui32DevClassID == enBTRCore_DC_HID_Keyboard) {
+                BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Keyboard\n");
+                rc = enBTRCore_DC_HID_Keyboard;
+            }
+            else if (ui32DevClassID == enBTRCore_DC_HID_Mouse) {
+                BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Mouse\n");
+                rc = enBTRCore_DC_HID_Mouse;
+            }
+            else if (ui32DevClassID == enBTRCore_DC_HID_MouseKeyBoard) {
+                BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_MouseKeyBoard\n");
+                rc = enBTRCore_DC_HID_MouseKeyBoard;
+            }
+            else if (ui32DevClassID == enBTRCore_DC_HID_Joystick) {
+                BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Joystick\n");
+                rc = enBTRCore_DC_HID_Joystick;
+            }
+        }
+        else
+        {
+            rc = btrCore_MapClassIDtoAVDevClass(aui32ClassId);
+        }
+    }
+
+    return rc;
+}
 
 static enBTRCoreDeviceType
 btrCore_MapClassIDToDevType (
