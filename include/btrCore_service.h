@@ -84,6 +84,7 @@ includes information for query of available services
 #define BTR_CORE_GATT_TILE_TEXT "Tile"
 #define BTR_CORE_GATT_TILE_1    "0xfeed"
 #define BTR_CORE_GATT_TILE_2    "0xfeec"
+#define BTR_CORE_GATT_TILE_3    "0xfebe"
 
 #define BTR_CORE_GEN_ACCESS_TEXT        "Generic Access Profile"
 #define BTR_CORE_GEN_ACCESS             "0x1800"

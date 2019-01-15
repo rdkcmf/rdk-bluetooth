@@ -653,8 +653,9 @@ btrCore_AddDeviceToScannedDevicesArr (
             else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_A2SRC, NULL, 16)) {
                 lstFoundDevice.enDeviceType = enBTRCore_DC_SmartPhone;
             }
-            else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_1, NULL, 16) ||
-                     lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_2, NULL, 16)) {
+            else if ((lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_1, NULL, 16)) ||
+                     (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_2, NULL, 16)) ||
+                     (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_GATT_TILE_3, NULL, 16))) {
                 lstFoundDevice.enDeviceType = enBTRCore_DC_Tile;
             }
             else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_1, NULL, 16) ||
@@ -1217,6 +1218,9 @@ btrCore_BTParseUUIDValue (
             strcpy(pServiceNameOut, BTR_CORE_GATT_TILE_TEXT);
 
         else if (!strcasecmp(aUUID, BTR_CORE_GATT_TILE_2))
+            strcpy(pServiceNameOut, BTR_CORE_GATT_TILE_TEXT);
+
+        else if (!strcasecmp(aUUID, BTR_CORE_GATT_TILE_3))
             strcpy(pServiceNameOut, BTR_CORE_GATT_TILE_TEXT);
 
         else if (!strcasecmp(aUUID, BTR_CORE_GEN_ACCESS))

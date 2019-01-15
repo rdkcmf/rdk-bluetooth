@@ -69,6 +69,21 @@
 #define BT_UUID_A2DP_SINK       "0000110b-0000-1000-8000-00805f9b34fb"
 
 /**
+ * @brief Bluetooth LE Tile 1 UUID
+ */
+#define BT_UUID_GATT_TILE_1     "0000feed-0000-1000-8000-00805f9b34fb"
+
+/**
+ * @brief Bluetooth LE Tile 2 UUID
+ */
+#define BT_UUID_GATT_TILE_2     "0000feec-0000-1000-8000-00805f9b34fb"
+
+/**
+ * @brief Bluetooth LE Tile 2 UUID
+ */
+#define BT_UUID_GATT_TILE_3     "0000febe-0000-1000-8000-00805f9b34fb"
+
+/**
  * @brief Bluetooth Hands Free Audio Gateway UUID
  */
 #define BT_UUID_HFP_AG          "0000111f-0000-1000-8000-00805f9b34fb"

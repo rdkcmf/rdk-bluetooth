@@ -3366,6 +3366,47 @@ BtrCore_BTStartLEDiscovery (
             dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
         dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
     }
+    {
+        DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant, lDBusMsgIterSubArray;
+        char*       lpcKey = "UUIDs";
+        int         i32DBusType = DBUS_TYPE_STRING;
+        const char* apcBtSrvUUID1 = BT_UUID_GATT_TILE_1;
+        const char* apcBtSrvUUID2 = BT_UUID_GATT_TILE_2;
+        const char* apcBtSrvUUID3 = BT_UUID_GATT_TILE_3;
+
+        char array_type[5] = "a";
+        strncat (array_type, (char*)&i32DBusType, sizeof(array_type) - sizeof(i32DBusType));
+
+        const char *lppui8Props[] = { apcBtSrvUUID1, apcBtSrvUUID2, apcBtSrvUUID3, NULL };
+
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+            dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+            dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, array_type, &lDBusMsgIterVariant);
+                dbus_message_iter_open_container (&lDBusMsgIterVariant, DBUS_TYPE_ARRAY, (char *)&i32DBusType, &lDBusMsgIterSubArray);
+                    dbus_message_iter_append_basic (&lDBusMsgIterSubArray, i32DBusType, &lppui8Props);
+                dbus_message_iter_close_container (&lDBusMsgIterVariant, &lDBusMsgIterSubArray);
+            dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+    }
+#if 0
+    //TODO: Enable in future when you can eliminate the UUID based filter 
+    //      As in my opinion filtering based on RSSI and delta of RSSI change is a better approach as compared to 
+    //      Filtering based on UUID as above
+    {
+        DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterVariant;
+        char*   lpcKey      = "RSSI";
+        short   lpcValue    = -64;
+        int     i32DBusType = DBUS_TYPE_INT16;
+
+        dbus_message_iter_open_container(&lDBusMsgIterDict, DBUS_TYPE_DICT_ENTRY, NULL, &lDBusMsgIterDictStr);
+            dbus_message_iter_append_basic (&lDBusMsgIterDictStr, DBUS_TYPE_STRING, &lpcKey);
+            dbus_message_iter_open_container (&lDBusMsgIterDictStr, DBUS_TYPE_VARIANT, (char *)&i32DBusType, &lDBusMsgIterVariant);
+                dbus_message_iter_append_basic (&lDBusMsgIterVariant, i32DBusType, &lpcValue);
+            dbus_message_iter_close_container (&lDBusMsgIterDictStr, &lDBusMsgIterVariant);
+        dbus_message_iter_close_container (&lDBusMsgIterDict, &lDBusMsgIterDictStr);
+    }
+#endif
+
     dbus_message_iter_close_container (&lDBusMsgIter, &lDBusMsgIterDict);
 
 

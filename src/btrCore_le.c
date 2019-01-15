@@ -313,7 +313,8 @@ btrCore_LE_isServiceSupported (
     lUUID[6] = '\0';
     
     if (!strcmp(lUUID, BTR_CORE_GATT_TILE_1) ||
-        !strcmp(lUUID, BTR_CORE_GATT_TILE_2))  {
+        !strcmp(lUUID, BTR_CORE_GATT_TILE_2) ||
+        !strcmp(lUUID, BTR_CORE_GATT_TILE_3)) {
         isSupported = TRUE;
     } /* - Add further supported Services
     else if {
