@@ -30,9 +30,13 @@
  * @addtogroup BLUETOOTH_TYPES
  * @{
  */
+#define BTR_AV_MEDIA_ELEMENT_MAX            64
 
 
 typedef void* tBTRCoreAVMediaHdl;
+typedef unsigned int tBTRCoreAVMediaItemId;
+
+typedef unsigned long long int tBTRCoreAVMediaElementId;
 
 typedef enum _eBTRCoreAVMType {
     eBTRCoreAVMTypePCM,
@@ -62,6 +66,8 @@ typedef enum _enBTRCoreAVMediaCtrl {
     enBTRCoreAVMediaCtrlRewind,
     enBTRCoreAVMediaCtrlVolumeUp,
     enBTRCoreAVMediaCtrlVolumeDown,
+    enBTRcoreAVMediaCtrlEqlzrOff,
+    enBTRcoreAVMediaCtrlEqlzrOn,
     enBTRCoreAVMediaCtrlShflOff,
     enBTRCoreAVMediaCtrlShflAllTracks,
     enBTRCoreAVMediaCtrlShflGroup,
@@ -69,6 +75,9 @@ typedef enum _enBTRCoreAVMediaCtrl {
     enBTRCoreAVMediaCtrlRptSingleTrack,
     enBTRCoreAVMediaCtrlRptAllTracks,
     enBTRCoreAVMediaCtrlRptGroup,
+    enBTRcoreAVMediaCtrlScanOff,
+    enBTRcoreAVMediaCtrlScanAllTracks,
+    enBTRcoreAVMediaCtrlScanGroup,
     enBTRCoreAVMediaCtrlUnknown
 } enBTRCoreAVMediaCtrl;
 
@@ -83,8 +92,23 @@ typedef enum _eBTRCoreAVMediaStatusUpdate {
     eBTRCoreAVMediaTrkPosition,
     eBTRCoreAVMediaPlaybackEnded,
     eBTRCoreAVMediaPlaybackError,
-    eBTRCoreAVMediaPlaylistUpdate,
-    eBTRCoreAVMediaBrowserUpdate
+    eBTRCoreAVMediaPlyrName,
+    eBTRCoreAVMediaPlyrEqlzrStOff,
+    eBTRCoreAVMediaPlyrEqlzrStOn,
+    eBTRCoreAVMediaPlyrShflStOff,
+    eBTRCoreAVMediaPlyrShflStAllTracks,
+    eBTRCoreAVMediaPlyrShflStGroup,
+    eBTRCoreAVMediaPlyrRptStOff,
+    eBTRCoreAVMediaPlyrRptStSingleTrack,
+    eBTRCoreAVMediaPlyrRptStAllTracks,
+    eBTRCoreAVMediaPlyrRptStGroup,
+    eBTRCoreAVMediaPlyrScanStOff,
+    eBTRCoreAVMediaPlyrScanStAllTracks,
+    eBTRCoreAVMediaPlyrScanStGroup,
+    eBTRCoreAVMediaPlyrVolume,
+    eBTRCoreAVMediaElementAdded,
+    eBTRCoreAVMediaElementRemoved,
+    eBTRCoreAVMediaStUnknown
 } eBTRCoreAVMediaStatusUpdate;
 
 typedef enum _eBTRCoreAVMediaFlow {
@@ -93,6 +117,16 @@ typedef enum _eBTRCoreAVMediaFlow {
     eBTRCoreAVMediaFlowInOut,
     eBTRCoreAVMediaFlowUnknown
 } eBTRCoreAVMediaFlow;
+
+typedef enum _eBTRCoreAVMElementType {
+    eBTRCoreAVMETypeUnknown,
+    eBTRCoreAVMETypeAlbum,
+    eBTRCoreAVMETypeArtist,
+    eBTRCoreAVMETypeGenre,
+    eBTRCoreAVMETypeCompilation,
+    eBTRCoreAVMETypePlayList,
+    eBTRCoreAVMETypeTrackList
+} eBTRCoreAVMElementType;
 
 typedef struct _stBTRMgrAVMediaPcmInfo {
     eBTRCoreAVMAChan    eAVMAChan;
@@ -149,12 +183,28 @@ typedef struct _stBTRCoreAVMediaPositionInfo {
     unsigned int    ui32Position;
 } stBTRCoreAVMediaPositionInfo;
 
+typedef struct _stBTRCoreAVMediaElementInfo {
+    eBTRCoreAVMElementType       eAVMElementType;
+    tBTRCoreAVMediaElementId     ui32AVMediaElementId;
+    unsigned char                bIsPlayable;
+    char                         m_mediaElementName[BTRCORE_MAX_STR_LEN];
+    stBTRCoreAVMediaTrackInfo    m_mediaTrackInfo;
+} stBTRCoreAVMediaElementInfo;
+
+typedef struct _stBTRCoreAVMediaElementInfoList {
+    unsigned short               m_numOfElements;
+    stBTRCoreAVMediaElementInfo  m_mediaElementInfo[BTR_AV_MEDIA_ELEMENT_MAX];
+} stBTRCoreAVMediaElementInfoList;
+
 typedef struct _stBTRCoreAVMediaStatusUpdate {
     eBTRCoreAVMediaStatusUpdate     eAVMediaState;
 
     union {
-      stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;
-      stBTRCoreAVMediaPositionInfo    m_mediaPositionInfo;
+        stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;
+        stBTRCoreAVMediaPositionInfo    m_mediaPositionInfo;
+        stBTRCoreAVMediaElementInfo     m_mediaElementInfo;
+        char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
+        unsigned char                   m_mediaPlayerVolumePercentage;
     };
 } stBTRCoreAVMediaStatusUpdate;
 
@@ -280,6 +330,71 @@ enBTRCoreRet BTRCore_AVMedia_GetPositionInfo (tBTRCoreAVMediaHdl  hBTRCoreAVM, c
 */
 enBTRCoreRet BTRCore_AVMedia_GetMediaProperty (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, const char* mediaPropertyKey, void* mediaPropertyValue);
 
+/**
+ * @brief  This API is used to change the media browsing location in the connected AudioIn device.
+ *
+ * @param[in] hBTRCoreAVM           Bluetooth core AV media handle
+ * @param[in] apBtDevAddr           Bluetooth device address.
+ * @param[in] aBtrAVMediaElementId  target browsing locations' media element id
+ * @param[in] aeBtrAVMElementType   media element type (Albums, Artist, ...)
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+*/
+enBTRCoreRet BTRCore_AVMedia_ChangeBrowserLocation (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId, eBTRCoreAVMElementType aeBtrAVMElementType);
+
+/**
+ * @brief  This API is used to List(implicitly) the media elements in the current browsing location of the connected AudioIn device.
+ *
+ * @param[in] hBTRCoreAVM           Bluetooth core AV media handle
+ * @param[in] apBtDevAddr           Bluetooth device address.
+ * @param[in] aui16StartIdx         Starting index of the list to retrive.
+ * @param[in] aui16EndIdx           Ending index of the list to retrive.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+*/
+enBTRCoreRet BTRCore_AVMedia_SelectMediaBrowserElements (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, unsigned short aui16StartIdx, unsigned short aui16EndIdx);
+
+/**
+ * @brief  This API is used to fetch the media item list.
+ *
+ * @param[in] hBTRCoreAVM           Bluetooth core AV media handle
+ * @param[in] apBtDevAddr           Bluetooth device address.
+ * @param[in] aBtrAVMediaElementId  target browsing locations' media element id
+ * @param[in] aui16StartIdx         Starting index of the list to retrive.
+ * @param[in] aui16EndIdx           Ending index of the list to retrive.
+ * @param[out] aAVMediaElementInfoList  Fetched media element list
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+*/
+enBTRCoreRet BTRCore_AVMedia_GetMediaElementList (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId, unsigned short aui16StartIdx, unsigned short aui16EndIdx, stBTRCoreAVMediaElementInfoList*  aAVMediaElementInfoList);
+
+/**
+ * @brief  This API starts playing the mentioned media item.
+ *
+ * @param[in] hBTRCoreAVM           Bluetooth core AV media handle
+ * @param[in] apBtDevAddr           Bluetooth device address.
+ * @param[in] aBtrAVMediaElementId  target browsing locations' media element id
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+*/
+enBTRCoreRet BTRCore_AVMedia_PlayTrack (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId);
+
+/**
+ * @brief  This API is used to find if a MediaElement is Playable or Non-Playable
+ *
+ * @param[in] hBTRCoreAVM           Bluetooth core AV media handle
+ * @param[in] apBtDevAddr           Bluetooth device address.
+ * @param[in] aBtrAVMediaElementId  target browsing locations' media element id
+ * @Param[out] isPlayable           Playable/Non-Playable state
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_AVMedia_IsMediaElementPlayable (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId, char* isPlayable);
 
 // Outgoing callbacks Registration Interfaces
 /** Callback to notify the BT Core about Mediaplayer path and its Userdata */

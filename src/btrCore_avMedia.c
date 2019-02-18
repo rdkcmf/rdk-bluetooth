@@ -177,6 +177,11 @@
 
 #define BTR_SBC_DEFAULT_BITRATE_BITPOOL		BTR_SBC_HIGH_BITRATE_BITPOOL
 
+#define BTR_MEDIA_INVALID_ID                0xFFFFFFFFFFFFFFFF
+#define BTR_MEDIA_PLAYLIST_ID               0x8000000000000000
+#define BTR_MEDIA_BROWSER_ID                0x0
+
+//TODO Move to Private Header
 typedef enum _enBTRCoreAVMTransportPathState {
     enAVMTransportStConnected,
     enAVMTransportStToBeConnected,
@@ -197,39 +202,54 @@ typedef enum _eBTRCoreAVMediaPlayerSubtype {
     eBTRCoreAVMPSbTypUnknown
 } eBTRCoreAVMediaPlayerSubtype;
 
-typedef enum _eBTRCoreAVMediaPlayerScan {
-    eBTRCoreAVMPScanOff,
-    eBTRCoreAVMPScanAllTracks,
-    eBTRCoreAVMPScanGroup,
-    eBTRCoreAVMPScanUnknown
-} eBTRCoreAVMediaPlayerScan;
+//TODO Change to macros - store as bit infos
+typedef enum _eBTRCoreAVMediaItemFilterAtt {
+    eBTRcoreAVMFilterAttTitle,
+    eBTRcoreAVMFilterAttArtist,
+    eBTRcoreAVMFilterAttAlbum,
+    eBTRcoreAVMFilterAttGenre,
+    eBTRcoreAVMFilterAttNumberOfTracks,
+    eBTRcoreAVMFilterAttTrackNumber,
+    eBTRcoreAVMFilterAttDuration,
+    eBTRcoreAVMFilterAttUnknown
+} eBTRCoreAVMediaItemFilterAtt;
 
-typedef struct _stBTRCoreAVMediaPlayer {
-    char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
-    eBTRCoreAVMediaPlayerType       eAVMediaPlayerType;
-    eBTRCoreAVMediaPlayerSubtype    eAVMediaPlayerSubtype;
-    eBTRCoreAVMediaPlayerScan       eAVMediaPlayerScan;
-    enBTRCoreAVMediaCtrl            eAVMediaPlayerShuffle;
-    enBTRCoreAVMediaCtrl            eAVMediaPlayerRepeat;
-    unsigned int                    m_mediaPlayerPosition;
-    unsigned char                   m_mediaPlayerEqualizer;
-    unsigned char                   m_mediaPlayerBrowsable;
-    unsigned char                   m_mediaPlayerSearchable;
-    unsigned char                   m_mediaTrackChanged;
-    eBTRCoreAVMediaStatusUpdate     eAVMediaStatusUpdate;       /* change to eAVMediaTrackStatus later */
-    stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;
-    //char*           m_mediaPlayerPlaylist;
-} stBTRCoreAVMediaPlayer;
-
-typedef struct _stBTRCoreAVMediaFolder {
-    char*           m_mediaParentFolder;
-    char            m_mediaFolderName[BTRCORE_MAX_STR_LEN];
-    unsigned int    m_mediaFolderNumberOfItems;
-    unsigned int    m_mediaFolderFilterStartItemNumber;
-    unsigned int    m_mediaFolderFilterEndItemNumber;
-    //m_mediaFolderFilterWithAttributes[];
-} stBTRCoreAVMediaFolder;
+typedef struct _stBTRCoreAVMediaItemFilter {
+    unsigned int                       ui32AVMediaFolderFilterStartIndex;
+    unsigned int                       ui32AVMediaFolderFilterEndIndex;
+    unsigned char                      mediaItemFilterAttFlag;
+} stBTRCoreAVMediaItemFilter;
     
+typedef struct _stBTRCoreAVMediaItem {
+    void*                              pvAVMediaParentItem;
+    unsigned char                      bIsMediaItemPlayable;
+    char                               pcAVMediaItemPath[BTRCORE_MAX_STR_LEN];
+    char                               pcAVMediaItemName[BTRCORE_MAX_STR_LEN];
+    unsigned int                       ui32AVMediaNumberOfItems;    /* thing about populated items count */
+    tBTRCoreAVMediaElementId           ui32AVMediaItemId;
+
+    union {
+        struct _stBTRCoreAVMediaItem**   pstAVMediaSubItems;
+        stBTRCoreAVMediaTrackInfo        mediaTrackInfo;
+    };
+} stBTRCoreAVMediaItem;
+    
+typedef struct _stBTRCoreAVMediaPlayer {
+    char                               m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
+    eBTRCoreAVMediaPlayerType          eAVMediaPlayerType;
+    eBTRCoreAVMediaPlayerSubtype       eAVMediaPlayerSubtype;
+    enBTRCoreAVMediaCtrl               eAVMediaPlayerEqualizer;
+    enBTRCoreAVMediaCtrl               eAVMediaPlayerShuffle;
+    enBTRCoreAVMediaCtrl               eAVMediaPlayerRepeat;
+    enBTRCoreAVMediaCtrl               eAVMediaPlayerScan;
+    unsigned int                       m_mediaPlayerPosition;
+    unsigned char                      m_mediaPlayerBrowsable;
+    unsigned char                      m_mediaPlayerSearchable;
+    unsigned char                      m_mediaTrackChanged;
+    eBTRCoreAVMediaStatusUpdate        eAVMediaStatusUpdate;       /* change to eAVMediaTrackStatus later */
+    stBTRCoreAVMediaTrackInfo          m_mediaTrackInfo;
+    stBTRCoreAVMediaItem*              m_mediaBrowserItem;
+} stBTRCoreAVMediaPlayer;
 
 
 typedef struct _stBTRCoreAVMediaHdl {
@@ -247,15 +267,16 @@ typedef struct _stBTRCoreAVMediaHdl {
 
     char*                               pcAVMediaPlayerPath;
     unsigned char                       bAVMediaPlayerConnected;
-
     stBTRCoreAVMediaPlayer              pstAVMediaPlayer;
-    //FileSystem Path
-    //NowPlaying Path
-    //MediaItem  List []
+
+    stBTRCoreAVMediaItem*               pstAVMediaBrowser;
+    unsigned int                        ui32AVMediaBrowserItemCount;
+
+    stBTRCoreAVMediaItem*               pstAVMediaPlayList;
+    unsigned int                        ui32AVMediaPlayListItemCount;
 
 
     fPtr_BTRCore_AVMediaStatusUpdateCb  fpcBBTRCoreAVMediaStatusUpdate;
-
     void*                               pcBMediaStatusUserData;
 
     GThread*                            pMediaPollingThread;
@@ -271,6 +292,12 @@ typedef struct _stBTRCoreAVMediaStatusUserData {
 
 /* Static Function Prototypes */
 static uint8_t btrCore_AVMedia_GetA2DPDefaultBitpool (uint8_t au8SamplingFreq, uint8_t au8AudioChannelsMode);
+static int btrCore_AVMedia_AllocateBrowserMemory (stBTRCoreAVMediaHdl* apstlhBTRCoreAVM, stBTRCoreAVMediaItem* apstBrowser, stBTRCoreAVMediaItem** apstBrowserNew);
+static int btrCore_AVMedia_DeallocateBrowserMemory (stBTRCoreAVMediaHdl* apstlhBTRCoreAVM, stBTRCoreAVMediaItem** apstBrowser);
+static int btrCore_AVMedia_DeallocateUnhandledBrowserMemory (stBTRCoreAVMediaHdl* apstlhBTRCoreAVM, const char* apcBtDevAddr, stBTRCoreAVMediaItem** apstMedItem);
+static int btrCore_AVMedia_FindMediaItem (stBTRCoreAVMediaItem* apstBrowser, tBTRCoreAVMediaElementId aui32AVMediaItemId, stBTRCoreAVMediaItem** apstMedItem);
+static int btrCore_AVMedia_SwitchToMediaBrowserItem (stBTRCoreAVMediaHdl* apstlhBTRCoreAVM, stBTRCoreAVMediaItem* apstAVMediaItem);
+static eBTRCoreAVMElementType btrCore_AVMedia_MapFolderTypeToElementType (enBTMediaFolderType aeMediaFolderType);
 
 /* Local Op Threads Prototypes */
 static void* btrCore_AVMedia_PlaybackPositionPolling (void* arg);
@@ -280,6 +307,7 @@ static int btrCore_AVMedia_NegotiateMediaCb (void* apBtMediaCapsInput, void** ap
 static int btrCore_AVMedia_TransportPathCb (const char* apBtMediaTransportPath, const char* apBtMediaUuid, void* apBtMediaCaps, enBTDeviceType aenBTDeviceType, enBTMediaType aenBTMediaType, void* apUserData);
 static int btrCore_AVMedia_MediaPlayerPathCb (const char* apcBTMediaPlayerPath, void* apUserData);
 static int btrCore_AVMedia_MediaStatusUpdateCb (enBTDeviceType aeBtDeviceType, stBTMediaStatusUpdate* apstBtMediaStUpdate, const char* apcBtDevAddr, void* apUserData);
+static int btrCore_AVMedia_MediaBrowserUpdateCb (stBTMediaBrowserUpdate* apstBtMediaBrUpdate, unsigned char ucItemScope, const char* apcBtDevAddr, void* apUserData);
 
 
 /* Static Function Definition */
@@ -372,6 +400,326 @@ btrCore_AVMedia_GetA2DPDefaultBitpool (
     }
 }
 #endif
+
+static int
+btrCore_AVMedia_AllocateBrowserMemory (
+    stBTRCoreAVMediaHdl*     apstlhBTRCoreAVM,
+    stBTRCoreAVMediaItem*    apstBrowser,
+    stBTRCoreAVMediaItem**   apstBrowserNew
+) {
+    int i32BtRet = -1;
+
+    if (!apstlhBTRCoreAVM || !apstBrowserNew) {
+        BTRCORELOG_ERROR ("Invalid Args!\n");
+        return i32BtRet;
+    }
+
+    if (!(*apstBrowserNew = (stBTRCoreAVMediaItem*) malloc (sizeof(stBTRCoreAVMediaItem)))) {
+        BTRCORELOG_ERROR ("Memory Allocation Failed !\n");
+        return i32BtRet;
+    }
+
+    memset (*apstBrowserNew, 0, sizeof(stBTRCoreAVMediaItem));
+
+    if (apstBrowser) {
+        /* Do we want to re-allocate based on a fixed slab mechanism, inorder to prevent frequent alloc calls */
+        BTRCORELOG_DEBUG ("Reallocating subItem from %u to %u\n", apstBrowser->ui32AVMediaNumberOfItems, apstBrowser->ui32AVMediaNumberOfItems+1);
+        if ((apstBrowser->pstAVMediaSubItems = (stBTRCoreAVMediaItem**) realloc (apstBrowser->pstAVMediaSubItems,
+                                                                           ++apstBrowser->ui32AVMediaNumberOfItems * sizeof(stBTRCoreAVMediaItem*)))) {
+            apstBrowser->pstAVMediaSubItems[apstBrowser->ui32AVMediaNumberOfItems -1] = *apstBrowserNew;
+            i32BtRet = 0;
+        }
+        else {
+            BTRCORELOG_ERROR ("Memory Re-allocation Failed !\n");
+        }
+    }
+    else {
+        i32BtRet = 0;
+    }
+
+    return i32BtRet;
+}
+
+
+static int
+btrCore_AVMedia_DeallocateBrowserMemory (
+    stBTRCoreAVMediaHdl*          apstlhBTRCoreAVM,
+    stBTRCoreAVMediaItem**        apstBrowser
+) {
+    int i32BtRet = -1;
+    stBTRCoreAVMediaItem* ptr = NULL;
+
+    if (!apstBrowser || !(*apstBrowser)) {
+        BTRCORELOG_ERROR ("Invalid Args!\n");
+        return i32BtRet;
+    }
+
+    if ((ptr = (*apstBrowser)->pvAVMediaParentItem)) {
+        if (ptr->pstAVMediaSubItems[ptr->ui32AVMediaNumberOfItems -1]->ui32AVMediaItemId != (*apstBrowser)->ui32AVMediaItemId) {
+            memcpy (*apstBrowser, ptr->pstAVMediaSubItems[ptr->ui32AVMediaNumberOfItems -1], sizeof(stBTRCoreAVMediaItem));
+            *apstBrowser = ptr->pstAVMediaSubItems[ptr->ui32AVMediaNumberOfItems -1];
+        }
+    }
+
+    memset (*apstBrowser, 0, sizeof(stBTRCoreAVMediaItem));
+    free ((void*)(*apstBrowser));
+
+    if ((*apstBrowser = ptr)) {
+        BTRCORELOG_DEBUG ("Reallocating subItem from %u to %u\n", ptr->ui32AVMediaNumberOfItems, ptr->ui32AVMediaNumberOfItems-1);
+        ptr->pstAVMediaSubItems = (stBTRCoreAVMediaItem**) realloc (ptr->pstAVMediaSubItems,
+                                                           --ptr->ui32AVMediaNumberOfItems * sizeof(stBTRCoreAVMediaItem*));
+        if (!ptr->pstAVMediaSubItems && ptr->ui32AVMediaNumberOfItems) {
+            BTRCORELOG_ERROR ("Memory Re-allocation Failed !\n");
+        }
+        else {
+            i32BtRet = 0;
+        }
+    }
+    else {
+        i32BtRet = 0;
+    }
+
+    return i32BtRet;
+}
+
+
+static int
+btrCore_AVMedia_DeallocateUnhandledBrowserMemory (
+    stBTRCoreAVMediaHdl*          apstlhBTRCoreAVM,
+    const char*                   apcBtDevAddr,
+    stBTRCoreAVMediaItem**        apstMedItem
+) {
+    unsigned int          ui32ArrayIdx[10]  = {0};
+    unsigned int          ui8LoopIdx        = 0;
+    stBTRCoreAVMediaItem* apstBrowser       = NULL;
+    stBTRCoreAVMediaItem* ptr               = NULL;
+
+    if (!apstMedItem  || !(*apstMedItem) || !apstlhBTRCoreAVM) {
+        /* validate apcBtDevAddr when used */
+        BTRCORELOG_ERROR ("Invalid Args!\n");
+        return -1;
+    }
+
+    BTRCORELOG_WARN ("!!!Clearing Off unhandled AV Media Browser memory\n");
+    apstBrowser = *apstMedItem;
+
+    while (apstBrowser) {
+
+        if (apstBrowser->ui32AVMediaNumberOfItems) {
+            if (!apstBrowser->bIsMediaItemPlayable && apstBrowser->pstAVMediaSubItems) {
+                if (0 < apstBrowser->ui32AVMediaNumberOfItems - ui32ArrayIdx[ui8LoopIdx]) {
+                        if (apstBrowser->pstAVMediaSubItems[apstBrowser->ui32AVMediaNumberOfItems -ui32ArrayIdx[ui8LoopIdx] -1]) {
+
+                        apstBrowser = (ptr = apstBrowser)->pstAVMediaSubItems[apstBrowser->ui32AVMediaNumberOfItems -ui32ArrayIdx[ui8LoopIdx] -1];
+                        ptr->pstAVMediaSubItems[ptr->ui32AVMediaNumberOfItems -ui32ArrayIdx[ui8LoopIdx] -1] = NULL;
+
+                        if (!(ptr->ui32AVMediaNumberOfItems -ui32ArrayIdx[ui8LoopIdx] -1)) {
+                            BTRCORELOG_DEBUG ("Freeing Media SubItem List of %s : %p (%u)\n", ptr->pcAVMediaItemName, apstBrowser, ptr->ui32AVMediaNumberOfItems);
+                            free ((void*)ptr->pstAVMediaSubItems);
+                            ptr->pstAVMediaSubItems = NULL;
+                            ptr->ui32AVMediaNumberOfItems = 0;
+                        }
+
+                        ui32ArrayIdx[++ui8LoopIdx] = 0;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        ptr = apstBrowser;
+        BTRCORELOG_DEBUG ("Freeing Media Item %p:%s [ID: %llu]\n", ptr, ptr->pcAVMediaItemName, ptr->ui32AVMediaItemId);
+#if 0
+        /* NOTE: Try to get a valid apcBtDevAddr before uncommenting this block! */
+        {
+            stBTRCoreAVMediaStatusUpdate    mediaStatus;
+
+            mediaStatus.eAVMediaState           = eBTRCoreAVMediaElementRemoved;
+            mediaElement->ui32AVMediaElementId  = ptr->ui32BTMediaItemId;
+
+            if (apstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate) {
+                if (apstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate(&mediaStatus, apcBtDevAddr, apstlhBTRCoreAVM->pcBMediaStatusUserData) != enBTRCoreSuccess) {
+                    BTRCORELOG_ERROR ("fpcBBTRCoreAVMediaStatusUpdate - Failure !!!\n");
+                    return -1;
+                }
+            }
+        }
+#endif
+        if (ptr->bIsMediaItemPlayable) {
+            (ptr->ui32AVMediaItemId & BTR_MEDIA_PLAYLIST_ID)? apstlhBTRCoreAVM->ui32AVMediaPlayListItemCount-- : apstlhBTRCoreAVM->ui32AVMediaBrowserItemCount--;
+        }
+
+        if (ptr == *apstMedItem) {
+            btrCore_AVMedia_DeallocateBrowserMemory (apstlhBTRCoreAVM, &ptr);
+            *apstMedItem = ptr;
+            break;
+        }
+
+        apstBrowser = apstBrowser->pvAVMediaParentItem;
+        free ((void*)ptr);
+        ui32ArrayIdx[--ui8LoopIdx]++;
+    }
+
+    return 0;
+}
+
+
+static int
+btrCore_AVMedia_FindMediaItem (
+    stBTRCoreAVMediaItem*           apstBrowser,
+    tBTRCoreAVMediaElementId        aui32AVMediaItemId,
+    stBTRCoreAVMediaItem**          apstMedItem
+) {
+    unsigned int    ui32ArrayIdx[10] = {0};
+    unsigned int    ui8LoopIdx       = 0;
+
+    if (!apstBrowser || !apstMedItem) {
+        BTRCORELOG_ERROR ("Invalid Args!\n");
+        return -1;
+    }
+
+    *apstMedItem = NULL;
+
+    while (apstBrowser) {
+        //BTRCORELOG_DEBUG ("Inside Folder %p:%s - %u - %d\n", apstBrowser, apstBrowser->pcAVMediaItemName, apstBrowser->ui32AVMediaNumberOfItems, apstBrowser->bIsMediaItemPlayable);
+        if (apstBrowser->ui32AVMediaNumberOfItems) {
+
+            if (!apstBrowser->bIsMediaItemPlayable && apstBrowser->pstAVMediaSubItems) {
+                if (0 < apstBrowser->ui32AVMediaNumberOfItems - ui32ArrayIdx[ui8LoopIdx]) {
+                    if (apstBrowser->pstAVMediaSubItems[apstBrowser->ui32AVMediaNumberOfItems -ui32ArrayIdx[ui8LoopIdx] -1]) {
+                        apstBrowser = apstBrowser->pstAVMediaSubItems[apstBrowser->ui32AVMediaNumberOfItems -ui32ArrayIdx[ui8LoopIdx] -1];
+                        ui32ArrayIdx[++ui8LoopIdx] = 0;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        if (apstBrowser->ui32AVMediaItemId == aui32AVMediaItemId) {
+            *apstMedItem = apstBrowser;
+            BTRCORELOG_INFO ("Media Item Found : %s [%llu] - %d\n", apstBrowser->pcAVMediaItemName, apstBrowser->ui32AVMediaItemId, apstBrowser->bIsMediaItemPlayable);
+        }
+
+        if (ui8LoopIdx && !(*apstMedItem)) {
+            ui32ArrayIdx[--ui8LoopIdx]++;
+            apstBrowser = apstBrowser->pvAVMediaParentItem;
+        }
+        else {
+            break;
+        }
+    }
+
+    return 0;
+}
+
+
+static int
+btrCore_AVMedia_SwitchToMediaBrowserItem (
+    stBTRCoreAVMediaHdl*        apstlhBTRCoreAVM,
+    stBTRCoreAVMediaItem*       apstAVMediaItem
+) {
+    stBTRCoreAVMediaItem*       curr     = 0;
+    stBTRCoreAVMediaItem*       dest     = 0;
+    int                         i32Ret   = -1;
+
+    if (!apstlhBTRCoreAVM || !(dest=apstAVMediaItem)) {
+        BTRCORELOG_ERROR ("Invalid Args!\n");
+        return i32Ret;
+    }
+
+    if ((curr = apstlhBTRCoreAVM->pstAVMediaBrowser)) {
+
+        char  mediaItemPath[15][BTRCORE_MAX_STR_LEN];
+        tBTRCoreAVMediaElementId  comnItemId = 0;
+        short arrayIdx =-1;
+        short countIdx = 0;
+        short commnIdx = 0;
+        
+        memset (mediaItemPath, 0, 15 * BTRCORE_MAX_STR_LEN);
+
+        comnItemId = BtrCore_BTGetCommonParentMediaItemId (curr->ui32AVMediaItemId, dest->ui32AVMediaItemId);
+
+        /* retrive the mediaItemPaths from current browser dir to the common parent dir */
+        if (comnItemId != curr->ui32AVMediaItemId) {
+
+            while (curr->pvAVMediaParentItem) {
+                curr = curr->pvAVMediaParentItem;
+
+                if (comnItemId != dest->ui32AVMediaItemId || curr->ui32AVMediaItemId != comnItemId) {
+                    strncpy (mediaItemPath[countIdx++], curr->pcAVMediaItemPath, BTRCORE_MAX_STR_LEN -1);
+                }
+                if (curr->ui32AVMediaItemId == comnItemId) {
+                    break;
+                }
+            }
+        }
+
+        commnIdx = countIdx;
+
+        /* retrive the mediaItemPaths from common parent dir to destination browser dir */
+        if (comnItemId != dest->ui32AVMediaItemId) {
+
+            while (dest->pvAVMediaParentItem) {
+                dest = dest->pvAVMediaParentItem;
+
+                if (comnItemId != dest->ui32AVMediaItemId) {
+                    strncpy (mediaItemPath[countIdx++], dest->pcAVMediaItemPath, BTRCORE_MAX_STR_LEN -1);
+                }
+                else {
+                    break;
+                }
+            }
+        }
+
+        /* Changing from current browsing location to destination browsing location */
+        while (++arrayIdx < commnIdx || (arrayIdx = --countIdx) >= commnIdx) {
+            if (BtrCore_BTChangeMediaFolder(apstlhBTRCoreAVM->btIfceHdl, apstlhBTRCoreAVM->pcAVMediaPlayerPath, mediaItemPath[arrayIdx])) {
+                BTRCORELOG_ERROR ("Failed to Change Media Folder Path %s !\n", mediaItemPath[arrayIdx]);
+                return i32Ret;
+            }
+        }
+
+        i32Ret = 0;
+    }
+    else {
+        BTRCORELOG_ERROR ("Media Browser Error - Browser root is NULL!\n");
+    }
+
+    return i32Ret;
+}
+
+
+static eBTRCoreAVMElementType
+btrCore_AVMedia_MapFolderTypeToElementType (
+    enBTMediaFolderType      aeMediaFolderType
+) {
+    eBTRCoreAVMElementType  leAVMElementType;
+
+    switch (aeMediaFolderType) {
+    case enBTMediaFldTypAlbum:
+        leAVMElementType = eBTRCoreAVMETypeAlbum;
+        break;
+    case enBTMediaFldTypArtist:
+        leAVMElementType = eBTRCoreAVMETypeArtist;
+        break;
+    case enBTMediaFldTypGenre:
+        leAVMElementType = eBTRCoreAVMETypeGenre;
+        break;
+    case enBTMediaFldTypCompilation:
+        leAVMElementType = eBTRCoreAVMETypeCompilation;
+        break;
+    case enBTMediaFldTypPlayList:
+        leAVMElementType = eBTRCoreAVMETypePlayList;
+        break;
+    case enBTMediaFldTypTrackList:
+        leAVMElementType = eBTRCoreAVMETypeTrackList;
+        break;
+    default:
+        leAVMElementType = eBTRCoreAVMETypeTrackList;
+    }
+
+    return leAVMElementType;
+}
 
 
 /* Local Op Threads */
@@ -541,6 +889,7 @@ BTRCore_AVMedia_Init (
     int                     lBtAVMediaTransportPRet = -1;
     int                     lBTAVMediaPlayerPRet    = -1;
     int                     lBTAVMediaStatusRet     = -1;
+    int                     lBTAVMediaBrowserRet    = -1;
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
 
     if (!phBTRCoreAVM || !apBtConn || !apBtAdapter) {
@@ -690,6 +1039,12 @@ BTRCore_AVMedia_Init (
                                                                     pstlhBTRCoreAVM);
 
     if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet && !lBTAVMediaPlayerPRet && !lBTAVMediaStatusRet)
+        lBTAVMediaBrowserRet = BtrCore_BTRegisterMediaBrowserUpdateCb(apBtConn,
+                                                                      &btrCore_AVMedia_MediaBrowserUpdateCb,
+                                                                      pstlhBTRCoreAVM);
+
+    if (!lBtAVMediaASinkRegRet && !lBtAVMediaASrcRegRet && !lBtAVMediaNegotiateRet && !lBtAVMediaTransportPRet &&
+        !lBTAVMediaPlayerPRet && !lBTAVMediaStatusRet && !lBTAVMediaBrowserRet)
         lenBTRCoreRet = enBTRCoreSuccess;
 
     if (lenBTRCoreRet != enBTRCoreSuccess) {
@@ -772,6 +1127,25 @@ BTRCore_AVMedia_DeInit (
     if (pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
         free(pstlhBTRCoreAVM->pcAVMediaPlayerPath);
         pstlhBTRCoreAVM->pcAVMediaPlayerPath = NULL;
+    }
+
+    if (pstlhBTRCoreAVM->pstAVMediaBrowser) {
+        const char* apcBtDevAddr = NULL; /* TODO get device Address */
+        while (pstlhBTRCoreAVM->pstAVMediaBrowser->pvAVMediaParentItem) {
+           pstlhBTRCoreAVM->pstAVMediaBrowser = pstlhBTRCoreAVM->pstAVMediaBrowser->pvAVMediaParentItem;
+        }
+        if (!btrCore_AVMedia_DeallocateUnhandledBrowserMemory (pstlhBTRCoreAVM, apcBtDevAddr, &pstlhBTRCoreAVM->pstAVMediaBrowser)) {
+            BTRCORELOG_ERROR ("Media Browser Error - Deallocate Unhandled Browser Memory Failed!\n");
+        }
+        pstlhBTRCoreAVM->pstAVMediaBrowser  = NULL;
+    }
+
+    if (pstlhBTRCoreAVM->pstAVMediaPlayList) {
+        const char* apcBtDevAddr = NULL; /* TODO get device Address */
+        if (!btrCore_AVMedia_DeallocateUnhandledBrowserMemory (pstlhBTRCoreAVM, apcBtDevAddr, &pstlhBTRCoreAVM->pstAVMediaPlayList)) {
+            BTRCORELOG_ERROR ("Media Browser Error - Deallocate Unhandled Browser Memory Failed!\n");
+        }
+        pstlhBTRCoreAVM->pstAVMediaPlayList = NULL;
     }
 
     pstlhBTRCoreAVM->btIfceHdl               = NULL;
@@ -1258,15 +1632,47 @@ BTRCore_AVMedia_MediaControl (
     case enBTRCoreAVMediaCtrlVolumeDown:
         aenBTMediaControl = enBTMediaCtrlVolumeDown;
         break;
-    default:
+    case enBTRcoreAVMediaCtrlEqlzrOff:
+        aenBTMediaControl = enBTMediaCtrlEqlzrOff;
         break;
+    case enBTRcoreAVMediaCtrlEqlzrOn:
+        aenBTMediaControl = enBTMediaCtrlEqlzrOn;
+        break;
+    case enBTRCoreAVMediaCtrlShflOff:
+        aenBTMediaControl = enBTMediaCtrlShflOff;
+        break;
+    case enBTRCoreAVMediaCtrlShflAllTracks:
+        aenBTMediaControl = enBTMediaCtrlShflAllTracks;
+        break;
+    case enBTRCoreAVMediaCtrlShflGroup:
+        aenBTMediaControl = enBTMediaCtrlShflGroup;
+        break;
+    case enBTRCoreAVMediaCtrlRptOff:
+        aenBTMediaControl = enBTMediaCtrlRptOff;
+        break;
+    case enBTRCoreAVMediaCtrlRptSingleTrack:
+        aenBTMediaControl = enBTMediaCtrlRptSingleTrack;
+        break;
+    case enBTRCoreAVMediaCtrlRptAllTracks:
+        aenBTMediaControl = enBTMediaCtrlRptAllTracks;
+        break;
+    case enBTRCoreAVMediaCtrlRptGroup:
+        aenBTMediaControl = enBTMediaCtrlRptGroup;
+        break;
+    default:
+        aenBTMediaControl = enBTMediaCtrlUnknown;
     }
 
+    if (aenBTMediaControl == enBTMediaCtrlUnknown) {
+        BTRCORELOG_ERROR ("Unknown Media Control option!\n");
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
+    else
     if (BtrCore_BTDevMediaControl(pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aenBTMediaControl)) {
-       BTRCORELOG_ERROR ("Failed to set the Media control option");
+       BTRCORELOG_ERROR ("Failed to set the Media control option!");
        lenBTRCoreRet = enBTRCoreFailure;
     }
-      
+
     return lenBTRCoreRet;
 }
 
@@ -1391,6 +1797,387 @@ BTRCore_AVMedia_GetMediaProperty (
     return lenBTRCoreRet;
 }
 
+
+enBTRCoreRet
+BTRCore_AVMedia_ChangeBrowserLocation (
+    tBTRCoreAVMediaHdl         hBTRCoreAVM,
+    const char*                apBtDevAddr,
+    tBTRCoreAVMediaElementId   aBtrAVMediaElementId,
+    eBTRCoreAVMElementType     aeBtrAVMElementType
+) {
+    enBTRCoreRet            lenBTRCoreRet       = enBTRCoreSuccess;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM     = NULL;
+    stBTRCoreAVMediaItem*   ptr                 = NULL;
+    const char*             lpBtMediaFolderPath = NULL;
+
+    if (!hBTRCoreAVM || !apBtDevAddr)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+        //      Seems to be the root cause of the stack corruption as part of DELIA-25861
+        char*   lpcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath(pstlhBTRCoreAVM->btIfceHdl, apBtDevAddr);
+        if (!lpcAVMediaPlayerPath || !(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(lpcAVMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1))) {
+            BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+            return enBTRCoreFailure;
+        }
+    }
+
+    if (!pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaPlayerBrowsable) {
+        BTRCORELOG_ERROR ("Connected Media is not Browsable!\n");
+        return enBTRCoreFailure;
+    }
+
+
+    /* TODO Index based folderPath retrival */
+    if (!(aBtrAVMediaElementId & BTR_MEDIA_PLAYLIST_ID))  {
+
+        if ((ptr = pstlhBTRCoreAVM->pstAVMediaBrowser)) {
+            /* If we are already on the same item */
+            if (ptr->ui32AVMediaItemId == aBtrAVMediaElementId) {
+                lpBtMediaFolderPath = ptr->pcAVMediaItemPath;
+            }
+            /* If the item is parent */
+            if (!lpBtMediaFolderPath && ptr->pvAVMediaParentItem) {
+                if (((stBTRCoreAVMediaItem*)(ptr->pvAVMediaParentItem))->ui32AVMediaItemId == aBtrAVMediaElementId) {
+                    lpBtMediaFolderPath = (char*)((stBTRCoreAVMediaItem*)(ptr->pvAVMediaParentItem))->pcAVMediaItemPath;
+                    ptr = ptr->pvAVMediaParentItem;
+                }
+            }
+            /* If the item is one of the child */
+            if (!lpBtMediaFolderPath) {
+                if (ptr->ui32AVMediaNumberOfItems && ptr->pstAVMediaSubItems) {
+                    unsigned int ui32LoopIdx = 0;
+
+                    while (ui32LoopIdx < ptr->ui32AVMediaNumberOfItems) {
+                        if (ptr->pstAVMediaSubItems[ui32LoopIdx]->ui32AVMediaItemId == aBtrAVMediaElementId) {
+                            lpBtMediaFolderPath = ptr->pstAVMediaSubItems[ui32LoopIdx]->pcAVMediaItemPath;
+                            break;
+                        }
+                        ui32LoopIdx++;
+                    }
+                }
+            }
+            /* Finding the shortest path from current location to destination */
+            if (!lpBtMediaFolderPath) {
+                while (ptr->pvAVMediaParentItem) {
+                    ptr = ptr->pvAVMediaParentItem;
+                }
+                /* Searching from root */
+                if (!btrCore_AVMedia_FindMediaItem (ptr, aBtrAVMediaElementId, &ptr)) {
+                    /* on success ptr will be pointing the node which has mediaID as aBtrAVMediaElementId */
+                    if (ptr) {
+                        lpBtMediaFolderPath = ptr->pcAVMediaItemPath;
+                        if (btrCore_AVMedia_SwitchToMediaBrowserItem (pstlhBTRCoreAVM, ptr)) { 
+                            BTRCORELOG_ERROR ("Switching to MediaBrowserItem(%llu) Failed!\n", ptr->ui32AVMediaItemId);
+                            lenBTRCoreRet = enBTRCoreFailure;
+                        }
+                    } 
+                    else {
+                        BTRCORELOG_ERROR ("Media Item(%llu) Not Found!\n", aBtrAVMediaElementId);
+                        lenBTRCoreRet = enBTRCoreFailure;
+                    } 
+                }
+                else {
+                    BTRCORELOG_ERROR ("Failed to Find Media Item(%llu) !\n", aBtrAVMediaElementId);
+                    lenBTRCoreRet = enBTRCoreFailure;
+                }
+            }
+        }
+        else {
+            BTRCORELOG_ERROR ("Media Browser Error - No parent Filesystem !\n");
+            lenBTRCoreRet = enBTRCoreFailure;
+        }
+    }
+    else
+    if (pstlhBTRCoreAVM->pstAVMediaPlayList) {
+        lpBtMediaFolderPath = pstlhBTRCoreAVM->pstAVMediaPlayList->pcAVMediaItemPath;
+    }
+    else {
+        BTRCORELOG_ERROR ("PlayList not found for Item : %llu !\n", aBtrAVMediaElementId);
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+
+
+    if (!lpBtMediaFolderPath) {
+        BTRCORELOG_ERROR ("Media Browser Error - cannot find item : %llu\n", aBtrAVMediaElementId);
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    if (lenBTRCoreRet == enBTRCoreSuccess &&
+        BtrCore_BTChangeMediaFolder(pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, lpBtMediaFolderPath)) {
+        BTRCORELOG_ERROR ("Failed to change Browser Location to %s(%llu) !\n", lpBtMediaFolderPath, aBtrAVMediaElementId);
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_SelectMediaBrowserElements (
+    tBTRCoreAVMediaHdl          hBTRCoreAVM,
+    const char*                 apBtDevAddr,
+    unsigned short              aui16StartIdx,
+    unsigned short              aui16EndIdx
+) {
+    enBTRCoreRet            lenBTRCoreRet       = enBTRCoreSuccess;
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM     = NULL;
+    unsigned int            ui32NumberOfItems   = 0;
+
+    if (!hBTRCoreAVM || !apBtDevAddr)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+        //      Seems to be the root cause of the stack corruption as part of DELIA-25861
+        char*   lpcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath(pstlhBTRCoreAVM->btIfceHdl, apBtDevAddr);
+        if (!lpcAVMediaPlayerPath || !(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(lpcAVMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1))) {
+            BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+            return enBTRCoreFailure;
+        }
+    }
+
+    if (!pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaPlayerBrowsable) {
+        BTRCORELOG_ERROR ("Connected Media is not Browsable!\n");
+        return enBTRCoreFailure;
+    }
+
+
+    if (!BtrCore_BTGetMediaFolderNumberOfItems (pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, &ui32NumberOfItems)) {
+        BTRCORELOG_DEBUG ("Number Of Items : %u\n", ui32NumberOfItems);
+        if (ui32NumberOfItems && aui16EndIdx > ui32NumberOfItems) {
+            aui16EndIdx = ui32NumberOfItems;
+        }
+    }
+    else {
+        BTRCORELOG_WARN ("Couldn't get No. Of Items in current Browser location!\n");
+    }
+
+    /*To enhance this logic better to handle failures too */
+    if (aui16StartIdx <= aui16EndIdx) {
+        BTRCORELOG_DEBUG ("Querying to list browser items from %u to %u\n", aui16StartIdx, aui16EndIdx);
+
+        if (BtrCore_BTSelectMediaFolderItems (pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aui16StartIdx, aui16EndIdx, NULL, 0)) {
+            BTRCORELOG_ERROR ("Failed to List Browser Items!\n");
+            lenBTRCoreRet = enBTRCoreFailure;
+        }
+    }
+    else {
+        BTRCORELOG_ERROR ("List indices not in Range!\n");
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    {   /* sleeping half of a second. Max 5 seconds */
+        int ui32sleepIdx = 10;
+
+        while (ui32sleepIdx-- && pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaBrowserItem->ui32AVMediaNumberOfItems < aui16EndIdx) {
+            usleep (500000); 
+        }
+    }
+
+    return lenBTRCoreRet;
+}
+
+enBTRCoreRet
+BTRCore_AVMedia_GetMediaElementList (
+    tBTRCoreAVMediaHdl                  hBTRCoreAVM,
+    const char*                         apBtDevAddr,
+    tBTRCoreAVMediaElementId            aBtrAVMediaElementId,
+    unsigned short                      aui16StartIdx,
+    unsigned short                      aui16EndIdx,
+    stBTRCoreAVMediaElementInfoList*    aAVMediaElementInfoList
+) {
+    stBTRCoreAVMediaHdl*          lpstlhBTRCoreAVM   = NULL;
+    stBTRCoreAVMediaItem*         lpstBtAVMediaItem  = NULL;
+    enBTRCoreRet                  lenBTRCoreRet      = enBTRCoreFailure;
+
+    if (!hBTRCoreAVM || !apBtDevAddr || !aAVMediaElementInfoList ||
+        aui16EndIdx < aui16StartIdx) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    if (aui16EndIdx - aui16StartIdx > BTR_AV_MEDIA_ELEMENT_MAX -1) {
+        aui16EndIdx = aui16StartIdx + BTR_AV_MEDIA_ELEMENT_MAX -1;
+    }
+
+    lpstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (!(lpstBtAVMediaItem = lpstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaBrowserItem)) {
+        BTRCORELOG_ERROR ("Media Browser Error - browsing handle is NULL!\n");
+        return lenBTRCoreRet;
+    }
+
+    if (lpstBtAVMediaItem->ui32AVMediaItemId != aBtrAVMediaElementId) {
+        stBTRCoreAVMediaItem* ptr = lpstlhBTRCoreAVM->pstAVMediaBrowser;
+        BTRCORELOG_WARN ("Media Browser Error - Media ElementID(%llu) didn't match!\n", aBtrAVMediaElementId);
+
+        if (ptr) {
+            while (ptr->pvAVMediaParentItem) {
+                ptr = ptr->pvAVMediaParentItem;
+            }
+
+            if (btrCore_AVMedia_FindMediaItem (ptr, aBtrAVMediaElementId, &lpstBtAVMediaItem)) {
+                BTRCORELOG_ERROR ("Failed to Find MediaTrack by Id(%llu) !\n", aBtrAVMediaElementId);
+            }
+        }
+    }
+
+    if (!lpstBtAVMediaItem) {
+        return lenBTRCoreRet;
+    }
+
+    if (lpstBtAVMediaItem->bIsMediaItemPlayable) {
+        BTRCORELOG_ERROR ("Media Browser Error - Its a Playable Item!\n");
+        return lenBTRCoreRet;
+    }
+
+    if (lpstBtAVMediaItem->pstAVMediaSubItems) {
+        unsigned short  m_numOfElements = 0;
+
+        memset (aAVMediaElementInfoList, 0, sizeof(stBTRCoreAVMediaElementInfoList));
+
+        while (aui16StartIdx <= aui16EndIdx && aui16StartIdx < lpstBtAVMediaItem->ui32AVMediaNumberOfItems && lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]) {
+
+            aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].eAVMElementType        = eBTRCoreAVMETypeTrackList; //TODO 
+            aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].ui32AVMediaElementId   = lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->ui32AVMediaItemId;
+            aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].bIsPlayable            = lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->bIsMediaItemPlayable;
+            strncpy(aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].m_mediaElementName, lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->pcAVMediaItemName, BTRCORE_MAX_STR_LEN -1);
+            memcpy (&aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements++].m_mediaTrackInfo, &lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx++]->mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+        }
+
+        aAVMediaElementInfoList->m_numOfElements = m_numOfElements;
+        lenBTRCoreRet = enBTRCoreSuccess;
+        BTRCORELOG_INFO ("Number of MediaItems retrived : %d\n", aAVMediaElementInfoList->m_numOfElements);
+    }
+    else {
+        BTRCORELOG_ERROR ("Media Browser Error - NumOfItems : %d | SubItems : %p\n", lpstBtAVMediaItem->ui32AVMediaNumberOfItems, lpstBtAVMediaItem->pstAVMediaSubItems);
+    }
+
+    return lenBTRCoreRet;
+}
+
+
+enBTRCoreRet
+BTRCore_AVMedia_PlayTrack (
+    tBTRCoreAVMediaHdl         hBTRCoreAVM,
+    const char*                apBtDevAddr,
+    tBTRCoreAVMediaElementId   aBtrAVMediaItemId
+) {
+    stBTRCoreAVMediaHdl*           pstlhBTRCoreAVM = NULL;
+    stBTRCoreAVMediaItem*          ptrBsr          = NULL;
+    stBTRCoreAVMediaItem*          ptrTrack        = NULL;
+    enBTRCoreRet                   lenBTRCoreRet   = enBTRCoreFailure;
+
+    if (!hBTRCoreAVM || !apBtDevAddr) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+
+    if (!(ptrBsr = (aBtrAVMediaItemId & BTR_MEDIA_PLAYLIST_ID)? pstlhBTRCoreAVM->pstAVMediaPlayList : pstlhBTRCoreAVM->pstAVMediaBrowser)) {
+        BTRCORELOG_ERROR ("Media Browser doesn't exist!\n");
+        return lenBTRCoreRet;
+    }
+
+    if (btrCore_AVMedia_FindMediaItem (ptrBsr, aBtrAVMediaItemId, &ptrTrack)) {
+        BTRCORELOG_ERROR ("Failed to Search MediaTrack by Id(%llu) !\n", aBtrAVMediaItemId);
+        return lenBTRCoreRet;
+    }
+
+    if (ptrTrack) {
+        if (ptrTrack->bIsMediaItemPlayable) {
+            if (ptrTrack->pcAVMediaItemPath[0]) {
+                if (BtrCore_BTPlayMediaTrackItem (pstlhBTRCoreAVM->btIfceHdl, ptrTrack->pcAVMediaItemPath)) {
+                    BTRCORELOG_ERROR ("Failed to Play Media Track Item(%llu) %s !\n", aBtrAVMediaItemId, ptrTrack->pcAVMediaItemPath);
+                }
+                else {
+                    lenBTRCoreRet = enBTRCoreSuccess;
+                }
+            }
+            else {
+                BTRCORELOG_ERROR ("Media Item Path is not present!\n");
+            }
+        }
+        else {
+             BTRCORELOG_ERROR ("Media Item %llu is not Playable!\n", aBtrAVMediaItemId);
+        }
+    }
+    else {
+        BTRCORELOG_ERROR ("Media Track Item(%llu) not found!\n", aBtrAVMediaItemId);
+    }
+
+    return lenBTRCoreRet;
+}
+
+enBTRCoreRet
+BTRCore_AVMedia_IsMediaElementPlayable (
+    tBTRCoreAVMediaHdl          hBTRCoreAVM,
+    const char*                 apBtDevAddr,
+    tBTRCoreAVMediaElementId    aBtrAVMediaItemId,
+    char*                       isPlayable
+) {
+    stBTRCoreAVMediaHdl*           lpstlhBTRCoreAVM = NULL;
+    stBTRCoreAVMediaItem*          lpstBtAVMBrowser = NULL;
+    stBTRCoreAVMediaItem*          lpstBtAVMItem    = NULL;
+    enBTRCoreRet                   lenBTRCoreRet    = enBTRCoreFailure;
+
+    if (!hBTRCoreAVM || !apBtDevAddr) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    lpstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+
+    if (aBtrAVMediaItemId & BTR_MEDIA_PLAYLIST_ID) {
+        lpstBtAVMBrowser = lpstlhBTRCoreAVM->pstAVMediaPlayList;
+    }
+    else {
+        lpstBtAVMBrowser = lpstlhBTRCoreAVM->pstAVMediaBrowser;
+        while (lpstBtAVMBrowser->pvAVMediaParentItem) {
+            lpstBtAVMBrowser = lpstBtAVMBrowser->pvAVMediaParentItem;
+        }
+    }
+
+    if (!lpstBtAVMBrowser) {
+        BTRCORELOG_ERROR ("Media Browser doesn't exist!\n");
+        return lenBTRCoreRet;
+    }
+
+    if (btrCore_AVMedia_FindMediaItem (lpstBtAVMBrowser, aBtrAVMediaItemId, &lpstBtAVMItem)) {
+        BTRCORELOG_ERROR ("Failed to Search MediaTrack by Id(%llu) !\n", aBtrAVMediaItemId);
+        return lenBTRCoreRet;
+    }
+
+    if (lpstBtAVMItem) {
+        if ((*isPlayable = lpstBtAVMItem->bIsMediaItemPlayable)) {
+            BTRCORELOG_DEBUG ("Its a playable Media Item\n");
+        }
+        else {
+            BTRCORELOG_DEBUG ("Its a non-playable Media Item\n");
+        }
+        lenBTRCoreRet = enBTRCoreSuccess;
+    }
+    else {
+        BTRCORELOG_ERROR ("Media Item(%llu) not found!\n", aBtrAVMediaItemId);
+    }
+
+
+    return lenBTRCoreRet;
+}
 
 // Outgoing callbacks Registration Interfaces
 enBTRCoreRet
@@ -2032,8 +2819,8 @@ btrCore_AVMedia_MediaPlayerPathCb (
             char* ptr = pstlhBTRCoreAVM->pcAVMediaPlayerPath;
 
             if (!strncmp(pstlhBTRCoreAVM->pcAVMediaPlayerPath, apcBTMediaPlayerPath,
-                 (strlen(pstlhBTRCoreAVM->pcAVMediaPlayerPath) < strlen(apcBTMediaPlayerPath)) ? strlen(pstlhBTRCoreAVM->pcAVMediaPlayerPath) : strlen(apcBTMediaPlayerPath))) {
-                BTRCORELOG_INFO ("Freeing 0x%p:%s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath);
+                 (strlen(pstlhBTRCoreAVM->pcAVMediaPlayerPath) > strlen(apcBTMediaPlayerPath)) ? strlen(pstlhBTRCoreAVM->pcAVMediaPlayerPath) : strlen(apcBTMediaPlayerPath))) {
+                BTRCORELOG_INFO ("Freeing %p:%s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath);
          
                 pstlhBTRCoreAVM->pcAVMediaPlayerPath = NULL;
                 free(ptr);
@@ -2042,6 +2829,9 @@ btrCore_AVMedia_MediaPlayerPathCb (
                 BTRCORELOG_INFO ("Switching Media Player from  %s  to  %s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, apcBTMediaPlayerPath);
                 pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(apcBTMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1);
                 free(ptr);
+                /*TODO At here, we should initiallize 'pstAVMediaPlayer' properties as the player has changed effectively */
+                memset (&pstlhBTRCoreAVM->pstAVMediaPlayer, 0, sizeof(pstlhBTRCoreAVM->pstAVMediaPlayer));
+                strncpy (pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaPlayerName, "UnknownPlayer", BTRCORE_MAX_STR_LEN -1);
              }   
         }
         else {
@@ -2101,8 +2891,10 @@ btrCore_AVMedia_MediaStatusUpdateCb (
             break;
 
         case enBTMedTPropVol:
-            pstlhBTRCoreAVM->ui16BTMediaTransportVolume = apstBtMediaStUpdate->m_mediaTransportVolume;
-            BTRCORELOG_DEBUG ("AV Media Transport Volume : %d \n", (pstlhBTRCoreAVM->ui16BTMediaTransportVolume * 100)/127);
+            mediaStatus.eAVMediaState = eBTRCoreAVMediaPlyrVolume;
+            mediaStatus.m_mediaPlayerVolumePercentage = pstlhBTRCoreAVM->ui16BTMediaTransportVolume = (apstBtMediaStUpdate->m_mediaTransportVolume * 100)/127;
+            BTRCORELOG_DEBUG ("AV Media Transport Volume : %d%%\n", pstlhBTRCoreAVM->ui16BTMediaTransportVolume);
+            postEvent = TRUE;
             break;
         default:
             break;
@@ -2123,6 +2915,7 @@ btrCore_AVMedia_MediaStatusUpdateCb (
                         stBTRCoreAVMediaStatusUserData* pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*) malloc (sizeof(stBTRCoreAVMediaStatusUserData));
                         memset (pstAVMediaStUserData, 0, sizeof(stBTRCoreAVMediaStatusUserData));
                         memset (&pstlhBTRCoreAVM->pstAVMediaPlayer, 0, sizeof(stBTRCoreAVMediaPlayer));
+                        strncpy (pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaPlayerName, "UnknownPlayer", BTRCORE_MAX_STR_LEN -1);
 
                         pstAVMediaStUserData->apvAVMUserData   = pstlhBTRCoreAVM->btIfceHdl; //TODO: This is redundant. There should be no need to do this
                         pstAVMediaStUserData->apcAVMDevAddress = strndup(apcBtDevAddr, BTRCORE_MAX_STR_LEN - 1);
@@ -2141,6 +2934,36 @@ btrCore_AVMedia_MediaStatusUpdateCb (
                     }
                 }
                 else {
+                    if (pstlhBTRCoreAVM->pstAVMediaBrowser || pstlhBTRCoreAVM->pstAVMediaPlayList ||
+                        pstlhBTRCoreAVM->ui32AVMediaBrowserItemCount || pstlhBTRCoreAVM->ui32AVMediaPlayListItemCount) {
+                        BTRCORELOG_WARN ("Media Browser Error - ####### Possibility Of Memory Leak #####\n");
+                        BTRCORELOG_WARN ("Media Browser Error - MediaBrowser : %p(%u) | MediaPlayList : %p(%u)\n"
+                                         , pstlhBTRCoreAVM->pstAVMediaBrowser
+                                         , pstlhBTRCoreAVM->ui32AVMediaBrowserItemCount
+                                         , pstlhBTRCoreAVM->pstAVMediaPlayList
+                                         , pstlhBTRCoreAVM->ui32AVMediaPlayListItemCount);
+
+                        if (pstlhBTRCoreAVM->pstAVMediaBrowser) {
+                            while (pstlhBTRCoreAVM->pstAVMediaBrowser->pvAVMediaParentItem) {
+                                pstlhBTRCoreAVM->pstAVMediaBrowser = pstlhBTRCoreAVM->pstAVMediaBrowser->pvAVMediaParentItem;
+                            }
+                            if (!btrCore_AVMedia_DeallocateUnhandledBrowserMemory (pstlhBTRCoreAVM, apcBtDevAddr, &pstlhBTRCoreAVM->pstAVMediaBrowser)) {
+                                BTRCORELOG_ERROR ("Media Browser Error - Deallocate Unhandled Browser Memory Failed!\n");
+                            }
+                            pstlhBTRCoreAVM->pstAVMediaBrowser  = NULL;
+                        }
+
+                        if (pstlhBTRCoreAVM->pstAVMediaPlayList) {
+                            if (!btrCore_AVMedia_DeallocateUnhandledBrowserMemory (pstlhBTRCoreAVM, apcBtDevAddr, &pstlhBTRCoreAVM->pstAVMediaPlayList)) {
+                                BTRCORELOG_ERROR ("Media Browser Error - Deallocate Unhandled Browser Memory Failed!\n");
+                            }
+                            pstlhBTRCoreAVM->pstAVMediaPlayList = NULL;
+                        }
+
+                        pstlhBTRCoreAVM->ui32AVMediaBrowserItemCount  = 0;
+                        pstlhBTRCoreAVM->ui32AVMediaPlayListItemCount = 0;
+                    }
+
                     if (pstlhBTRCoreAVM->bAVMediaPlayerConnected && pstlhBTRCoreAVM->pMediaPollingThread) {
                         /* Exit playback position polling thread */
                         pstlhBTRCoreAVM->pstAVMediaPlayer.eAVMediaStatusUpdate = eBTRCoreAVMediaPlaybackEnded;
@@ -2160,7 +2983,7 @@ btrCore_AVMedia_MediaStatusUpdateCb (
 
                         /* Lets look for a better place inorder to be in sync with the bottom layer */
                         if (pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
-                            BTRCORELOG_INFO ("Freeing 0x%p:%s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath);
+                            BTRCORELOG_INFO ("Freeing %p:%s\n", pstlhBTRCoreAVM->pcAVMediaPlayerPath, pstlhBTRCoreAVM->pcAVMediaPlayerPath);
                             free (pstlhBTRCoreAVM->pcAVMediaPlayerPath);
                             pstlhBTRCoreAVM->pcAVMediaPlayerPath = NULL;
                         }
@@ -2193,8 +3016,11 @@ btrCore_AVMedia_MediaStatusUpdateCb (
 
             switch (apstBtMediaStUpdate->aunBtOpIfceProp.enBtMediaPlayerProp) {
             case enBTMedPlayerPropName:
+                mediaStatus.eAVMediaState = eBTRCoreAVMediaPlyrName;
                 strncpy(lstAVMediaPlayer->m_mediaPlayerName, apstBtMediaStUpdate->m_mediaPlayerName, BTRCORE_MAX_STR_LEN - 1);
+                strncpy(mediaStatus.m_mediaPlayerName, lstAVMediaPlayer->m_mediaPlayerName, BTRCORE_MAX_STR_LEN - 1);
                 BTRCORELOG_DEBUG ("AV Media Player Name : %s\n", lstAVMediaPlayer->m_mediaPlayerName);
+                postEvent = TRUE;
                 break;
 
             case enBTMedPlayerPropType:
@@ -2250,6 +3076,17 @@ btrCore_AVMedia_MediaStatusUpdateCb (
                     memset(&lstAVMediaPlayer->m_mediaTrackInfo, 0, sizeof(stBTRCoreAVMediaTrackInfo));
                     memcpy(&lstAVMediaPlayer->m_mediaTrackInfo, &apstBtMediaStUpdate->m_mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
                 } else {
+                    if (!apstBtMediaStUpdate->m_mediaTrackInfo.pcAlbum[0] && !apstBtMediaStUpdate->m_mediaTrackInfo.pcArtist[0] &&
+                        !apstBtMediaStUpdate->m_mediaTrackInfo.pcGenre[0] && !apstBtMediaStUpdate->m_mediaTrackInfo.ui32Duration) {
+                        strncpy (apstBtMediaStUpdate->m_mediaTrackInfo.pcTitle,
+                                 strncpy (apstBtMediaStUpdate->m_mediaTrackInfo.pcArtist,
+                                          strncpy (apstBtMediaStUpdate->m_mediaTrackInfo.pcAlbum,
+                                                   strncpy (apstBtMediaStUpdate->m_mediaTrackInfo.pcGenre, "Unknown", BTRCORE_MAX_STR_LEN -1),
+                                                   BTRCORE_MAX_STR_LEN -1),
+                                          BTRCORE_MAX_STR_LEN -1),
+                                 BTRCORE_MAX_STR_LEN -1);
+                    }
+
                     if (apstBtMediaStUpdate->m_mediaTrackInfo.ui32Duration) {
                         lstAVMediaPlayer->m_mediaTrackInfo.ui32Duration = apstBtMediaStUpdate->m_mediaTrackInfo.ui32Duration;
                     }
@@ -2270,60 +3107,75 @@ btrCore_AVMedia_MediaStatusUpdateCb (
                 break;
 
             case enBTMedPlayerPropEqualizer:
-                lstAVMediaPlayer->m_mediaPlayerEqualizer    = apstBtMediaStUpdate->m_mediaPlayerEqualizer;
-                BTRCORELOG_DEBUG ("AV Media Player Equalizer : %d\n", lstAVMediaPlayer->m_mediaPlayerEqualizer);
+                switch (apstBtMediaStUpdate->enMediaPlayerEqualizer) {
+                case enBTMedPlayerEqualizerOff:
+                    lstAVMediaPlayer->eAVMediaPlayerEqualizer = eBTRCoreAVMediaPlyrEqlzrStOff;
+                    break;
+                case enBTMedPlayerEqualizerOn:
+                    lstAVMediaPlayer->eAVMediaPlayerEqualizer = eBTRCoreAVMediaPlyrEqlzrStOn;
+                    break;
+                default:
+                    lstAVMediaPlayer->eAVMediaPlayerEqualizer = enBTRCoreAVMediaCtrlUnknown;
+                }
+                mediaStatus.eAVMediaState = lstAVMediaPlayer->eAVMediaPlayerEqualizer;
+                BTRCORELOG_DEBUG ("AV Media Player Equalizer : %d\n", lstAVMediaPlayer->eAVMediaPlayerEqualizer);
+                postEvent = TRUE;
                 break;
 
             case enBTMedPlayerPropShuffle:
                 switch (apstBtMediaStUpdate->enMediaPlayerShuffle) {
                 case enBTMedPlayerShuffleOff:
-                    lstAVMediaPlayer->eAVMediaPlayerShuffle = enBTRCoreAVMediaCtrlShflOff;
+                    lstAVMediaPlayer->eAVMediaPlayerShuffle = eBTRCoreAVMediaPlyrShflStOff;
                     break;
                 case enBTMedPlayerShuffleAllTracks:
-                    lstAVMediaPlayer->eAVMediaPlayerShuffle = enBTRCoreAVMediaCtrlShflAllTracks;
+                    lstAVMediaPlayer->eAVMediaPlayerShuffle = eBTRCoreAVMediaPlyrShflStAllTracks;
                     break;
                 case enBTMedPlayerShuffleGroup:
-                    lstAVMediaPlayer->eAVMediaPlayerShuffle = enBTRCoreAVMediaCtrlShflGroup;
+                    lstAVMediaPlayer->eAVMediaPlayerShuffle = eBTRCoreAVMediaPlyrShflStGroup;
                     break;
                 default:
-                    lstAVMediaPlayer->eAVMediaPlayerShuffle = enBTRCoreAVMediaCtrlUnknown;
+                    lstAVMediaPlayer->eAVMediaPlayerShuffle = eBTRCoreAVMediaStUnknown;
                 }
+                mediaStatus.eAVMediaState = lstAVMediaPlayer->eAVMediaPlayerShuffle;
                 BTRCORELOG_DEBUG ("AV Media Player Shuffle : %d\n", lstAVMediaPlayer->eAVMediaPlayerShuffle);
+                postEvent = TRUE;
                 break;
 
             case enBTMedPlayerPropRepeat:
                 switch (apstBtMediaStUpdate->enMediaPlayerRepeat) {
                 case enBTMedPlayerRpOff:
-                    lstAVMediaPlayer->eAVMediaPlayerRepeat = enBTRCoreAVMediaCtrlRptOff;
+                    lstAVMediaPlayer->eAVMediaPlayerRepeat = eBTRCoreAVMediaPlyrRptStOff;
                     break;
                 case enBTMedPlayerRpSingleTrack:
-                    lstAVMediaPlayer->eAVMediaPlayerRepeat = enBTRCoreAVMediaCtrlRptSingleTrack;
+                    lstAVMediaPlayer->eAVMediaPlayerRepeat = eBTRCoreAVMediaPlyrRptStSingleTrack;
                     break;
                 case enBTMedPlayerRpAllTracks:
-                    lstAVMediaPlayer->eAVMediaPlayerRepeat = enBTRCoreAVMediaCtrlRptAllTracks;
+                    lstAVMediaPlayer->eAVMediaPlayerRepeat = eBTRCoreAVMediaPlyrRptStAllTracks;
                     break;
                 case enBTMedPlayerRpGroup:
-                    lstAVMediaPlayer->eAVMediaPlayerRepeat = enBTRCoreAVMediaCtrlRptGroup;
+                    lstAVMediaPlayer->eAVMediaPlayerRepeat = eBTRCoreAVMediaPlyrRptStGroup;
                     break;
                 default:
-                    lstAVMediaPlayer->eAVMediaPlayerRepeat = enBTRCoreAVMediaCtrlUnknown;
+                    lstAVMediaPlayer->eAVMediaPlayerRepeat = eBTRCoreAVMediaStUnknown;
                 }
+                mediaStatus.eAVMediaState = lstAVMediaPlayer->eAVMediaPlayerRepeat;
                 BTRCORELOG_DEBUG ("AV Media Player Repeat : %d\n", lstAVMediaPlayer->eAVMediaPlayerRepeat);
+                postEvent = TRUE;
                 break;
 
             case enBTMedPlayerPropScan:
                 switch (apstBtMediaStUpdate->enMediaPlayerScan) {
                 case enBTMedPlayerScanOff:
-                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMPScanOff;
+                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMediaPlyrScanStOff;
                     break;
                 case enBTMedPlayerScanAllTracks:
-                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMPScanAllTracks;
+                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMediaPlyrScanStAllTracks;
                     break;
                 case enBTMedPlayerScanGroup:
-                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMPScanGroup;
+                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMediaPlyrScanStGroup;
                     break;
                 default:
-                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMPScanUnknown;
+                    lstAVMediaPlayer->eAVMediaPlayerScan = eBTRCoreAVMediaStUnknown;
                 }
                 BTRCORELOG_DEBUG ("AV Media Player Scan : %d\n", lstAVMediaPlayer->eAVMediaPlayerScan);
                 break;
@@ -2360,15 +3212,34 @@ btrCore_AVMedia_MediaStatusUpdateCb (
                 break;
 
             case enBTMedPlayerPropBrowsable:
-                lstAVMediaPlayer->m_mediaPlayerBrowsable    = apstBtMediaStUpdate->m_mediaPlayerBrowsable;
+                lstAVMediaPlayer->m_mediaPlayerBrowsable  = apstBtMediaStUpdate->m_mediaPlayerBrowsable;
                 BTRCORELOG_DEBUG ("AV Media Player Browsable : %d\n", lstAVMediaPlayer->m_mediaPlayerBrowsable);
+                postEvent = TRUE;
                 break;
 
             case enBTMedPlayerPropSearchable:
-                lstAVMediaPlayer->m_mediaPlayerSearchable   = apstBtMediaStUpdate->m_mediaPlayerSearchable;
+                lstAVMediaPlayer->m_mediaPlayerSearchable = apstBtMediaStUpdate->m_mediaPlayerSearchable;
                 BTRCORELOG_DEBUG ("AV Media Player Searchable : %d\n", lstAVMediaPlayer->m_mediaPlayerSearchable);
+                postEvent = TRUE;
                 break;
 
+            case enBTMedPlayerPropPlaylist:
+                mediaStatus.eAVMediaState = eBTRCoreAVMediaElementAdded;
+
+                if (pstlhBTRCoreAVM->pstAVMediaPlayList) {
+                    strncpy (mediaStatus.m_mediaElementInfo.m_mediaElementName, pstlhBTRCoreAVM->pstAVMediaPlayList->pcAVMediaItemName, BTRCORE_MAX_STR_LEN -1);
+                    mediaStatus.m_mediaElementInfo.ui32AVMediaElementId = pstlhBTRCoreAVM->pstAVMediaPlayList->ui32AVMediaItemId;
+                    mediaStatus.m_mediaElementInfo.bIsPlayable       = 0;
+                    BTRCORELOG_DEBUG ("AV Media Player PlayList %p:%s [ID: %llu]\n", pstlhBTRCoreAVM->pstAVMediaPlayList
+                                                                                   , pstlhBTRCoreAVM->pstAVMediaPlayList->pcAVMediaItemName
+                                                                                   , pstlhBTRCoreAVM->pstAVMediaPlayList->ui32AVMediaItemId);
+                    //postEvent = TRUE;
+                    /* Do post PlayList Addition works here */
+                }
+                else {
+                    BTRCORELOG_WARN ("AV Media Player PlayList %p Exist\n", pstlhBTRCoreAVM->pstAVMediaPlayList);
+                }
+                break;
             default:
                 break;
             }
@@ -2376,8 +3247,68 @@ btrCore_AVMedia_MediaStatusUpdateCb (
         break;
 
     case enBTMediaItem:
+        /*
+        switch(apstBtMediaStUpdate->aunBtOpIfceProp.enBtMediaItemProp) {
+        case Playable
+        case Metadata
+        } 
+        */
         break;
     case enBTMediaFolder:
+        switch(apstBtMediaStUpdate->aunBtOpIfceProp.enBtMediaFolderProp) {
+        case enBTMedFolderPropName:
+        {
+            unsigned char            bChanged  = 0;
+            stBTRCoreAVMediaItem*    ptr       = NULL;
+            stBTRCoreAVMediaPlayer*  ptrPlayer = &pstlhBTRCoreAVM->pstAVMediaPlayer;
+            BTRCORELOG_DEBUG ("AV Media Folder Name : %s\n", apstBtMediaStUpdate->m_mediaFolderName);
+
+            if (strcmp(apstBtMediaStUpdate->m_mediaFolderName, "NowPlaying") && (ptr = pstlhBTRCoreAVM->pstAVMediaBrowser)) {
+                unsigned int  ui32Index = 0;
+                char*         staStr    = apstBtMediaStUpdate->m_mediaFolderName;
+
+                if (ptr->pvAVMediaParentItem) {
+                    char* bsrStr = ((stBTRCoreAVMediaItem*)ptr->pvAVMediaParentItem)->pcAVMediaItemName;
+
+                    if (!strncmp(staStr, bsrStr, (strlen(staStr) > strlen(bsrStr))? strlen(staStr) : strlen(bsrStr))) {
+                        ptrPlayer->m_mediaBrowserItem = pstlhBTRCoreAVM->pstAVMediaBrowser = ptr->pvAVMediaParentItem;
+                        bChanged = 1;
+                    }
+                }
+
+                ptr = pstlhBTRCoreAVM->pstAVMediaBrowser;
+
+                while (!bChanged && ui32Index < ptr->ui32AVMediaNumberOfItems) {
+                    char* bsrStr = ptr->pstAVMediaSubItems[ui32Index]->pcAVMediaItemName;
+
+                    if (!strncmp(staStr, bsrStr, (strlen(staStr) > strlen(bsrStr))? strlen(staStr) : strlen(bsrStr))) {
+                        ptrPlayer->m_mediaBrowserItem = pstlhBTRCoreAVM->pstAVMediaBrowser = ptr->pstAVMediaSubItems[ui32Index];
+                        bChanged = 1;
+                    }
+                    ui32Index++;
+                }
+            }
+            else if (!strcmp(apstBtMediaStUpdate->m_mediaFolderName, "NowPlaying") && pstlhBTRCoreAVM->pstAVMediaPlayList) {
+                ptrPlayer->m_mediaBrowserItem = pstlhBTRCoreAVM->pstAVMediaPlayList;
+                bChanged = 1;
+            }
+            else {
+                BTRCORELOG_ERROR ("No Filesystem is present for %s !\n", apstBtMediaStUpdate->m_mediaFolderName);
+            }
+
+            if (bChanged) {
+                BTRCORELOG_DEBUG ("Browsing Location %p:%s [ID: %llu]\n", ptrPlayer->m_mediaBrowserItem
+                                                                        , ptrPlayer->m_mediaBrowserItem->pcAVMediaItemName
+                                                                        , ptrPlayer->m_mediaBrowserItem->ui32AVMediaItemId);
+            }
+            break;
+        }
+        case enBTMedFolderPropNumberOfItems:
+            BTRCORELOG_DEBUG ("AV Media Folder NumberOfItems : %u\n", apstBtMediaStUpdate->m_mediaFolderNumberOfItems);
+            break;
+        default:
+            break;
+        }
         break;
     default:
         break;
@@ -2391,6 +3322,156 @@ btrCore_AVMedia_MediaStatusUpdateCb (
 
     /* post callback */
     if (postEvent && pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate) {
+        if (pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate(&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData) != enBTRCoreSuccess) {
+            BTRCORELOG_ERROR ("fpcBBTRCoreAVMediaStatusUpdate - Failure !!!\n");
+            i32BtRet = -1;
+        }
+    }
+
+    return i32BtRet;
+}
+
+static int
+btrCore_AVMedia_MediaBrowserUpdateCb (
+    stBTMediaBrowserUpdate* apstBtMediaBsrUpdate,
+    unsigned char           ucItemScope,
+    const char*             apcBtDevAddr,
+    void*                   apUserData
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    stBTRCoreAVMediaItem*   ptr             = NULL;
+    stBTRCoreAVMediaItem**  ptrRoot         = NULL;
+    int                     i32BtRet        = -1;
+    BOOLEAN                 postEvent       = FALSE;
+
+    stBTRCoreAVMediaStatusUpdate    mediaStatus;
+    stBTRCoreAVMediaElementInfo*    mediaElement;
+
+    if (!apstBtMediaBsrUpdate || !apUserData) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg!!!\n");
+       return i32BtRet;
+    }
+    BTRCORELOG_DEBUG ("AV Media Browser Cb\n");
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)apUserData;
+
+    if (!pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaPlayerBrowsable &&
+        apstBtMediaBsrUpdate->ui32BTMediaItemId != BTR_MEDIA_PLAYLIST_ID &&
+        apstBtMediaBsrUpdate->ui32BTMediaItemId) {
+        return 0;
+    }
+
+    mediaElement    = &mediaStatus.m_mediaElementInfo;
+    ptr = *(ptrRoot = (apstBtMediaBsrUpdate->ui32BTMediaItemId & BTR_MEDIA_PLAYLIST_ID)? &pstlhBTRCoreAVM->pstAVMediaPlayList : &pstlhBTRCoreAVM->pstAVMediaBrowser);
+
+    if (ucItemScope) {
+
+        stBTRCoreAVMediaItem* lpstBroswer = NULL;
+
+        if (apstBtMediaBsrUpdate->eMediaItemType == enBTMediaItemTypFolder ||
+            apstBtMediaBsrUpdate->eMediaItemType == enBTMediaItemTypAudio) {
+
+            if (!(i32BtRet = btrCore_AVMedia_AllocateBrowserMemory (pstlhBTRCoreAVM, ptr, &lpstBroswer))) {
+
+                lpstBroswer->pvAVMediaParentItem        = ptr;
+                lpstBroswer->ui32AVMediaNumberOfItems   = 0;
+                lpstBroswer->ui32AVMediaItemId          = apstBtMediaBsrUpdate->ui32BTMediaItemId;
+                strncpy(lpstBroswer->pcAVMediaItemPath, apstBtMediaBsrUpdate->pcMediaItemPath, BTRCORE_MAX_STR_LEN -1);
+                strncpy(lpstBroswer->pcAVMediaItemName, apstBtMediaBsrUpdate->pcMediaItemName, BTRCORE_MAX_STR_LEN -1);
+
+                if ((lpstBroswer->bIsMediaItemPlayable = (apstBtMediaBsrUpdate->eMediaItemType == enBTMediaItemTypAudio))) {
+                    memcpy (&lpstBroswer->mediaTrackInfo, &apstBtMediaBsrUpdate->mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo)),
+                    (lpstBroswer->ui32AVMediaItemId & BTR_MEDIA_PLAYLIST_ID)? pstlhBTRCoreAVM->ui32AVMediaPlayListItemCount++ : pstlhBTRCoreAVM->ui32AVMediaBrowserItemCount++;
+                }
+                else {
+                    if (!ptr) {
+                        if (!(*ptrRoot = lpstBroswer)->ui32AVMediaItemId) {
+                            pstlhBTRCoreAVM->pstAVMediaPlayer.m_mediaBrowserItem = lpstBroswer;
+                        }
+                    }
+                }
+
+                if (postEvent) {
+                    mediaStatus.eAVMediaState          = eBTRCoreAVMediaElementAdded;
+                    mediaElement->eAVMElementType      = btrCore_AVMedia_MapFolderTypeToElementType (apstBtMediaBsrUpdate->eMediaFolderType);
+                    mediaElement->ui32AVMediaElementId = lpstBroswer->ui32AVMediaItemId = apstBtMediaBsrUpdate->ui32BTMediaItemId;
+                    if ((mediaElement->bIsPlayable = lpstBroswer->bIsMediaItemPlayable)) {
+                        memcpy (&mediaElement->m_mediaTrackInfo, &lpstBroswer->mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+                    }
+                    strncpy(mediaElement->m_mediaElementName, lpstBroswer->pcAVMediaItemName, BTRCORE_MAX_STR_LEN -1);
+                }
+                BTRCORELOG_DEBUG ("Storing Media Item %p:%s [ID: %llu]\n", lpstBroswer, lpstBroswer->pcAVMediaItemName, lpstBroswer->ui32AVMediaItemId);
+            }
+            else {
+                BTRCORELOG_ERROR ("Media Browser Error - Allocate Browser Memory Failed!\n");
+            }
+        }
+        else if (apstBtMediaBsrUpdate->eMediaItemType == enBTMediaItemTypVideo) {
+            BTRCORELOG_DEBUG ("enBTMediaItemTypVideo received\n");
+            i32BtRet = 0;
+        }
+        else {
+            BTRCORELOG_ERROR ("Unknown MediaItem type received : %d !\n", apstBtMediaBsrUpdate->eMediaItemType);
+        }
+    }
+    else { /* To implement subFolder/AudioTrack search based on unique mediaItemID for better performance */
+        stBTRCoreAVMediaItem*   pstMediaItemRoot = 0;
+
+        if (!(pstMediaItemRoot = ptr)) {
+            BTRCORELOG_ERROR ("Media Browser Error - No parent Filesystem !\n");
+            return i32BtRet;
+        }
+
+        while (pstMediaItemRoot->pvAVMediaParentItem) {
+            pstMediaItemRoot = pstMediaItemRoot->pvAVMediaParentItem;
+        }
+
+        if (btrCore_AVMedia_FindMediaItem (pstMediaItemRoot, apstBtMediaBsrUpdate->ui32BTMediaItemId, &ptr)) {
+            BTRCORELOG_ERROR ("Media Browser Error - Couldn't Find MediaItem %llu\n", apstBtMediaBsrUpdate->ui32BTMediaItemId);
+        }
+        else
+        if (ptr) { /* ptr will be updated if the above Find menthod is successfull */
+
+            if (ptr->ui32AVMediaNumberOfItems || (ptr->pstAVMediaSubItems && !ptr->bIsMediaItemPlayable)) {
+                BTRCORELOG_WARN ("!!!Media Browser Error - contains MediaSubItems\n");
+                BTRCORELOG_WARN ("!!!No.OfItems : %u | SubItems : %p\n", ptr->ui32AVMediaNumberOfItems, ptr->pstAVMediaSubItems);
+                mediaElement->ui32AVMediaElementId = (*ptrRoot)->ui32AVMediaItemId;
+
+                if (!(i32BtRet = btrCore_AVMedia_DeallocateUnhandledBrowserMemory (pstlhBTRCoreAVM, apcBtDevAddr, &ptr))) {
+                    if (mediaElement->ui32AVMediaElementId == apstBtMediaBsrUpdate->ui32BTMediaItemId) {
+                        *ptrRoot = ptr;
+                    }
+                }
+                else {
+                    BTRCORELOG_ERROR ("Media Browser Error - Deallocate Unhandled Browser Memory Failed!\n");
+                }
+                postEvent = FALSE;
+            }
+            else {
+                BTRCORELOG_DEBUG ("Freeing Media Item %p:%s [ID: %llu]\n", ptr, ptr->pcAVMediaItemName, ptr->ui32AVMediaItemId);
+                mediaElement->ui32AVMediaElementId = (*ptrRoot)->ui32AVMediaItemId;
+
+                if (ptr->bIsMediaItemPlayable) {
+                    (apstBtMediaBsrUpdate->ui32BTMediaItemId & BTR_MEDIA_PLAYLIST_ID)? pstlhBTRCoreAVM->ui32AVMediaPlayListItemCount-- : pstlhBTRCoreAVM->ui32AVMediaBrowserItemCount--;
+                }
+
+                if (!(i32BtRet = btrCore_AVMedia_DeallocateBrowserMemory(pstlhBTRCoreAVM, &ptr))) {
+                    if (mediaElement->ui32AVMediaElementId == apstBtMediaBsrUpdate->ui32BTMediaItemId) {
+                        *ptrRoot = ptr;      /* Moving to root will be good for the next connection -  Inform through Event? */
+                    }
+
+                    mediaStatus.eAVMediaState = eBTRCoreAVMediaElementRemoved;
+                    mediaElement->ui32AVMediaElementId = apstBtMediaBsrUpdate->ui32BTMediaItemId;
+                }
+                else {
+                    BTRCORELOG_ERROR ("Media Browser Error - Deallocate Browser Memory Failed!\n");
+                }
+            }
+        }
+    }
+
+    /* post callback */
+    if (postEvent && !i32BtRet && pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate) {
         if (pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate(&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData) != enBTRCoreSuccess) {
             BTRCORELOG_ERROR ("fpcBBTRCoreAVMediaStatusUpdate - Failure !!!\n");
             i32BtRet = -1;

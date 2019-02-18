@@ -123,7 +123,7 @@
  */
 #define BT_MEDIA_CODEC_PCM      0x00
 
-
+typedef unsigned long long int tBTMediaItemId;
 /* Enum Types */
 /**
  * @brief Bluetooth device types.
@@ -310,6 +310,7 @@ typedef enum _enBTMediaPlayerProp {
     enBTMedPlayerPropTrack,
     enBTMedPlayerPropBrowsable,
     enBTMedPlayerPropSearchable,
+    enBTMedPlayerPropPlaylist,
     enBTMedPlayerPropUnknown
 } enBTMediaPlayerProp;
 
@@ -374,6 +375,11 @@ typedef enum _enBTMediaTransportState {
     enBTMedTransportStActive          /* Streaming and Acquired                              */
 } enBTMediaTransportState;
 
+/**
+ * @brief Bluetooth Media Player Status.
+ *
+ * This enumeration lists the status of the media player.
+ */
 typedef enum _enBTMediaPlayerStatus {
     enBTMedPlayerStPlaying,
     enBTMedPlayerStStopped,
@@ -383,18 +389,43 @@ typedef enum _enBTMediaPlayerStatus {
     enBTMedPlayerStError
 } enBTMediaPlayerStatus;
 
+/**
+ * @brief Bluetooth Media Players' Equalizer State.
+ *
+ * This enumeration lists the equalizer states of the media player.
+ */
+typedef enum _enBTMediaPlayerEqualizer {
+    enBTMedPlayerEqualizerOff,
+    enBTMedPlayerEqualizerOn
+} enBTMediaPlayerEqualizer;
+
+/**
+ * @brief Bluetooth Media Players' Shuffle State.
+ *
+ * This enumeration lists the shuffle states of the media player.
+ */
 typedef enum _enBTMediaPlayerShuffle {
     enBTMedPlayerShuffleOff,
     enBTMedPlayerShuffleAllTracks,
     enBTMedPlayerShuffleGroup
 } enBTMediaPlayerShuffle;
 
+/**
+ * @brief Bluetooth Media Players' Scan State.
+ *
+ * This enumeration lists the scan states of the media player.
+ */
 typedef enum _enBTMediaPlayerScan {
     enBTMedPlayerScanOff,
     enBTMedPlayerScanAllTracks,
     enBTMedPlayerScanGroup
 } enBTMediaPlayerScan;
 
+/**
+ * @brief Bluetooth Media Players' Repeat States.
+ *
+ * This enumeration lists the repeat states of the media player.
+ */
 typedef enum _enBTMediaPlayerRepeat {
     enBTMedPlayerRpOff,
     enBTMedPlayerRpSingleTrack,
@@ -402,6 +433,11 @@ typedef enum _enBTMediaPlayerRepeat {
     enBTMedPlayerRpGroup
 } enBTMediaPlayerRepeat;
 
+/**
+ * @brief Bluetooth Media Players' Type.
+ *
+ * This enumeration lists the type of the media player.
+ */
 typedef enum _enBTMediaPlayerType {
     enBTMedPlayerTypAudio,
     enBTMedPlayerTypVideo,
@@ -409,10 +445,27 @@ typedef enum _enBTMediaPlayerType {
     enBTMedPlayerTypVideoBroadcasting
 } enBTMediaPlayerType;
 
+/**
+ * @brief Bluetooth Media Players' Subtype.
+ *
+ * This enumeration lists the subtype of the media player.
+ */
 typedef enum _enBTMediaPlayerSubtype {
     enBTMedPlayerSbTypAudioBook,
     enBTMedPlayerSbTypPodcast
 } enBTMediaPlayerSubtype;
+
+/**
+ * @brief Bluetooth Media Items' Type.
+ *
+ * This enumeration lists the type of media item.
+ */
+typedef enum _enBTMediaItemType {
+    enBTMediaItemTypUnknown,
+    enBTMediaItemTypAudio,
+    enBTMediaItemTypVideo,
+    enBTMediaItemTypFolder
+} enBTMediaItemType;
 #if 0
 /**
  * @brief Bluetooth Media Status updates.
@@ -454,9 +507,28 @@ typedef enum _enBTMediaControlCmd {
     enBTMediaCtrlFastForward,
     enBTMediaCtrlRewind,
     enBTMediaCtrlVolumeUp,
-    enBTMediaCtrlVolumeDown
+    enBTMediaCtrlVolumeDown,
+    enBTMediaCtrlEqlzrOff,
+    enBTMediaCtrlEqlzrOn,
+    enBTMediaCtrlShflOff,
+    enBTMediaCtrlShflAllTracks,
+    enBTMediaCtrlShflGroup,
+    enBTMediaCtrlRptOff,
+    enBTMediaCtrlRptSingleTrack,
+    enBTMediaCtrlRptAllTracks,
+    enBTMediaCtrlRptGroup,
+    enBTMediaCtrlUnknown
 } enBTMediaControlCmd;
 
+typedef enum _enBTMediaFolderType {
+    enBTMediaFldTypAlbum,
+    enBTMediaFldTypArtist,
+    enBTMediaFldTypGenre,
+    enBTMediaFldTypCompilation,
+    //enBTMediaFldTypMixed,
+    enBTMediaFldTypPlayList,
+    enBTMediaFldTypTrackList
+} enBTMediaFolderType;
 
 /* Union Types */
 typedef union _unBTOpIfceProp {
@@ -541,8 +613,8 @@ typedef struct _stBTMediaTrackInfo {
     unsigned int    ui32NumberOfTracks;
 } stBTMediaTrackInfo;
 
+
 typedef struct _stBTMediaStatusUpdate {
-    //enBTMediaStatusUpdate  aeBtMediaStatus;
     enBTOpIfceType          aenBtOpIfceType;
     unBTOpIfceProp          aunBtOpIfceProp;
 
@@ -551,11 +623,11 @@ typedef struct _stBTMediaStatusUpdate {
       unsigned short            m_mediaTransportVolume;
       enBTMediaPlayerType       enMediaPlayerType;
       enBTMediaPlayerSubtype    enMediaPlayerSubtype;
+      enBTMediaPlayerEqualizer  enMediaPlayerEqualizer;
       enBTMediaPlayerShuffle    enMediaPlayerShuffle;
       enBTMediaPlayerScan       enMediaPlayerScan;
       enBTMediaPlayerRepeat     enMediaPlayerRepeat;
       enBTMediaPlayerStatus     enMediaPlayerStatus;
-      unsigned char             m_mediaPlayerEqualizer;
       unsigned char             m_mediaPlayerBrowsable;
       unsigned char             m_mediaPlayerSearchable;
       unsigned char             m_mediaPlayerConnected;
@@ -563,11 +635,20 @@ typedef struct _stBTMediaStatusUpdate {
       stBTMediaTrackInfo        m_mediaTrackInfo;
       char                      m_mediaPlayerPath[BT_MAX_STR_LEN];
       char                      m_mediaPlayerName[BT_MAX_STR_LEN];
-      //MediaBrowser
-      //Playlist
+      char                      m_mediaFolderName[BT_MAX_STR_LEN];
+      unsigned int              m_mediaFolderNumberOfItems;
     };
 } stBTMediaStatusUpdate;
 
+typedef struct _stBTMediaBrowserUpdate {
+    char                    pcMediaItemName[BT_MAX_STR_LEN];
+    char                    pcMediaItemPath[BT_MAX_STR_LEN];
+    enBTMediaItemType       eMediaItemType;
+    enBTMediaFolderType     eMediaFolderType;
+    tBTMediaItemId          ui32BTMediaItemId;
+    unsigned int            ui32NumberOfItems;
+    stBTMediaTrackInfo      mediaTrackInfo;
+} stBTMediaBrowserUpdate;
 
 
 /* Fptr Callbacks types */
@@ -580,7 +661,7 @@ typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath
 typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, unsigned char ucIsReqConfirmation, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
 typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* apcBtDevAddr, enBTDeviceState aenBTDeviceState, void* apUserData);
-
+typedef int (*fPtr_BtrCore_BTMediaBrowserPathCb)(stBTMediaBrowserUpdate* apstBtMediaBsrUpdate, unsigned char ucItemScope, const char* apcBtDevAddr, void* apUserData);
 /* @} */ // End of group BLUETOOTH_TYPES
 
 /**
@@ -1049,6 +1130,19 @@ int   BtrCore_BTGetTransportState (void* apBtConn, const char* apBtDataPath, voi
 int   BtrCore_BTGetMediaPlayerProperty (void* apBtConn, const char* apBtObjectPath, const char* mediaProperty, void* mediaPropertyValue);
 
 /**
+ * @brief  This API is used to get the number of items in the current media folder.
+ *
+ * @param[in]  apBtConn            The Dbus connection handle as returned by BtrCore_BTInitGetConnection. 
+ *                                 NULL is valid for this API.
+ * @param[in]  apBtMediaPlayerPath Media Player path.
+ * @param[out] aui32NumberOfItems  number of items.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTGetMediaFolderNumberOfItems (void* apBtConn, const char* apBtMediaPlayerPath, unsigned int* aui32NumberOfItems);
+
+/**
  * @brief  This API is used to set the media property of the BT device .
  *
  * @param[in]  apBtConn          The Dbus connection handle as returned by BtrCore_BTInitGetConnection. 
@@ -1074,6 +1168,58 @@ int   BtrCore_BTSetMediaProperty (void* apBtConn, const char* apBtAdapterPath, c
  * @retval Returns 0 on success, appropriate error code otherwise.
  */
 int   BtrCore_BTGetTrackInformation (void* apBtConn, const char* apBtmediaPlayerObjectPath, stBTMediaTrackInfo* lpstBTMediaTrackInfo);
+
+/**
+ * @brief  This API is used to change from the current media folder path to another path.
+ *
+ * @param[in]  apBtConn                   The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                        NULL is valid for this API.
+ * @param[in]  apBtmediaPlayerObjectPath  Object path of the BT media player.
+ * @param[in]  apBtdestMediaFolderPath    Destination Folder path.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */ 
+int   BtrCore_BTChangeMediaFolder (void* apstBtIfceHdl, const char* apBtmediaPlayerObjectPath, const char* apBtdestMediaFolderPath);
+
+/**
+ * @brief  This API is used to list the media items in the current folder.
+ *
+ * @param[in]  apBtConn                   The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                        NULL is valid for this API.
+ * @param[in]  apBtmediaPlayerObjectPath  Object path of the BT media player.
+ * @param[in]  apBtMediaFolderStartIndex  Starting index of the list.
+ * @param[in]  apBtMediaFolderEndIndex    Ending indx of the list.
+ * @param[in]  apBtMediaFilter            Filter to be applied.
+ * @param[in]  apBtMediaFilterSize        Filter size.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTSelectMediaFolderItems (void* apstBtIfceHdl, const char* apBtMediaPlayerObjectPath, unsigned int apBtMediaFolderStartIndex, unsigned int apBtMediaFolderEndIndex, const char* apBtMediaFilter, int apBtMediaFilterSize);
+
+/**
+ * @brief  This API is used to Play the mentioned media track.
+ *
+ * @param[in]  apBtConn                   The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                        NULL is valid for this API.
+ * @param[in]  apBtmediaItemObjectPath    Object path of the media Track.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTPlayMediaTrackItem (void* apstBtIfceHdl, const char* apBtMediaItemObjectPath);
+
+/**
+ * @brief  This API is used to get the mediaItemID of the node which is the immediate common parent of the src and dest nodes.
+ *
+ * @param[in]  aBTcurrMediaItemId         mediaItemId of the current browsing folder.
+ * @param[in]  aBTdestMediaItemId         mediaItemId of the destination browsing folder, we need to switch.
+ *
+ * @return Returns the result of the operation.
+ * @return Returns the common parents' mediaItemId.
+ */
+tBTMediaItemId BtrCore_BTGetCommonParentMediaItemId (tBTMediaItemId aBTcurrMediaItemId, tBTMediaItemId aBTdestMediaItemId);
 
 /******************************************
 *    LE Functions
@@ -1123,7 +1269,8 @@ int   BtrCore_BTRegisterNegotiateMediaCb (void* apBtConn, const char* apBtAdapte
 int   BtrCore_BTRegisterTransportPathMediaCb (void* apBtConn, const char* apBtAdapter,
                                                 fPtr_BtrCore_BTTransportPathMediaCb afpcBTransportPathMedia, void* apUserData);
 int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapter,
-                                                fPtr_BtrCore_BTMediaPlayerPathCb afpcBTMediaPlayerPath, void* apUserData); 
+                                                fPtr_BtrCore_BTMediaPlayerPathCb afpcBTMediaPlayerPath, void* apUserData);
+int   BtrCore_BTRegisterMediaBrowserUpdateCb (void* apBtConn, fPtr_BtrCore_BTMediaBrowserPathCb afpcBTMediaBrowserPath, void* apUserData);
 int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
 
 #endif // __BTR_CORE_BT_IFCE_H__

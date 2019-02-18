@@ -61,10 +61,12 @@ extern "C" {
 #define BTRCORE_MAX_NUM_BT_ADAPTERS 4   // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_NUM_BT_DEVICES  64  // TODO:Better to make this configurable at runtime
 #define BTRCORE_MAX_DEVICE_PROFILE  32
+#define BTRCORE_MAX_MEDIA_ELEMENTS  64
 
 #define BTRCORE_STRINGS_MAX_LEN     BTRCORE_STR_LEN
 #define BTRCORE_UUID_LEN            64
 
+typedef unsigned long long int tBTRCoreMediaElementId;
 
 typedef enum _enBTRCoreOpType {
     enBTRCoreOpTypeAdapter,
@@ -155,7 +157,20 @@ typedef enum _enBTRCoreMediaCtrl {
     enBTRCoreMediaCtrlFastForward,
     enBTRCoreMediaCtrlRewind,
     enBTRCoreMediaCtrlVolumeUp,
-    enBTRCoreMediaCtrlVolumeDown
+    enBTRCoreMediaCtrlVolumeDown,
+    enBTRCoreMediaCtrlEqlzrOff,
+    enBTRCoreMediaCtrlEqlzrOn,
+    enBTRCoreMediaCtrlShflOff,
+    enBTRCoreMediaCtrlShflAllTracks,
+    enBTRCoreMediaCtrlShflGroup,
+    enBTRCoreMediaCtrlRptOff,
+    enBTRCoreMediaCtrlRptSingleTrack,
+    enBTRCoreMediaCtrlRptAllTracks,
+    enBTRCoreMediaCtrlRptGroup,
+    enBTRCoreMediaCtrlScanOff,
+    enBTRCoreMediaCtrlScanAllTracks,
+    enBTRCoreMediaCtrlScanGroup,
+    enBTRCoreMediaCtrlUnknown
 } enBTRCoreMediaCtrl;
 
 typedef enum _eBTRCoreMediaStatusUpdate {
@@ -166,9 +181,34 @@ typedef enum _eBTRCoreMediaStatusUpdate {
     eBTRCoreMediaTrkStChanged,
     eBTRCoreMediaTrkPosition,
     eBTRCoreMediaPlaybackEnded,
-    eBTRCoreMediaPlaylistUpdate,
-    eBTRCoreMediaBrowserUpdate
+    eBTRCoreMediaPlyrName,
+    eBTRCoreMediaPlyrVolume,
+    eBTRCoreMediaPlyrEqlzrStOff,
+    eBTRCoreMediaPlyrEqlzrStOn,
+    eBTRCoreMediaPlyrShflStOff,
+    eBTRCoreMediaPlyrShflStAllTracks,
+    eBTRCoreMediaPlyrShflStGroup,
+    eBTRCoreMediaPlyrRptStOff,
+    eBTRCoreMediaPlyrRptStSingleTrack,
+    eBTRCoreMediaPlyrRptStAllTracks,
+    eBTRCoreMediaPlyrRptStGroup,
+    eBTRCoreMediaPlyrScanStOff,
+    eBTRCoreMediaPlyrScanStAllTracks,
+    eBTRCoreMediaPlyrScanStGroup,
+    eBTRCoreMediaElementInScope,
+    eBTRCoreMediaElementOofScope,
+    eBTRCoreMediaStUnknown
 } eBTRCoreMediaStatusUpdate;
+
+typedef enum _eBTRCoreMedElementType {
+    enBTRCoreMedETypeUnknown,
+    enBTRCoreMedETypeAlbum,
+    enBTRCoreMedETypeArtist,
+    enBTRCoreMedETypeGenre,
+    enBTRCoreMedETypeCompilation,
+    enBTRCoreMedETypePlayList,
+    enBTRCoreMedETypeTrackList
+} eBTRCoreMedElementType;
 
 typedef enum _enBTRCoreLeOp {
     enBTRCoreLeOpGReady,
@@ -341,12 +381,28 @@ typedef struct _stBTRCoreMediaPositionInfo {
     unsigned int    ui32Position;
 } stBTRCoreMediaPositionInfo;
 
+typedef struct _stBTRCoreMediaElementInfo {
+    eBTRCoreMedElementType       eAVMedElementType;
+    tBTRCoreMediaElementId       ui32MediaElementId;
+    unsigned char                bIsPlayable;
+    char                         m_mediaElementName[BTRCORE_MAX_STR_LEN];
+    stBTRCoreMediaTrackInfo      m_mediaTrackInfo;
+} stBTRCoreMediaElementInfo;
+
+typedef struct _stBTRCoreMediaElementInfoList {
+    unsigned short               m_numOfElements;
+    stBTRCoreMediaElementInfo    m_mediaElementInfo[BTRCORE_MAX_MEDIA_ELEMENTS];
+} stBTRCoreMediaElementInfoList;
+
 typedef struct _stBTRCoreMediaStatusUpdate {
    eBTRCoreMediaStatusUpdate     eBTMediaStUpdate;
 
     union {
-      stBTRCoreMediaTrackInfo       m_mediaTrackInfo;
-      stBTRCoreMediaPositionInfo    m_mediaPositionInfo;
+      stBTRCoreMediaTrackInfo         m_mediaTrackInfo;
+      stBTRCoreMediaPositionInfo      m_mediaPositionInfo;
+      stBTRCoreMediaElementInfo       m_mediaElementInfo;
+      char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
+      unsigned char                   m_mediaPlayerVolumePercentage;
     };
 } stBTRCoreMediaStatusUpdate;
 
@@ -947,8 +1003,52 @@ enBTRCoreRet BTRCore_GetMediaPositionInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevI
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue); 
+enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, const char* mediaPropertyKey, void* mediaPropertyValue);
 
+/**
+ * @brief  This API sets the mentioned media list active/in_scope at the lower to allow further operations on the elements in the list.
+ *
+ * @param[in]  hBTRCore                     Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId                Device Id of the remote device.
+ * @param[in]  aBtrMediaElementId           Media Element Id
+ * @param[in]  aenBTRCoreDevType            Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[in]  aeBTRCoreMedElementType      Media Element type (Albums, Artists, ...)
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetMediaElementActive (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId,
+                                                              enBTRCoreDeviceType aenBTRCoreDevType, eBTRCoreMedElementType aeBTRCoreMedElementType);
+/**
+ * @brief  This API returns the mentioned media list.
+ *
+ * @param[in]  hBTRCore                     Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId                Device Id of the remote device.
+ * @param[in]  aBtrMediaElementId           Media Element Id
+ * @param[in]  aui16BtrMedElementStartIdx   Starting index of the list.
+ * @param[in]  aui16BtrMedElementEndIdx     ending index of the list
+ * @param[in]  aenBTRCoreDevType            Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[in]  aeBTRCoreMedElementType      Media Element type (Albums, Artists, ...)
+ * @param[out] apstMediaElementListInfo     Retrived Media Element List.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_GetMediaElementList (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, unsigned short aui16BtrMedElementStartIdx,
+                                                             unsigned short aui16BtrMedElementEndIdx, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaElementInfoList* apstMediaElementListInfo);
+/**
+ * @brief  This API performs operation according to the element type selected.
+ * @param[in]  hBTRCore                     Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId                Device Id of the remote device.
+ * @param[in]  aBtrMediaElementId           Media Element Id
+ * @param[in]  aenBTRCoreDevType            Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[in]  aeBTRCoreMedElementType      Media Element type (Albums, Artists, ...)
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SelectMediaElement (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, enBTRCoreDeviceType aenBTRCoreDevType,
+                                                                                                                 eBTRCoreMedElementType  aenBTRCoreMedElementType);
 /**
  * @brief  This API returns the Low energy profile device name and address.
  *

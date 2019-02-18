@@ -49,7 +49,6 @@ typedef void* tBTRCoreHandle;
 
 typedef unsigned long long int tBTRCoreDevId;
 
-
 typedef enum _enBTRCoreRet {
     enBTRCoreFailure, 
     enBTRCoreInitFailure, 
