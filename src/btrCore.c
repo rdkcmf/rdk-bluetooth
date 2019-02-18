@@ -154,6 +154,7 @@ static enBTRCoreDeviceType btrCore_MapDevClassToDevType(enBTRCoreDeviceClass aen
 static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
 static int btrCore_AddDeviceToScannedDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo, stBTRCoreBTDevice* apstFoundDevice); 
 static int btrCore_AddDeviceToKnownDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo);
+static enBTRCoreRet btrCore_RemoveDeviceFromScannedDevicesArr (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId, stBTRCoreBTDevice* astRemovedDevice);
 static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCore, const char* pAdapterPath);
 static void btrCore_MapKnownDeviceListFromPairedDeviceInfo (stBTRCoreBTDevice* knownDevicesArr, stBTPairedDeviceInfo* pairedDeviceInfo);
 static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
@@ -712,6 +713,47 @@ btrCore_AddDeviceToScannedDevicesArr (
     return -1;
 }
 
+static enBTRCoreRet
+btrCore_RemoveDeviceFromScannedDevicesArr (
+    stBTRCoreHdl*       apstlhBTRCore,
+    tBTRCoreDevId       aBTRCoreDevId,
+    stBTRCoreBTDevice*  astRemovedDevice
+) {
+    enBTRCoreRet    retResult   = enBTRCoreSuccess;
+    int             i32LoopIdx  = -1;
+
+    for (i32LoopIdx = 0; i32LoopIdx < apstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
+        if (apstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId == aBTRCoreDevId) {
+            break;
+        }
+    }
+
+    if (i32LoopIdx != apstlhBTRCore->numOfScannedDevices) {
+        BTRCORELOG_TRACE ("i32ScannedDevIdx = %d\n", i32LoopIdx);
+        BTRCORELOG_TRACE ("pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDeviceCurrState = %d\n", apstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDeviceCurrState);
+        BTRCORELOG_TRACE ("pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDevicePrevState = %d\n", apstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDevicePrevState);
+
+        memcpy (astRemovedDevice, &apstlhBTRCore->stScannedDevicesArr[i32LoopIdx], sizeof(stBTRCoreBTDevice));
+        astRemovedDevice->bFound = FALSE;
+
+        // Clean flipping logic. This will suffice
+        if (i32LoopIdx != apstlhBTRCore->numOfScannedDevices - 1) {
+            memcpy (&apstlhBTRCore->stScannedDevicesArr[i32LoopIdx], &apstlhBTRCore->stScannedDevicesArr[apstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreBTDevice));
+            memcpy (&apstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx], &apstlhBTRCore->stScannedDevStInfoArr[apstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreDevStateInfo));
+        }
+
+        memset(&apstlhBTRCore->stScannedDevicesArr[apstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreBTDevice));
+        memset(&apstlhBTRCore->stScannedDevStInfoArr[apstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreDevStateInfo));
+
+        apstlhBTRCore->numOfScannedDevices--;
+    }
+    else {
+        BTRCORELOG_ERROR ("Device %lld not found in Scanned List!\n", aBTRCoreDevId);
+        retResult = enBTRCoreDeviceNotFound;
+    }
+
+    return retResult;
+}
 
 static int
 btrCore_AddDeviceToKnownDevicesArr (
@@ -1757,43 +1799,26 @@ btrCore_OutTask (
                         stBTDeviceInfo*     lpstBTDeviceInfo = (stBTDeviceInfo*)lpstOutTskInData->pstBTDevInfo;
                         stBTRCoreBTDevice   lstRemovedDevice;
                         tBTRCoreDevId       lBTRCoreDevId = lpstOutTskInData->bTRCoreDevId;
-                        int                 i32LoopIdx = -1;
 
                         (void)lpstBTDeviceInfo;
+                        memset (&lstRemovedDevice, 0, sizeof(stBTRCoreBTDevice));
 
-                        for (i32LoopIdx = 0; i32LoopIdx < pstlhBTRCore->numOfScannedDevices; i32LoopIdx++) {
-                            if (pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].tDeviceId == lBTRCoreDevId) {
-                                break;
+                        lenBTRCoreRet = btrCore_RemoveDeviceFromScannedDevicesArr (pstlhBTRCore, lBTRCoreDevId, &lstRemovedDevice);
+
+                        if (lenBTRCoreRet == enBTRCoreSuccess && lstRemovedDevice.tDeviceId) {
+
+                            pstlhBTRCore->stDiscoveryCbInfo.type = enBTRCoreOpTypeDevice;
+                            memcpy(&pstlhBTRCore->stDiscoveryCbInfo.device, &lstRemovedDevice, sizeof(stBTRCoreBTDevice));
+
+                            if (pstlhBTRCore->fpcBBTRCoreDeviceDisc) {
+                                if ((lenBTRCoreRet = pstlhBTRCore->fpcBBTRCoreDeviceDisc(&pstlhBTRCore->stDiscoveryCbInfo,
+                                        pstlhBTRCore->pvcBDevDiscUserData)) != enBTRCoreSuccess) {
+                                    BTRCORELOG_ERROR ("Failure fpcBBTRCoreDeviceDisc Ret = %d\n", lenBTRCoreRet);
+                                }
                             }
                         }
-
-                        BTRCORELOG_TRACE ("i32ScannedDevIdx = %d\n", i32LoopIdx);
-                        BTRCORELOG_TRACE ("pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDeviceCurrState = %d\n", pstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDeviceCurrState);
-                        BTRCORELOG_TRACE ("pstlhBTRCore->stScannedDevicesArr[i32LoopIdx].eDevicePrevState = %d\n", pstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx].eDevicePrevState);
-
-
-                        memcpy (&lstRemovedDevice, &pstlhBTRCore->stScannedDevicesArr[i32LoopIdx], sizeof(stBTRCoreBTDevice));
-                        lstRemovedDevice.bFound = FALSE;
-
-                        // Clean flipping logic. This will suffice
-                        if (i32LoopIdx != pstlhBTRCore->numOfScannedDevices - 1) {
-                            memcpy (&pstlhBTRCore->stScannedDevicesArr[i32LoopIdx], &pstlhBTRCore->stScannedDevicesArr[pstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreBTDevice));
-                            memcpy (&pstlhBTRCore->stScannedDevStInfoArr[i32LoopIdx], &pstlhBTRCore->stScannedDevStInfoArr[pstlhBTRCore->numOfScannedDevices - 1], sizeof(stBTRCoreDevStateInfo));   
-                        }
-
-                        memset(&pstlhBTRCore->stScannedDevicesArr[pstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreBTDevice));
-                        memset(&pstlhBTRCore->stScannedDevStInfoArr[pstlhBTRCore->numOfScannedDevices - 1], 0, sizeof(stBTRCoreDevStateInfo));
-
-                        pstlhBTRCore->numOfScannedDevices--;
-
-                        pstlhBTRCore->stDiscoveryCbInfo.type = enBTRCoreOpTypeDevice;
-                        memcpy(&pstlhBTRCore->stDiscoveryCbInfo.device, &lstRemovedDevice, sizeof(stBTRCoreBTDevice));
-
-                        if (pstlhBTRCore->fpcBBTRCoreDeviceDisc) {
-                            if ((lenBTRCoreRet = pstlhBTRCore->fpcBBTRCoreDeviceDisc(&pstlhBTRCore->stDiscoveryCbInfo,
-                                    pstlhBTRCore->pvcBDevDiscUserData)) != enBTRCoreSuccess) {
-                                BTRCORELOG_ERROR ("Failure fpcBBTRCoreDeviceDisc Ret = %d\n", lenBTRCoreRet);
-                            }
+                        else {
+                            BTRCORELOG_ERROR ("Failed to remove dev %lld from Scanned List | Ret = %d\n", lBTRCoreDevId, lenBTRCoreRet);
                         }
 
 
@@ -3336,6 +3361,7 @@ BTRCore_UnPairDevice (
     enBTRCoreRet            lenBTRCoreRet       = enBTRCoreFailure;
 
     enBTRCoreDeviceType     aenBTRCoreDevType = enBTRCoreUnknown;
+    stBTRCoreBTDevice       pstScannedDevice;
 
     /* We can enhance the BTRCore with passcode support later point in time */
     if (!hBTRCore) {
@@ -3348,7 +3374,6 @@ BTRCore_UnPairDevice (
     }
 
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-
 
     if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
                                                     &lenBTDeviceType, &pstKnownDevice, &lpstKnownDevStInfo, &pDeviceAddress)) != enBTRCoreSuccess) {
@@ -3368,6 +3393,16 @@ BTRCore_UnPairDevice (
 
     //Calling this api will update the KnownDevList appropriately
     btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
+
+    memset (&pstScannedDevice, 0 ,sizeof(stBTRCoreBTDevice));
+    //Clear corresponding  device entry from Scanned List if any
+    if (btrCore_GetScannedDeviceAddress(pstlhBTRCore, aBTRCoreDevId)) {
+        lenBTRCoreRet = btrCore_RemoveDeviceFromScannedDevicesArr (pstlhBTRCore, aBTRCoreDevId, &pstScannedDevice);
+
+        if (!(enBTRCoreSuccess == lenBTRCoreRet && pstScannedDevice.tDeviceId)) {
+            BTRCORELOG_ERROR ("Remove device %lld from Scanned List Failed!\n", aBTRCoreDevId);
+        }
+    }
 
     BTRCORELOG_INFO ("UnPairing Success\n");
     return enBTRCoreSuccess;
