@@ -138,6 +138,7 @@ typedef struct _stBTRCoreHdl {
 
     GThread*                        pThreadOutTask;
     GAsyncQueue*                    pGAQueueOutTask;
+    enBTRCoreDeviceType             aenDeviceDiscoveryType;
 
 } stBTRCoreHdl;
 
@@ -668,6 +669,15 @@ btrCore_AddDeviceToScannedDevicesArr (
         }
     }
 
+    if (apsthBTRCore->aenDeviceDiscoveryType == enBTRCoreHID) {
+        if ((lstFoundDevice.enDeviceType != enBTRCore_DC_HID_Keyboard)      &&
+            (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_Mouse)         &&
+            (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_Joystick)      &&
+            (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_MouseKeyBoard) ){
+            BTRCORELOG_ERROR("Skipped the device %s DevID = %lld as the it is not interested device\n", lstFoundDevice.pcDeviceAddress, lstFoundDevice.tDeviceId);
+            return -1;
+        }
+    }
 
     for (i = 0; i < BTRCORE_MAX_NUM_BT_DEVICES; i++) {
         if ((lstFoundDevice.tDeviceId == apsthBTRCore->stScannedDevicesArr[i].tDeviceId) || (apsthBTRCore->stScannedDevicesArr[i].bFound == FALSE)) {
@@ -2352,6 +2362,8 @@ BTRCore_Init (
     //Initialize array of known devices so we can use it for stuff
     btrCore_PopulateListOfPairedDevices(*phBTRCore, pstlhBTRCore->curAdapterPath);
     
+    /* Discovery Type */
+    pstlhBTRCore->aenDeviceDiscoveryType = enBTRCoreUnknown;
 
     return enBTRCoreSuccess;
 }
@@ -3111,6 +3123,9 @@ BTRCore_StartDiscovery (
     pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
     btrCore_ClearScannedDevicesList(pstlhBTRCore);
+
+    /* Discovery Type */
+    pstlhBTRCore->aenDeviceDiscoveryType = aenBTRCoreDevType;
 
     if (aenBTRCoreDevType == enBTRCoreLE)  {
         if (BtrCore_BTStartLEDiscovery(pstlhBTRCore->connHdl, pAdapterPath, pstlhBTRCore->agentPath)) {
