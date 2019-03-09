@@ -65,6 +65,7 @@ typedef enum _enBTRCoreTaskProcessType {
     enBTRCoreTaskPTcBDeviceLost,
     enBTRCoreTaskPTcBDeviceStatus,
     enBTRCoreTaskPTcBMediaStatus,
+    enBTRCoreTaskPTcBDevOpInfoStatus,
     enBTRCoreTaskPTcBConnIntim,
     enBTRCoreTaskPTcBConnAuth,
     enBTRCoreTaskPTUnknown
@@ -1474,6 +1475,12 @@ btrCore_OutTaskAddOp (
             memcpy(lpstOutTaskGAqData->pvBTRCoreTskInData, (stBTRCoreMediaStatusCBInfo*)apvOutTaskInData, sizeof(stBTRCoreMediaStatusCBInfo));
         }
     }
+    else if (lpstOutTaskGAqData->enBTRCoreTskPT == enBTRCoreTaskPTcBDevOpInfoStatus) {
+        if ((apvOutTaskInData) &&
+            (lpstOutTaskGAqData->pvBTRCoreTskInData = g_malloc0(sizeof(stBTRCoreDevStatusCBInfo)))) {
+            memcpy(lpstOutTaskGAqData->pvBTRCoreTskInData, (stBTRCoreDevStatusCBInfo*)apvOutTaskInData, sizeof(stBTRCoreDevStatusCBInfo));
+        }
+    }
     else if (lpstOutTaskGAqData->enBTRCoreTskPT == enBTRCoreTaskPTcBConnIntim) {
     }
     else if (lpstOutTaskGAqData->enBTRCoreTskPT == enBTRCoreTaskPTcBConnAuth) {
@@ -2187,6 +2194,21 @@ btrCore_OutTask (
                                 if ((lenBTRCoreRet = pstlhBTRCore->fpcBBTRCoreMediaStatus(&pstlhBTRCore->stMediaStatusCbInfo, pstlhBTRCore->pvcBMediaStatusUserData)) != enBTRCoreSuccess) {
                                     BTRCORELOG_ERROR ("Failure fpcBBTRCoreMediaStatus Ret = %d\n", lenBTRCoreRet);
                                 }
+                            }
+                        }
+
+                        g_free(lpstOutTskInData);
+                        lpstOutTskInData = NULL;
+                    }
+                }
+                else if (lenOutTskPTCur == enBTRCoreTaskPTcBDevOpInfoStatus) {
+                    if (lpstOutTskInData) {
+                        stBTRCoreDevStatusCBInfo* lpstDevStatusCbInfo = (stBTRCoreDevStatusCBInfo*)lpstOutTskInData;
+                        memcpy(&pstlhBTRCore->stDevStatusCbInfo, lpstDevStatusCbInfo,sizeof(stBTRCoreDevStatusCBInfo));
+                        
+                        if (pstlhBTRCore->fpcBBTRCoreStatus) {
+                            if ((lenBTRCoreRet = pstlhBTRCore->fpcBBTRCoreStatus(&pstlhBTRCore->stDevStatusCbInfo, pstlhBTRCore->pvcBStatusUserData)) != enBTRCoreSuccess) {
+                                BTRCORELOG_ERROR ("Failure fpcBBTRCoreStatus Ret = %d\n", lenBTRCoreRet);
                             }
                         }
 
@@ -5250,8 +5272,52 @@ btrCore_BTLeStatusUpdateCb (
         BTRCORELOG_ERROR ("Failed to find Device in ScannedList!\n");
         return enBTRCoreDeviceNotFound;
     }
+#if 1
+    BTRCORELOG_DEBUG ("LE Dev %s Path %s\n", pDeviceName, pDevicePath);
+    stBTRCoreDevStatusCBInfo lstDevStatusCbInfo;
 
 
+    lstDevStatusCbInfo.deviceId             = lBTRCoreDevId;
+    lstDevStatusCbInfo.eDeviceType          = enBTRCoreLE;
+    lstDevStatusCbInfo.eDeviceClass         = lpstScannedDevice->enDeviceType;
+    lstDevStatusCbInfo.ui32DevClassBtSpec   = lpstScannedDevice->ui32DevClassBtSpec;
+    lstDevStatusCbInfo.isPaired             = 0;   
+    lstDevStatusCbInfo.eDevicePrevState     = lpstScannedDevStInfo->eDeviceCurrState;
+    strncpy(lstDevStatusCbInfo.deviceName, pDeviceName, BD_NAME_LEN);
+
+
+    switch (apstBtrLeInfo->enLeOper) {
+    case enBTRCoreLEGOpReady:
+        lstDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStOpReady;
+        strncpy(lstDevStatusCbInfo.devOpResponse, apstBtrLeInfo->pui8Value, BTRCORE_MAX_STR_LEN - 1);
+        break;
+    case enBTRCoreLEGOpReadValue:
+        lstDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStOpInfo;
+        strncpy(lstDevStatusCbInfo.devOpResponse, apstBtrLeInfo->pui8Value, BTRCORE_MAX_STR_LEN - 1);
+        break;
+    case enBTRCoreLEGOpWriteValue:
+        lstDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStOpInfo;
+        strncpy(lstDevStatusCbInfo.devOpResponse, apstBtrLeInfo->pui8Value, BTRCORE_MAX_STR_LEN - 1);
+        break;
+    case enBTRCoreLEGOpStartNotify:
+        lstDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStOpInfo;
+        strncpy(lstDevStatusCbInfo.devOpResponse, apstBtrLeInfo->pui8Value, BTRCORE_MAX_STR_LEN - 1);
+        break;
+    case enBTRCoreLEGOpStopNotify:
+        lstDevStatusCbInfo.eDeviceCurrState = enBTRCoreDevStOpInfo;
+        strncpy(lstDevStatusCbInfo.devOpResponse, apstBtrLeInfo->pui8Value, BTRCORE_MAX_STR_LEN - 1);
+        break;
+    case enBTRCoreLEGOpUnknown:
+    default:
+        break;
+    }
+
+
+    if ((lenBTRCoreRet = btrCore_OutTaskAddOp(lpstlhBTRCore->pGAQueueOutTask, enBTRCoreTaskOpProcess, enBTRCoreTaskPTcBDevOpInfoStatus, &lstDevStatusCbInfo)) != enBTRCoreSuccess) {
+        BTRCORELOG_WARN("Failure btrCore_OutTaskAddOp enBTRCoreTaskOpProcess enBTRCoreTaskPTcBDeviceStatus %d\n", lenBTRCoreRet);
+    }
+
+#else
     BTRCORELOG_DEBUG ("LE Dev %s Path %s\n", pDeviceName, pDevicePath);
 
     lpstlhBTRCore->stDevStatusCbInfo.deviceId           = lBTRCoreDevId;
@@ -5294,6 +5360,7 @@ btrCore_BTLeStatusUpdateCb (
             lenBTRCoreRet = enBTRCoreFailure;
         }
     }
+#endif
 
     return lenBTRCoreRet;
 }
