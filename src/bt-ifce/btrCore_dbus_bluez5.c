@@ -6357,7 +6357,7 @@ btrCore_BTDBusConnectionFilterCb (
                         enBTDeviceState lenBtDevState = enBTDevStUnknown; 
                         enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
 
-                        if (bPairingEvent && (lenBTDevType == enBTDevHID)) {
+                        if (bPairingEvent) {
                             const char* value = NULL;
                             BTRCORELOG_INFO ("Parsing Property Changed event figured that its pairing change..\n");
                             if (bPaired) {
