@@ -2033,6 +2033,9 @@ btrCore_OutTask (
                                         if (enBTRCoreDevStDisconnected == leBTDevState) {
                                             pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = FALSE;
                                         }
+                                        else if (enBTRCoreDevStConnected == leBTDevState) {
+                                            pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = TRUE;
+                                        }
 
                                         if (enBTRCoreDevStInitialized != pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState) {
                                             pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
@@ -4247,7 +4250,7 @@ BTRCore_ReleaseDeviceDataPath (
     // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
     // before making the call
     if(BTRCore_AVMedia_ReleaseDataPath(pstlhBTRCore->avMediaHdl, pDeviceAddress) != enBTRCoreSuccess) {
-        BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
+        BTRCORELOG_ERROR ("AVMedia_ReleaseDataPath ERROR occurred\n");
         return enBTRCoreFailure;
     }
 
@@ -5185,9 +5188,9 @@ btrCore_BTDeviceAuthenticationCb (
                             lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = lpstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState;
                         }
 
-                        BTRCORELOG_DEBUG("stKnownDevice.device_connected set : %d\n", lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].bDeviceConnected);
                         lpstlhBTRCore->stConnCbInfo.stKnownDevice.bDeviceConnected = TRUE;
                         lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].bDeviceConnected = TRUE;
+                        BTRCORELOG_DEBUG("stKnownDevice.device_connected set : %d\n", lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].bDeviceConnected);
                     }
                 }
             }

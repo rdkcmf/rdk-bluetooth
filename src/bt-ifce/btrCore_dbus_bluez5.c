@@ -6407,7 +6407,12 @@ btrCore_BTDBusConnectionFilterCb (
                             }
  
                             if (enBTDevAudioSource != lenBTDevType || strcmp(pstlhBtIfce->pcDeviceCurrState, "connected")) {
-
+                                if (pstlhBtIfce->fpcBDevStatusUpdate) {
+                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    }
+                                }
+                            }
+                            else if ((enBTDevAudioSource == lenBTDevType) && bSrvResolvedEvent && !strcmp(lstBTDeviceInfo.pcDevicePrevState, "connected") && !strcmp(lstBTDeviceInfo.pcDeviceCurrState, "connected")) {
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
                                     if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
