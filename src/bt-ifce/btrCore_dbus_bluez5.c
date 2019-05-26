@@ -152,7 +152,7 @@ static DBusHandlerResult btrCore_BTAgentRequestPincode (DBusConnection* apDBusCo
 static DBusHandlerResult btrCore_BTAgentRequestPasskey (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 static DBusHandlerResult btrCore_BTAgentRequestConfirmation(DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 static DBusHandlerResult btrCore_BTAgentAuthorize (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
-static DBusHandlerResult btrCore_BTAgentDisplayPinCode (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
+static DBusHandlerResult btrCore_BTAgentDisplayPinCodePassKey (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, bool abPinCode, void* apvUserData);
 static DBusHandlerResult btrCore_BTAgentCancelMessage (DBusConnection* apDBusConn, DBusMessage* apDBusMsg, void* apvUserData);
 
 static DBusMessage* btrCore_BTSendMethodCall (DBusConnection* apDBusConn, const char* objectpath, const char* interfacename, const char* methodname);
@@ -678,9 +678,10 @@ btrCore_BTAgentRequestConfirmation (
 }
 
 static DBusHandlerResult
-btrCore_BTAgentDisplayPinCode (
+btrCore_BTAgentDisplayPinCodePassKey (
     DBusConnection* apDBusConn,
     DBusMessage*    apDBusMsg,
+    bool            abPinCode,
     void*           apvUserData
 ) {
     DBusMessage*    lpDBusReply = NULL;
@@ -693,13 +694,23 @@ btrCore_BTAgentDisplayPinCode (
 
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
 
-    if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &pinCode, DBUS_TYPE_INVALID)) {
-        BTRCORELOG_ERROR ("Invalid arguments for PINCode Display method");
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    if (abPinCode == TRUE) {
+        if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_STRING, &pinCode, DBUS_TYPE_INVALID)) {
+            BTRCORELOG_ERROR ("Invalid arguments for PINCode Display method");
+            return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        }
+        BTRCORELOG_INFO ("btrCore_BTAgentDisplayPinCode: PINCode is @@%s@@\n", pinCode);
+        ui32PassCode = (unsigned int) atoi(pinCode);
+        BTRCORELOG_DEBUG ("btrCore_BTAgentDisplayPinCode: PINCode in decimal @@%06d@@\n", ui32PassCode);
     }
-    BTRCORELOG_INFO ("btrCore_BTAgentDisplayPinCode: PINCode is @@%s@@\n", pinCode);
-    ui32PassCode = (unsigned int) atoi(pinCode);
-    BTRCORELOG_DEBUG ("btrCore_BTAgentDisplayPinCode: PINCode in decimal @@%06d@@\n", ui32PassCode);
+    else {
+        unsigned short ui16Entered = 0;
+        if (!dbus_message_get_args(apDBusMsg, NULL, DBUS_TYPE_OBJECT_PATH, &lpcPath, DBUS_TYPE_UINT32, &ui32PassCode, DBUS_TYPE_UINT16, &ui16Entered, DBUS_TYPE_INVALID)) {
+            BTRCORELOG_ERROR ("Invalid arguments for PINCode Display method");
+            return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        }
+        BTRCORELOG_DEBUG ("btrCore_BTAgentDisplayPassKey : PassKey in decimal @@%06d@@  Entered is %d\n", ui32PassCode, ui16Entered);
+    }
 
     if (lpcPath) {
         btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, lpcPath);
@@ -7436,10 +7447,11 @@ btrCore_BTAgentMessageHandlerCb (
         return btrCore_BTAgentCancelMessage(apDBusConn, apDBusMsg, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "DisplayPinCode"))
-        return btrCore_BTAgentDisplayPinCode(apDBusConn, apDBusMsg, apvUserData);
+        return btrCore_BTAgentDisplayPinCodePassKey(apDBusConn, apDBusMsg, TRUE, apvUserData);
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "DisplayPasskey")) {
         BTRCORELOG_INFO ("btrCore_BTAgentMessageHandlerCb:: DisplayPasskey\n");
+        return btrCore_BTAgentDisplayPinCodePassKey(apDBusConn, apDBusMsg, FALSE, apvUserData);
     }
 
     if (dbus_message_is_method_call(apDBusMsg, BT_DBUS_BLUEZ_AGENT_PATH, "RequestAuthorization")) {
