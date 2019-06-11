@@ -4240,6 +4240,29 @@ BTRCore_ReleaseDeviceDataPath (
 
 
 enBTRCoreRet
+BTRCore_SetDeviceDataAckTimeout (
+    tBTRCoreHandle  hBTRCore,
+    unsigned int    aui32AckTOutms
+) {
+    stBTRCoreHdl*           pstlhBTRCore        = NULL;
+
+    if (!hBTRCore) {
+        BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
+        return enBTRCoreNotInitialized;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+    if (BtrCore_BTSetDevDataAckTimeout(pstlhBTRCore->connHdl, aui32AckTOutms) != 0) {
+        BTRCORELOG_ERROR ("Failed to SetDevDataAckTimeout\n");
+        return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+enBTRCoreRet
 BTRCore_MediaControl (
     tBTRCoreHandle      hBTRCore, 
     tBTRCoreDevId       aBTRCoreDevId, 
