@@ -881,8 +881,18 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-
 enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
+
+/**
+ * @brief  This API release the bluetooth device address.
+ *
+ * @param[in]  hBTRCore           Bluetooth core handle.
+ * @param[in]  aui32AckTOutms     Data write acknowledgment timeout
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetDeviceDataAckTimeout(tBTRCoreHandle hBTRCore, unsigned int aui32AckTOutms);
 
 /**
  * @brief  This API is used to perform media control operations like play, pause, NExt, Previous, Rewind etc.

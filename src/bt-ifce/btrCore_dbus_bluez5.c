@@ -4980,6 +4980,48 @@ BtrCore_BTReleaseDevDataPath (
     return 0;
 }
 
+
+int
+BtrCore_BTSetDevDataAckTimeout (
+    void*           apstBtIfceHdl,
+    unsigned int    aui32AckTOutms
+) {
+    stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apstBtIfceHdl;
+    FILE*           lHciDataAck = NULL;
+    int             i32OpRet    = -1;
+    char            lcpHciDataWriteAckTOutIp[128] = {'\0'};
+    char            lcpHciDataWriteAckTOutOp[256] = {'\0'};
+
+    if (!apstBtIfceHdl)
+        return -1;
+
+    (void)pstlhBtIfce;
+
+    snprintf(lcpHciDataWriteAckTOutIp, 128, "hcitool -i hci0 cmd 0x03 0x0028 0x0C 0x00 0x%2x 0x00", aui32AckTOutms);
+    BTRCORELOG_INFO ("lcpHciDataWriteAckTOutIp: %s\n", lcpHciDataWriteAckTOutIp);
+
+    lHciDataAck = popen(lcpHciDataWriteAckTOutIp, "r");
+    if ((lHciDataAck == NULL)) {
+        BTRCORELOG_ERROR ("Failed to run lcpHciDataWriteAckTOutIp command\n");
+    }
+    else {
+        if (fgets(lcpHciDataWriteAckTOutOp, sizeof(lcpHciDataWriteAckTOutOp)-1, lHciDataAck) == NULL) {
+            BTRCORELOG_ERROR ("Failed to Output of lcpHciDataWriteAckTOutIp\n");
+        }
+        else {
+            BTRCORELOG_WARN ("Output of lcpHciDataWriteAckTOutIp =  %s\n", lcpHciDataWriteAckTOutOp);
+            if (strstr(lcpHciDataWriteAckTOutOp, "HCI Command: ogf 0x03, ocf 0x0028, plen 4")) {
+                i32OpRet = 0;
+            }
+        }
+
+        pclose(lHciDataAck);
+    }
+
+    return i32OpRet;
+}
+
+
 /////////////////////////////////////////////////////         AVRCP Functions         ////////////////////////////////////////////////////
 /* Get Player Object Path on Remote BT Device*/
 char*

@@ -983,6 +983,19 @@ int   BtrCore_BTAcquireDevDataPath (void* apBtConn, char* apcDevTransportPath, i
  */
 int   BtrCore_BTReleaseDevDataPath (void* apBtConn, char* apcDevTransportPath);
 
+/**
+ * @brief  This API is used to release the acquired device data path.
+ *
+ * @param[in] apBtConn              The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                                  NULL is valid for this API.
+ * @param[in] aui32AckTOutms        Data write acknowledgment timeout
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTSetDevDataAckTimeout (void* apBtConn, unsigned int aui32AckTOutms);
+
+
 // AVRCP Interfaces
 
 /**
