@@ -35,6 +35,9 @@
 /* Local Headers */
 #include "btrCore_bt_ifce.h"
 #include "btrCore_logger.h"
+#ifdef LIBSYSWRAPPER_BUILD
+#include "secure_wrapper.h"
+#endif
 
 #define BD_NAME_LEN                     248
 
@@ -2420,8 +2423,11 @@ BtrCore_BTIsDeviceConnectable (
 
     snprintf(lcpL2PingIp, 128, "l2ping -i hci0 -c 3 -s 2 -d 2 %s", apcDevPath);
     BTRCORELOG_INFO ("lcpL2PingIp: %s\n", lcpL2PingIp);
-
+#ifdef LIBSYSWRAPPER_BUILD
+    lfpL2Ping = v_secure_popen("r","l2ping -i hci0 -c 3 -s 2 -d 2 %s", apcDevPath);
+#else
     lfpL2Ping = popen(lcpL2PingIp, "r");
+#endif
     if ((lfpL2Ping == NULL)) {
         BTRCORELOG_ERROR ("Failed to run BTIsDeviceConnectable command\n");
     }
@@ -2435,8 +2441,11 @@ BtrCore_BTIsDeviceConnectable (
                 i32OpRet = 0;
 			}
         }
-
+#ifdef LIBSYSWRAPPER_BUILD
+        v_secure_pclose(lfpL2Ping);
+#else
         pclose(lfpL2Ping);
+#endif
     }
 
     return i32OpRet;

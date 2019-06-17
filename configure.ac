@@ -54,6 +54,8 @@ BTR_CORE_TEST="tests"
 BTR_CORE_LOGGER_LIBS=" "
 BTR_IFCE_DBUS_BLUEZ4=" "
 BTR_IFCE_DBUS_BLUEZ5=" "
+LIBSYSWRAPPER_FLAG=" "
+IS_LIBSYSWRAPPER_ENABLED=" "
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
@@ -81,6 +83,20 @@ AS_IF([test "x$have_bluez5" = "xyes"], [
 
 AM_CONDITIONAL([BTR_IFCE_DBUS_BLUEZ4], [test x$have_bluez4 = xyes])
 AM_CONDITIONAL([BTR_IFCE_DBUS_BLUEZ5], [test x$have_bluez5 = xyes])
+
+AC_ARG_ENABLE([libsyswrapper],
+        AS_HELP_STRING([--enable-wrapper],[enables system wrapper replacement (default is no)]),
+        [
+          case "${enableval}" in
+           yes) IS_LIBSYSWRAPPER_ENABLED=true
+                LIBSYSWRAPPER_FLAG=" -DLIBSYSWRAPPER_BUILD ";;
+           no)  IS_LIBSYSWRAPPER_ENABLED=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-wrapper]) ;;
+           esac
+           ],
+        [echo "libsyswrapper is disabled"])
+AM_CONDITIONAL([IS_LIBSYSWRAPPER_ENABLED], [test x$IS_LIBSYSWRAPPER_ENABLED = xtrue])
+AC_SUBST(LIBSYSWRAPPER_FLAG)
 
 # Check for rdk logger
 AC_ARG_ENABLE([rdk-logger],
