@@ -1119,7 +1119,7 @@ btrCore_BTParseDevice (
                 lcDevVen[3]='\0';
                 ui16Vendor =  strtoll(lcDevVen, NULL, 16);
                 apstBTDeviceInfo->ui16Vendor = ui16Vendor;
-                BTRCORELOG_DEBUG ("ui16Vendor      = %d\n", apstBTDeviceInfo->ui16Vendor);
+                BTRCORELOG_TRACE ("ui16Vendor      = %d\n", apstBTDeviceInfo->ui16Vendor);
  #endif
             }
             else if (strcmp (pcKey, "Name") == 0) {
@@ -1127,7 +1127,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcName);
                 strncpy(apstBTDeviceInfo->pcName, pcName, BT_MAX_STR_LEN);
-                BTRCORELOG_DEBUG ("pcName          = %s\n", apstBTDeviceInfo->pcName);
+                BTRCORELOG_TRACE ("pcName          = %s\n", apstBTDeviceInfo->pcName);
 
             }
             else if (strcmp (pcKey, "Vendor") == 0) {
@@ -1135,7 +1135,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui16Vendor);
                 apstBTDeviceInfo->ui16Vendor = ui16Vendor;
-                BTRCORELOG_DEBUG ("ui16Vendor      = %d\n", apstBTDeviceInfo->ui16Vendor);
+                BTRCORELOG_TRACE ("ui16Vendor      = %d\n", apstBTDeviceInfo->ui16Vendor);
             }
             else if (strcmp (pcKey, "VendorSource") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -1170,7 +1170,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui32Class);
                 apstBTDeviceInfo->ui32Class = ui32Class;
-                BTRCORELOG_DEBUG ("ui32Class       = %d\n", apstBTDeviceInfo->ui32Class);
+                BTRCORELOG_TRACE ("ui32Class       = %d\n", apstBTDeviceInfo->ui32Class);
             }
             else if (strcmp (pcKey, "Paired") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -1205,13 +1205,13 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAlias);
                 strncpy(apstBTDeviceInfo->pcAlias, pcAlias, BT_MAX_STR_LEN);
-                BTRCORELOG_DEBUG ("pcAlias         = %s\n", apstBTDeviceInfo->pcAlias);
+                BTRCORELOG_TRACE ("pcAlias         = %s\n", apstBTDeviceInfo->pcAlias);
             }
             else if (strcmp (pcKey, "Adapter") == 0) {
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcDevAdapterObjPath);
-                BTRCORELOG_DEBUG ("pcDevAdapterObjPath = %s\n", pcDevAdapterObjPath);
+                BTRCORELOG_TRACE ("pcDevAdapterObjPath = %s\n", pcDevAdapterObjPath);
             }
             else if (strcmp (pcKey, "RSSI") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -3928,7 +3928,7 @@ BtrCore_BTGetPairedDeviceInfo (
     }
 
 
-    BTRCORELOG_INFO ("Exiting\n");
+    BTRCORELOG_TRACE ("Exiting\n");
 
     return 0;
 }
@@ -5614,7 +5614,7 @@ BtrCore_BTRegisterLeGatt (
     dbus_message_unref(lpDBusMsg);
 
 
-    BTRCORELOG_ERROR ("Exiting!!!!\n");
+    BTRCORELOG_TRACE ("Exiting!!!!\n");
 
     return 0;
 }
