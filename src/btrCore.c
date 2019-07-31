@@ -309,7 +309,7 @@ btrCore_MapClassIDtoAVDevClass (
 
     if (((aui32ClassId & 0x400u) == 0x400u) || ((aui32ClassId & 0x200u) == 0x200u) || ((aui32ClassId & 0x100u) == 0x100u)) {
         unsigned int ui32DevClassID = aui32ClassId & 0xFFFu;
-        BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
+        BTRCORELOG_TRACE ("ui32DevClassID = 0x%x\n", ui32DevClassID);
 
         if (ui32DevClassID == enBTRCore_DC_Tablet) {
             BTRCORELOG_INFO ("Its a enBTRCore_DC_Tablet\n");
@@ -435,7 +435,7 @@ btrCore_MapClassIDtoDevClass (
     unsigned int aui32ClassId
 ) {
     enBTRCoreDeviceClass rc = enBTRCore_DC_Unknown;
-    BTRCORELOG_DEBUG ("classID = 0x%x\n", aui32ClassId);
+    BTRCORELOG_TRACE ("classID = 0x%x\n", aui32ClassId);
 
     if (aui32ClassId == enBTRCore_DC_Tile) {
         BTRCORELOG_INFO ("enBTRCore_DC_Tile\n");
@@ -449,7 +449,7 @@ btrCore_MapClassIDtoDevClass (
     if (rc == enBTRCore_DC_Unknown) {
         if ((aui32ClassId & 0x500u) == 0x500u) {
             unsigned int ui32DevClassID = aui32ClassId & 0xFFFu;
-            BTRCORELOG_DEBUG ("ui32DevClassID = 0x%x\n", ui32DevClassID);
+            BTRCORELOG_TRACE ("ui32DevClassID = 0x%x\n", ui32DevClassID);
 
             if (ui32DevClassID == enBTRCore_DC_HID_Keyboard) {
                 BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Keyboard\n");
@@ -829,7 +829,7 @@ btrCore_MapKnownDeviceListFromPairedDeviceInfo (
         strncpy(knownDevicesArr[i_idx].pcDeviceAddress, pairedDeviceInfo->deviceInfo[i_idx].pcAddress,  BD_NAME_LEN);
         strncpy(knownDevicesArr[i_idx].pcDevicePath,    pairedDeviceInfo->devicePath[i_idx],            BD_NAME_LEN);
    
-        BTRCORELOG_DEBUG ("Unique DevID = %lld\n", knownDevicesArr[i_idx].tDeviceId);
+        BTRCORELOG_TRACE ("Unique DevID = %lld\n", knownDevicesArr[i_idx].tDeviceId);
 
         for (j_idx = 0; j_idx < BT_MAX_DEVICE_PROFILE; j_idx++) {
             if (pairedDeviceInfo->deviceInfo[i_idx].aUUIDs[j_idx][0] == '\0')
@@ -3309,7 +3309,7 @@ BTRCore_GetListOfScannedDevices (
         }
     }   
 
-    BTRCORELOG_INFO ("Copied scanned details of %d devices\n", pListOfScannedDevices->numberOfDevices);
+    BTRCORELOG_TRACE ("Copied scanned details of %d devices\n", pListOfScannedDevices->numberOfDevices);
 
     return enBTRCoreSuccess;
 }
@@ -4930,18 +4930,18 @@ btrCore_BTDeviceStatusUpdateCb (
             int j = 0;
             tBTRCoreDevId   lBTRCoreDevId = 0;
 
-            BTRCORELOG_DEBUG ("bPaired          = %d\n", apstBTDeviceInfo->bPaired);
-            BTRCORELOG_DEBUG ("bConnected       = %d\n", apstBTDeviceInfo->bConnected);
+            BTRCORELOG_TRACE ("bPaired          = %d\n", apstBTDeviceInfo->bPaired);
+            BTRCORELOG_TRACE ("bConnected       = %d\n", apstBTDeviceInfo->bConnected);
             BTRCORELOG_TRACE ("bTrusted         = %d\n", apstBTDeviceInfo->bTrusted);
             BTRCORELOG_TRACE ("bBlocked         = %d\n", apstBTDeviceInfo->bBlocked);
             BTRCORELOG_TRACE ("ui16Vendor       = %d\n", apstBTDeviceInfo->ui16Vendor);
             BTRCORELOG_TRACE ("ui16VendorSource = %d\n", apstBTDeviceInfo->ui16VendorSource);
             BTRCORELOG_TRACE ("ui16Product      = %d\n", apstBTDeviceInfo->ui16Product);
             BTRCORELOG_TRACE ("ui16Version      = %d\n", apstBTDeviceInfo->ui16Version);
-            BTRCORELOG_DEBUG ("ui32Class        = %d\n", apstBTDeviceInfo->ui32Class);
-            BTRCORELOG_DEBUG ("i32RSSI          = %d\n", apstBTDeviceInfo->i32RSSI);
-            BTRCORELOG_DEBUG ("pcName           = %s\n", apstBTDeviceInfo->pcName);
-            BTRCORELOG_DEBUG ("pcAddress        = %s\n", apstBTDeviceInfo->pcAddress);
+            BTRCORELOG_TRACE ("ui32Class        = %d\n", apstBTDeviceInfo->ui32Class);
+            BTRCORELOG_TRACE ("i32RSSI          = %d\n", apstBTDeviceInfo->i32RSSI);
+            BTRCORELOG_TRACE ("pcName           = %s\n", apstBTDeviceInfo->pcName);
+            BTRCORELOG_TRACE ("pcAddress        = %s\n", apstBTDeviceInfo->pcAddress);
             BTRCORELOG_TRACE ("pcAlias          = %s\n", apstBTDeviceInfo->pcAlias);
             BTRCORELOG_TRACE ("pcIcon           = %s\n", apstBTDeviceInfo->pcIcon);
             BTRCORELOG_TRACE ("pcDevicePath     = %s\n", apstBTDeviceInfo->pcDevicePath);
