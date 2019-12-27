@@ -63,8 +63,8 @@ extern "C" {
 #define BTRCORE_MAX_DEVICE_PROFILE  32
 #define BTRCORE_MAX_MEDIA_ELEMENTS  64
 
-#define BTRCORE_STRINGS_MAX_LEN     BTRCORE_STR_LEN
-#define BTRCORE_UUID_LEN            64
+#define BTRCORE_UUID_LEN            BTRCORE_STR_LEN
+#define BTRCORE_MAX_DEV_OP_DATA_LEN BTRCORE_MAX_STR_LEN * 3
 
 typedef unsigned long long int tBTRCoreMediaElementId;
 
@@ -106,6 +106,7 @@ typedef enum _enBTRCoreDeviceClass {
 
     /* LE DeviceClass */
     enBTRCore_DC_Tile               = 0xfeedu, //0xfeecu
+    enBTRCore_DC_HID_AudioRemote    = 0x50Cu,
     enBTRCore_DC_HID_Keyboard       = 0x540u,
     enBTRCore_DC_HID_Mouse          = 0x580u,
     enBTRCore_DC_HID_MouseKeyBoard  = 0x5C0u,
@@ -228,6 +229,7 @@ typedef enum _enBTRCoreLeProp {
     enBTRCoreLePropGNotifying,
     enBTRCoreLePropGFlags,
     enBTRCoreLePropGChar,
+    enBTRCoreLEGPropGDesc,
     enBTRCoreLePropUnknown
 } enBTRCoreLeProp;
 
@@ -239,11 +241,11 @@ typedef unsigned char BD_ADDR[BD_ADDR_LEN];
 #endif
 
 
-#define BD_NAME_LEN     248
+#define BD_NAME_LEN     BTRCORE_STR_LEN - 1
 typedef char BD_NAME[BD_NAME_LEN + 1];     /* Device name */
 typedef char *BD_NAME_PTR;                 /* Pointer to Device name */
 
-#define UUID_LEN 63
+#define UUID_LEN        BTRCORE_UUID_LEN - 1
 typedef char UUID[UUID_LEN+1];
 
 /*BT getAdapters*/
@@ -265,14 +267,18 @@ typedef struct _stBTRCoreFilterMode {
 
 typedef struct _stBTRCoreDevStatusCBInfo {
     tBTRCoreDevId           deviceId;
-    BD_NAME                 deviceName; 
+    BD_NAME                 deviceName;
+    char                    deviceAddress[BTRCORE_MAX_STR_LEN];
     enBTRCoreDeviceType     eDeviceType;
     enBTRCoreDeviceClass    eDeviceClass;
     enBTRCoreDeviceState    eDevicePrevState;
     enBTRCoreDeviceState    eDeviceCurrState;
     unsigned char           isPaired;
     unsigned int            ui32DevClassBtSpec;
-    char                    devOpResponse[BTRCORE_MAX_STR_LEN];
+    char                    uuid[BTRCORE_UUID_LEN];
+    char                    devOpResponse[BTRCORE_MAX_DEV_OP_DATA_LEN];
+    enBTRCoreLeProp         eCoreLeProp;
+    enBTRCoreLeOp           eCoreLeOper;
 } stBTRCoreDevStatusCBInfo;
 
 typedef struct _stBTRCoreSupportedService {
@@ -325,7 +331,7 @@ typedef struct _stBTRCorePairedDevicesCount {
 typedef struct _stBTRCoreConnCBInfo {
     unsigned int    ui32devPassKey;
     unsigned char   ucIsReqConfirmation;
-    char            cConnAuthDeviceName[BTRCORE_STRINGS_MAX_LEN];
+    char            cConnAuthDeviceName[BTRCORE_STR_LEN];
     union {
         stBTRCoreBTDevice        stFoundDevice;
         stBTRCoreBTDevice        stKnownDevice;
@@ -792,7 +798,7 @@ enBTRCoreRet BTRCore_GetListOfPairedDevices (tBTRCoreHandle hBTRCore, stBTRCoreP
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_FindDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId); //TODO: Change to a unique device Identifier
+enBTRCoreRet BTRCore_FindDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId);
 
 /**
  * @brief   This API is used to confirm if a given service exists on a device.
@@ -806,7 +812,7 @@ enBTRCoreRet BTRCore_FindDevice (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCore
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found); //TODO: Change to a unique device Identifier
+enBTRCoreRet BTRCore_FindService (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* UUID, char* XMLdata, int* found);
 
 /**
  * @brief   This API retuns the list of services supported by the device.
@@ -924,8 +930,7 @@ enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId 
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath,
-                                            int* aidataReadMTU, int* aidataWriteMTU); //TODO: Change to a unique device Identifier
+enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath, int* aidataReadMTU, int* aidataWriteMTU);
 
 /**
  * @brief  This API release the bluetooth device address.
@@ -937,7 +942,7 @@ enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevI
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType); //TODO: Change to a unique device Identifier
+enBTRCoreRet BTRCore_ReleaseDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType enDeviceType);
 
 /**
  * @brief  This API release the bluetooth device address.
@@ -1017,8 +1022,8 @@ enBTRCoreRet BTRCore_GetMediaProperty ( tBTRCoreHandle hBTRCore, tBTRCoreDevId a
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_SetMediaElementActive (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId,
-                                                              enBTRCoreDeviceType aenBTRCoreDevType, eBTRCoreMedElementType aeBTRCoreMedElementType);
+enBTRCoreRet BTRCore_SetMediaElementActive (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, enBTRCoreDeviceType aenBTRCoreDevType, eBTRCoreMedElementType aeBTRCoreMedElementType);
+
 /**
  * @brief  This API returns the mentioned media list.
  *
@@ -1034,8 +1039,8 @@ enBTRCoreRet BTRCore_SetMediaElementActive (tBTRCoreHandle hBTRCore, tBTRCoreDev
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_GetMediaElementList (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, unsigned short aui16BtrMedElementStartIdx,
-                                                             unsigned short aui16BtrMedElementEndIdx, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaElementInfoList* apstMediaElementListInfo);
+enBTRCoreRet BTRCore_GetMediaElementList (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, unsigned short aui16BtrMedElementStartIdx, unsigned short aui16BtrMedElementEndIdx, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaElementInfoList* apstMediaElementListInfo);
+
 /**
  * @brief  This API performs operation according to the element type selected.
  * @param[in]  hBTRCore                     Bluetooth core handle.
@@ -1047,8 +1052,8 @@ enBTRCoreRet BTRCore_GetMediaElementList (tBTRCoreHandle hBTRCore, tBTRCoreDevId
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_SelectMediaElement (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, enBTRCoreDeviceType aenBTRCoreDevType,
-                                                                                                                 eBTRCoreMedElementType  aenBTRCoreMedElementType);
+enBTRCoreRet BTRCore_SelectMediaElement (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, enBTRCoreDeviceType aenBTRCoreDevType, eBTRCoreMedElementType  aenBTRCoreMedElementType);
+
 /**
  * @brief  This API returns the Low energy profile device name and address.
  *
@@ -1077,6 +1082,106 @@ enBTRCoreRet BTRCore_GetLEProperty(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCo
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
 enBTRCoreRet BTRCore_PerformLEOp (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, const char* apcBTRCoreLEUuid, enBTRCoreLeOp aenBTRCoreLeOp, char* apLeOpArg, char* rpLeOpRes);
+
+/**
+ * @brief  This API is used to start advertisement registration
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_StartAdvertisement(tBTRCoreHandle hBTRCore);
+
+/**
+ * @brief  This API is used to stop advertisement registration
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_StopAdvertisement(tBTRCoreHandle  hBTRCore);
+
+/**
+ * @brief  This API is used to set advertisement type
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetAdvertisementType(tBTRCoreHandle hBTRCore, char *aAdvtType);
+
+/**
+ * @brief  This API is used to set service UUIDs
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetServiceUUIDs(tBTRCoreHandle hBTRCore, char *aUUID);
+
+/**
+ * @brief  This API is used to set manufacturer data
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetManufacturerData(tBTRCoreHandle hBTRCore, unsigned short aManfId, unsigned char *aDeviceDetails, int aLenManfData);
+
+/**
+ * @brief  This API is used to Enable Tx Power transmission
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetEnableTxPower(tBTRCoreHandle hBTRCore, BOOLEAN lTxPower);
+
+/**
+ * @brief  This API is used to Get Property value
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_GetPropertyValue(tBTRCoreHandle hBTRCore, char *aUUID, char *aValue, enBTRCoreLeProp aElement);
+
+/**
+ * @brief  This API is used to Set Service Info value
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetServiceInfo(tBTRCoreHandle hBTRCore, char *aUUID, BOOLEAN aServiceType);
+
+/**
+ * @brief  This API is used to Set Gatt Info value
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetGattInfo(tBTRCoreHandle hBTRCore, char *aParentUUID, char *aCharUUID, unsigned short aFlags, char *aValue, enBTRCoreLeProp aElement);
+
+/**
+ * @brief  This API is used to Set Property value
+ *
+ * @param[in]  hBTRCore                 Bluetooth core handle 
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_SetPropertyValue(tBTRCoreHandle hBTRCore, char *aUUID, char *aValue, enBTRCoreLeProp aElement);
 
 // Outgoing callbacks Registration Interfaces
 /* BTRCore_RegisterDiscoveryCb - Callback to notify the application every time when a new device is found and added to discovery list */
