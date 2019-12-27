@@ -38,12 +38,18 @@
 #define BT_MAX_STR_LEN           256
 
 /**
+ * @brief Bluetooth max device path length.
+ *
+ */
+#define BT_MAX_DEV_PATH_LEN      64     //BT_MAX_STR_LEN/4
+
+/**
  * @brief Bluetooth max uuid length.
  *
  * The data type uuid stores Universally Unique Identifiers (UUID) as defined by RFC 4122, 
  * ISO/IEC 9834-8:2005, and related standards.
  */
-#define BT_MAX_UUID_STR_LEN      64
+#define BT_MAX_UUID_STR_LEN      64     //BT_MAX_STR_LEN/4
 
 /**
  * @brief Bluetooth max number of devices that can be connected.
@@ -56,6 +62,11 @@
  * Bluetooth enabled devices use to communicate with other Bluetooth devices.
  */
 #define BT_MAX_DEVICE_PROFILE    32
+
+/**
+ * @brief Bluetooth max number of bluetooth adapters that can be connected over USB/UART
+ */
+#define BT_MAX_NUM_ADAPTERS      4
 
 /**
  * @brief Bluetooth Advertising Service Data max length.
@@ -128,6 +139,34 @@
  */
 #define BT_MEDIA_CODEC_PCM      0x00
 
+
+#define BT_MAX_NUM_GATT_SERVICE     4
+#define BT_MAX_NUM_GATT_CHAR        10
+#define BT_MAX_NUM_GATT_DESC        4
+#define BT_MAX_GATT_OP_DATA_LEN     BT_MAX_STR_LEN * 3
+
+
+ /* Characteristic Property bit field and Characteristic Extented Property bit field Values */
+#define BT_GATT_CHAR_FLAG_READ                         1 << 0
+#define BT_GATT_CHAR_FLAG_WRITE                        1 << 1
+#define BT_GATT_CHAR_FLAG_ENCRYPT_READ                 1 << 2
+#define BT_GATT_CHAR_FLAG_ENCRYPT_WRITE                1 << 3
+#define BT_GATT_CHAR_FLAG_ENCRYPT_AUTHENTICATED_READ   1 << 4
+#define BT_GATT_CHAR_FLAG_ENCRYPT_AUTHENTICATED_WRITE  1 << 5
+#define BT_GATT_CHAR_FLAG_SECURE_READ                  1 << 6          /* Server Mode only */
+#define BT_GATT_CHAR_FLAG_SECURE_WRITE                 1 << 7          /* Server Mode only */
+#define BT_GATT_CHAR_FLAG_NOTIFY                       1 << 8
+#define BT_GATT_CHAR_FLAG_INDICATE                     1 << 9
+#define BT_GATT_CHAR_FLAG_BROADCAST                    1 << 10
+#define BT_GATT_CHAR_FLAG_WRITE_WITHOUT_RESPONSE       1 << 11
+#define BT_GATT_CHAR_FLAG_AUTHENTICATED_SIGNED_WRITES  1 << 12
+#define BT_GATT_CHAR_FLAG_RELIABLE_WRITE               1 << 13
+#define BT_GATT_CHAR_FLAG_WRITABLE_AUXILIARIES         1 << 14
+
+
+#define BT_MAX_NUM_GATT_CHAR_FLAGS                     15
+#define BT_MAX_NUM_GATT_DESC_FLAGS                     8
+
 typedef unsigned long long int tBTMediaItemId;
 /* Enum Types */
 /**
@@ -174,6 +213,7 @@ typedef enum _enBTDeviceClass {
     enBTDCMouse              = 0x580u,
     enBTDCMouseKeyBoard      = 0x5C0u,
     enBTDCJoystick           = 0x504u,
+    enBTDCAudioRemote        = 0x50Cu,
 
     enBTDCUnknown            = 0x000u
 } enBTDeviceClass;
@@ -194,6 +234,7 @@ typedef enum _enBTOpType {
     enBTGattService,
     enBTGattCharacteristic,
     enBTGattDescriptor,
+    enBTAdvertisement,
     enBTUnknown
 } enBTOpIfceType;
 
@@ -338,6 +379,7 @@ typedef enum _enBTGattServiceProp {
     enBTGattSPropUUID,
     enBTGattSPropPrimary,
     enBTGattSPropDevice,
+    enBTGattSPropServPath,
     enBTGattSPropUnknown
 } enBTGattServiceProp;
 
@@ -354,6 +396,30 @@ typedef enum _enBTGattCharProp {
     enBTGattCPropFlags,
     enBTGattCPropUnknown
 } enBTGattCharProp;
+
+/**
+ * @brief Bluetooth Gatt characteristic Flag properties.
+ *
+ * This enumeration lists the flags of bluetooth Gatt characteristics.
+ */
+typedef enum _enBTGattCharFlagProp {
+    enBTGattCharFlagRead,
+    enBTGattCharFlagWrite,
+    enBTGattCharFlagEncryptRead,
+    enBTGattCharFlagEncryptWrite,
+    enBTGattCharFlagEncryptAuthenticatedRead,
+    enBTGattCharFlagEncryptAuthenticatedWrite,
+    enBTGattCharFlagSecureRead,
+    enBTGattCharFlagSecureWrite,
+    enBTGattCharFlagNotify,
+    enBTGattCharFlagIndicate,
+    enBTGattCharFlagBroadcast,
+    enBTGattCharFlagWriteWithoutResponse,
+    enBTGattCharFlagAuthenticatedSignedWrites,
+    enBTGattCharFlagReliableWrite,
+    enBTGattCharFlagWritableAuxiliaries,
+    enBTGattCharFlagUnknown
+}enBTGattCharFlagProp;
 
 /**
  * @brief Bluetooth Gatt Descriptor properties.
@@ -471,6 +537,7 @@ typedef enum _enBTMediaItemType {
     enBTMediaItemTypVideo,
     enBTMediaItemTypFolder
 } enBTMediaItemType;
+
 #if 0
 /**
  * @brief Bluetooth Media Status updates.
@@ -565,7 +632,7 @@ typedef struct _stBTAdapterInfo {
     int             bDiscovering;                                           // device discovery procedure active?
     char            ppcUUIDs[BT_MAX_DEVICE_PROFILE][BT_MAX_UUID_STR_LEN];   // List of 128-bit UUIDs that represents the available local services
     char            pcModalias[BT_MAX_STR_LEN];                             // Local Device ID information in modalias format used by the kernel and udev
-    char            pcPath[BT_MAX_STR_LEN];                                 // Bluetooth adapter path
+    char            pcPath[BT_MAX_DEV_PATH_LEN];                            // Bluetooth adapter path
 } stBTAdapterInfo;
 
 typedef struct _stBTAdServiceData {
@@ -593,7 +660,7 @@ typedef struct _stBTDeviceInfo {
     char            aUUIDs[BT_MAX_DEVICE_PROFILE][BT_MAX_UUID_STR_LEN];
     char            pcDevicePrevState[BT_MAX_STR_LEN];
     char            pcDeviceCurrState[BT_MAX_STR_LEN];
-    char            pcDevicePath[BT_MAX_STR_LEN];
+    char            pcDevicePath[BT_MAX_DEV_PATH_LEN];
     stBTAdServiceData  saServices[BT_MAX_DEVICE_PROFILE];
     // TODO: Array of objects Services;
     // TODO: Array of objects Nodes;
@@ -601,7 +668,7 @@ typedef struct _stBTDeviceInfo {
 
 typedef struct _stBTPairedDeviceInfo {
     unsigned short  numberOfDevices;
-    char            devicePath[BT_MAX_NUM_DEVICE][BT_MAX_STR_LEN];
+    char            devicePath[BT_MAX_NUM_DEVICE][BT_MAX_DEV_PATH_LEN];
     stBTDeviceInfo  deviceInfo[BT_MAX_NUM_DEVICE];
 } stBTPairedDeviceInfo;
 
@@ -663,6 +730,63 @@ typedef struct _stBTMediaBrowserUpdate {
 } stBTMediaBrowserUpdate;
 
 
+/* GattDescriptor1 Properties */
+typedef struct _stBTLeGattDesc {
+    char                    descPath[BT_MAX_STR_LEN];                       /* Descriptor Path */
+    char                    descUuid[BT_MAX_UUID_STR_LEN];                  /* 128-bit service UUID */
+    unsigned short          descFlags;                                      /* Descriptor Flags - bit field values */
+    char                    propertyValue[BT_MAX_GATT_OP_DATA_LEN];         /* value of the descriptor */
+} stBTLeGattDesc;
+
+/* GattCharacteristic1 Path and Properties */
+typedef struct _stBTLeGattChar {
+    char                    charPath[BT_MAX_STR_LEN];                       /* Characteristic Path */
+    char                    charUuid[BT_MAX_UUID_STR_LEN];                  /* 128-bit service UUID */
+    stBTLeGattDesc          atBTRGattDesc[BT_MAX_NUM_GATT_DESC];            /* Max of 8 Gatt Descriptor array */
+    unsigned short          ui16NumberOfGattDesc;                           /* Number of Gatt Service ID */
+    unsigned short          charFlags;                                      /* Characteristic Flags - bit field values */
+    char                    value[BT_MAX_GATT_OP_DATA_LEN];                 /* value of the characteristic */
+} stBTLeGattChar;
+
+/* GattService Path and Properties */
+typedef struct _stBTLeGattService {
+    char                    servicePath[BT_MAX_STR_LEN];                    /* Service Path */
+    char                    serviceUuid[BT_MAX_UUID_STR_LEN];               /* 128-bit service UUID */
+    unsigned char           serviceType;                                    /* Primary(True) or secondary(False) gatt service*/
+    stBTLeGattChar          astBTRGattChar[BT_MAX_NUM_GATT_CHAR];           /* Max of 6 Gatt Charactristic array */
+    unsigned short          ui16NumberOfGattChar;                           /* Number of Gatt Charactristics */
+} stBTLeGattService;
+
+typedef struct _stBTLeGattInfo {
+    stBTLeGattService       astBTRGattService[BT_MAX_NUM_GATT_SERVICE];
+    int                     nNumGattServices;
+}stBTLeGattInfo;
+
+/* Advertisement data structure */
+typedef struct _stBTLeManfData {
+    unsigned short  ManfID;                                                 /* Manufacturer ID Key */
+    unsigned int    lenManfData;                                            /* Length of data associated with the manufacturer ID */
+    unsigned char   data[BT_MAX_GATT_OP_DATA_LEN];                          /* Data associated with the manufacturer ID */
+} stBTLeManfData;
+
+typedef struct _stBTLeServData {
+    char    UUID[BT_MAX_STR_LEN];                                           /* UUID of the service data - Key */
+    uint8_t data[BT_MAX_GATT_OP_DATA_LEN];                                  /* Data associated with the service UUID */
+} stBTLeServData;
+
+typedef struct _stBTLeCustomAdv {
+    char            pui8AdvertPath[BT_MAX_STR_LEN];                         /* Service Path */
+    char            AdvertisementType[BT_MAX_STR_LEN];                      /* Type of advertising packet : "Broadcast"/"Peripheral" */
+    char            ServiceUUID[BT_MAX_NUM_GATT_SERVICE][BT_MAX_STR_LEN];   /* List of the UUIDs of the services supported by the device */
+    int             numServiceUUID;                                         /* Number of Services supported by the device */
+    char            SolicitUUID[BT_MAX_NUM_GATT_SERVICE][BT_MAX_STR_LEN];   /* Services the Peripheral device maybe interested in when it is a Gatt client too */
+    int             numSolicitUUID;                                         /* Number of solicit services of the device */
+    stBTLeManfData  ManfData;                                               /* Manufacturer Id and the data assosciated */
+    stBTLeServData  ServiceData;                                            /* Arbitary data associated with the UUID */
+    unsigned char   bTxPower;                                               /* Includes Tx power in advertisement */
+} stBTLeCustomAdv;
+
+
 /* Fptr Callbacks types */
 typedef int (*fPtr_BtrCore_BTAdapterStatusUpdateCb)(enBTAdapterProp aeBtAdapterProp, stBTAdapterInfo* apstBTAdapterInfo, void* apUserData);
 typedef int (*fPtr_BtrCore_BTDevStatusUpdateCb)(enBTDeviceType aeBtDeviceType, enBTDeviceState aeBtDeviceState, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
@@ -672,8 +796,9 @@ typedef int (*fPtr_BtrCore_BTTransportPathMediaCb)(const char* apBtMediaTranspor
 typedef int (*fPtr_BtrCore_BTMediaPlayerPathCb)(const char* apcBTMediaPlayerPath, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnIntimCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, unsigned int aui32devPassKey, unsigned char ucIsReqConfirmation, void* apUserData);
 typedef int (*fPtr_BtrCore_BTConnAuthCb)(enBTDeviceType aeBtDeviceType, stBTDeviceInfo* apstBTDeviceInfo, void* apUserData);
-typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, const char* apBtGattPath, const char* apcBtDevAddr, enBTDeviceState aenBTDeviceState, void* apUserData);
 typedef int (*fPtr_BtrCore_BTMediaBrowserPathCb)(stBTMediaBrowserUpdate* apstBtMediaBsrUpdate, unsigned char ucItemScope, const char* apcBtDevAddr, void* apUserData);
+typedef int (*fPtr_BtrCore_BTLeGattPathCb)(enBTOpIfceType enBtOpIfceType, enBTLeGattOp aenGattOp, const char* apBtGattPath, const char* apcBtDevAddr, enBTDeviceState aenBTDeviceState, void* apLeCbData, void* apUserData);
+typedef int (*fPtr_BtrCore_BTLeAdvertisementCb)(const char* apBtAdvPath, stBTLeCustomAdv** appstBtCoreLeCustomAdv, void* apUserData);
 /* @} */ // End of group BLUETOOTH_TYPES
 
 /**
@@ -762,7 +887,7 @@ int   BtrCore_BTUnregisterAgent (void* apBtConn, const char* apBtAdapter, const 
  * @return Returns the status of the operation.
  * @retval Returns 0 on success, appropriate error code otherwise.
 */
-int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, char** apcArrBtAdapterPath);
+int   BtrCore_BTGetAdapterList (void* apBtConn, unsigned int *apBtNumAdapters, char* apcArrBtAdapterPath[BT_MAX_NUM_ADAPTERS]);
 
 /**
  * @brief  Using this API adapter path is fetched from Dbus object path.
@@ -1237,9 +1362,37 @@ tBTMediaItemId BtrCore_BTGetCommonParentMediaItemId (tBTMediaItemId aBTcurrMedia
 *    LE Functions
 *******************************************/
 
-int BtrCore_BTRegisterLeGatt (void* apBtConn, const char* apBtAdapter, const char* apcBtSrvUUID, const char* apcBtCharUUID, const char* apcBtDescUUID, int ai32BtCapabilities, int ai32CapabilitiesSize);
+/**
+ * @brief  This API is used to invoke the bluez API advertisement method call RegisterAdvertisment
+ *
+ * @param[in]  apstBtIfceHdl           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ * @param[in]  apBtAdapter             Bluetooth adapter
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int BtrCore_BTRegisterLeAdvertisement( void* apstBtIfceHdl, const char* apBtAdapter);
 
+/**
+ * @brief  This API is used to invoke the bluez API gatt service method call RegisterApplication
+ *
+ * @param[in]  apstBtIfceHdl           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ * @param[in]  apBtAdapter             Bluetooth adapter
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int BtrCore_BTRegisterLeGatt (void* apBtConn, const char* apBtAdapter);
 
+/**
+ * @brief  This API is used to invoke the bluez API gatt service method call UnRegisterApplication
+ *
+ * @param[in]  apstBtIfceHdl           The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ * @param[in]  apBtAdapter             Bluetooth adapter
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
 int BtrCore_BTUnRegisterLeGatt (void* apBtConn, const char* apBtAdapter);
 
 /**
@@ -1284,5 +1437,6 @@ int   BtrCore_BTRegisterMediaPlayerPathCb (void* apBtConn, const char* apBtAdapt
                                                 fPtr_BtrCore_BTMediaPlayerPathCb afpcBTMediaPlayerPath, void* apUserData);
 int   BtrCore_BTRegisterMediaBrowserUpdateCb (void* apBtConn, fPtr_BtrCore_BTMediaBrowserPathCb afpcBTMediaBrowserPath, void* apUserData);
 int   BtrCore_BTRegisterLEGattInfoCb (void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeGattPathCb afpcBLeGattPath, void* apUserData);
+int   BtrCore_BTRegisterLEAdvInfoCb(void* apBtConn, const char* apBtAdapter, fPtr_BtrCore_BTLeAdvertisementCb afpcBLeAdvPath, void* apUserData);
 
 #endif // __BTR_CORE_BT_IFCE_H__
