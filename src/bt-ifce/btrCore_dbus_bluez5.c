@@ -1337,6 +1337,71 @@ btrCore_BTParseDevice (
                     BTRCORELOG_ERROR ("Services; Not an Array\n");
                 }
             }
+            else if (strcmp (pcKey, "ServiceData") == 0) {
+                dbus_message_iter_next(&dict_i);
+                dbus_message_iter_recurse(&dict_i, &variant_i);
+                dbus_type = dbus_message_iter_get_arg_type (&variant_i);
+
+                if (dbus_type == DBUS_TYPE_ARRAY) {
+                    DBusMessageIter variant_j;
+
+                    dbus_message_iter_recurse(&variant_i, &variant_j);
+                    //dbus_type = dbus_message_iter_get_arg_type (&variant_j);
+
+                    DBusMessageIter dict_j;
+                    int count = 0;
+
+
+                    while ((dbus_message_iter_get_arg_type (&variant_j) == DBUS_TYPE_DICT_ENTRY) &&
+                           (count < BT_MAX_DEVICE_PROFILE)){
+                        const char* uuid_str = NULL;
+                        dbus_message_iter_recurse(&variant_j, &dict_j);
+                        dbus_message_iter_get_basic(&dict_j, &uuid_str);
+
+                        if (uuid_str) {
+                            strncpy(apstBTDeviceInfo->saServices[count].pcUUIDs, uuid_str, (BT_MAX_UUID_STR_LEN - 1));
+	                    //BTRCORELOG_TRACE ("Service advertisement data, Key UUID is [%s]\n", apstBTDeviceInfo->saServices[count].pcUUIDs);
+
+	                    DBusMessageIter variant_k;
+	                    dbus_message_iter_next(&dict_j);
+	                    dbus_message_iter_recurse(&dict_j, &variant_k);
+
+                            dbus_type = dbus_message_iter_get_arg_type (&variant_k);
+                            if (dbus_type == DBUS_TYPE_ARRAY) {
+                                DBusMessageIter variant_l;
+                                uint8_t *service_data;
+                                int len;
+
+                                dbus_message_iter_recurse(&variant_k, &variant_l);
+                                dbus_message_iter_get_fixed_array(&variant_l, &service_data, &len);
+
+                                if(service_data && len) {
+                                    if(len <= BT_MAX_SERVICE_DATA_LEN) {
+	                                apstBTDeviceInfo->saServices[count].len = len;
+	                                memcpy(apstBTDeviceInfo->saServices[count].pcData, service_data, len);
+                                    }
+                                    else {
+                                        BTRCORELOG_ERROR ("Failed to populate the ServiceData since the ServiceData length [%d] is more than BT_MAX_SERVICE_DATA_LEN [%d].\n", len, BT_MAX_SERVICE_DATA_LEN);
+                                    }
+
+                                    //for (int i=0; i<len; i++) {
+                                    //BTRCORELOG_TRACE ("ServiceData [%d] [%x]\n",i, *(service_data+i));
+                                    //}
+                                }
+                            }
+
+                            BTRCORELOG_TRACE ("Service advertisement data, Data is: \n "  );
+                            BTRCORELOG_TRACE ("------------------\n" );
+                            for (int i =0; i < apstBTDeviceInfo->saServices[count].len; i++){
+                                BTRCORELOG_TRACE ("ServiceData[%d] = [%x]\n ", i, apstBTDeviceInfo->saServices[count].pcData[i]);
+                            }
+                            BTRCORELOG_TRACE ("------------------\n" );
+                        }
+                        count++;
+                        dbus_message_iter_next (&variant_j);
+                    }
+                }
+            }
         }
 
         if (!dbus_message_iter_next(&element_i)) {

@@ -57,6 +57,11 @@
  */
 #define BT_MAX_DEVICE_PROFILE    32
 
+/**
+ * @brief Bluetooth Advertising Service Data max length.
+ */
+#define BT_MAX_SERVICE_DATA_LEN        32
+
 
 /**
  * @brief Bluetooth A2DP Source UUID
@@ -563,6 +568,12 @@ typedef struct _stBTAdapterInfo {
     char            pcPath[BT_MAX_STR_LEN];                                 // Bluetooth adapter path
 } stBTAdapterInfo;
 
+typedef struct _stBTAdServiceData {
+    char            pcUUIDs[BT_MAX_UUID_STR_LEN];;
+    uint8_t         pcData[BT_MAX_SERVICE_DATA_LEN];
+    size_t          len;
+} stBTAdServiceData;
+
 typedef struct _stBTDeviceInfo {
     int             bPaired;
     int             bConnected;
@@ -583,6 +594,7 @@ typedef struct _stBTDeviceInfo {
     char            pcDevicePrevState[BT_MAX_STR_LEN];
     char            pcDeviceCurrState[BT_MAX_STR_LEN];
     char            pcDevicePath[BT_MAX_STR_LEN];
+    stBTAdServiceData  saServices[BT_MAX_DEVICE_PROFILE];
     // TODO: Array of objects Services;
     // TODO: Array of objects Nodes;
 } stBTDeviceInfo;
