@@ -65,6 +65,7 @@ extern "C" {
 
 #define BTRCORE_UUID_LEN            BTRCORE_STR_LEN
 #define BTRCORE_MAX_DEV_OP_DATA_LEN BTRCORE_MAX_STR_LEN * 3
+#define BTRCORE_MAX_SERVICE_DATA_LEN  32
 
 typedef unsigned long long int tBTRCoreMediaElementId;
 
@@ -292,6 +293,12 @@ typedef struct _stBTRCoreSupportedServiceList {
     stBTRCoreSupportedService   profile[BTRCORE_MAX_DEVICE_PROFILE];
 } stBTRCoreSupportedServiceList;
 
+typedef struct _stBTRCoreAdServiceData {
+    char            pcUUIDs[BTRCORE_UUID_LEN];;
+    unsigned char   pcData[BTRCORE_MAX_SERVICE_DATA_LEN];
+    unsigned int    len;
+} stBTRCoreAdServiceData;
+
 /*BT Adapter*/
 typedef struct _stBTRCoreAdapter {
     unsigned char   adapter_number;
@@ -317,6 +324,7 @@ typedef struct _stBTRCoreBTDevice {
     char                          pcDeviceAddress[BD_NAME_LEN+1];
     char                          pcDevicePath[BD_NAME_LEN+1];
     stBTRCoreSupportedServiceList stDeviceProfile;
+    stBTRCoreAdServiceData        stAdServiceData[BTRCORE_MAX_DEVICE_PROFILE];
 } stBTRCoreBTDevice;
 
 typedef struct _stBTRCoreScannedDevicesCount {

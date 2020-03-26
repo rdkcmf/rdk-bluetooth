@@ -574,6 +574,27 @@ main (
                 fprintf(stderr, "%d\t: %s - Show Found Devices\n", __LINE__, __FUNCTION__);
                 lstBTRCoreAdapter.adapter_number = myadapter;
                 BTRCore_GetListOfScannedDevices(lhBTRCore, &lstBTRCoreScannedDevList);
+
+                fprintf(stderr, "%d\t: %s - Display Ad Service data for scanned devices\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "%d\t: %s - *******************************************\n", __LINE__, __FUNCTION__);
+                fprintf(stderr, "%d\t: %s - numberOfDevices : %d \n", __LINE__, __FUNCTION__, lstBTRCoreScannedDevList.numberOfDevices);
+
+                for(int i = 0; i < lstBTRCoreScannedDevList.numberOfDevices; i++)
+                {
+                    fprintf(stderr, "%d\t: %s - ServiceData from Scanned Device : %d \n", __LINE__, __FUNCTION__, i);
+
+                    for(int count = 0; count < lstBTRCoreScannedDevList.devices[i].stDeviceProfile.numberOfService; count++)
+                    {
+                        fprintf(stderr, "%d\t: %s - ServiceData for UUID : %s \n", __LINE__, __FUNCTION__, lstBTRCoreScannedDevList.devices[i].stAdServiceData[count].pcUUIDs);
+                        if(0 != lstBTRCoreScannedDevList.devices[i].stAdServiceData[count].len)
+                        {
+                            for (int j =0; j < lstBTRCoreScannedDevList.devices[i].stAdServiceData[count].len; j++){
+                                fprintf(stderr, "%d\t: %s - ServiceData[%d] = [%x]\n ", __LINE__, __FUNCTION__, j, lstBTRCoreScannedDevList.devices[i].stAdServiceData[count].pcData[j]);
+                            }
+                        }
+                   }
+
+                }
             }
             break;
         case 4:
