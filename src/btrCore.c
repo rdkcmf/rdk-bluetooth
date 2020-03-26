@@ -233,6 +233,8 @@ btrCore_InitDataSt (
         memset (apsthBTRCore->stScannedDevicesArr[i].pcDeviceAddress,   '\0', sizeof(char) * (BD_NAME_LEN + 1));
         memset (apsthBTRCore->stScannedDevicesArr[i].pcDevicePath,      '\0', sizeof(char) * (BD_NAME_LEN + 1));
 
+        memset (apsthBTRCore->stScannedDevicesArr[i].stAdServiceData, 0, (BTRCORE_MAX_DEVICE_PROFILE * sizeof(stBTRCoreAdServiceData)));
+
         apsthBTRCore->stScannedDevStInfoArr[i].eDevicePrevState = enBTRCoreDevStInitialized;
         apsthBTRCore->stScannedDevStInfoArr[i].eDeviceCurrState = enBTRCoreDevStInitialized;
     }
@@ -252,6 +254,8 @@ btrCore_InitDataSt (
         memset (apsthBTRCore->stKnownDevicesArr[i].pcDeviceName,    '\0', sizeof(char) * (BD_NAME_LEN + 1));
         memset (apsthBTRCore->stKnownDevicesArr[i].pcDeviceAddress, '\0', sizeof(char) * (BD_NAME_LEN + 1));
         memset (apsthBTRCore->stKnownDevicesArr[i].pcDevicePath,    '\0', sizeof(char) * (BD_NAME_LEN + 1));
+
+        memset (apsthBTRCore->stKnownDevicesArr[i].stAdServiceData, 0, (BTRCORE_MAX_DEVICE_PROFILE * sizeof(stBTRCoreAdServiceData)));
 
         apsthBTRCore->stKnownDevStInfoArr[i].eDevicePrevState = enBTRCoreDevStInitialized;
         apsthBTRCore->stKnownDevStInfoArr[i].eDeviceCurrState = enBTRCoreDevStInitialized;
@@ -688,6 +692,7 @@ btrCore_AddDeviceToScannedDevicesArr (
     stBTRCoreBTDevice*  apstFoundDevice
 ) {
     int                 i;
+    int                 count = 0;
     stBTRCoreBTDevice   lstFoundDevice;
 
     memset(&lstFoundDevice, 0, sizeof(stBTRCoreBTDevice));
@@ -730,6 +735,23 @@ btrCore_AddDeviceToScannedDevicesArr (
             else if (lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_1, NULL, 16) ||
                      lstFoundDevice.stDeviceProfile.profile[i].uuid_value == strtol(BTR_CORE_HID_2, NULL, 16)) {
                 lstFoundDevice.enDeviceType = enBTRCore_DC_HID_Keyboard;
+            }
+        }
+    }
+
+    /* Populate the Ad Service Data */
+    for(count = 0; count < lstFoundDevice.stDeviceProfile.numberOfService; count++)
+    {
+        strncpy(lstFoundDevice.stAdServiceData[count].pcUUIDs, apstBTDeviceInfo->saServices[count].pcUUIDs, (BT_MAX_UUID_STR_LEN - 1));
+
+        if(0 != apstBTDeviceInfo->saServices[count].len)
+        {
+            lstFoundDevice.stAdServiceData[count].len = apstBTDeviceInfo->saServices[count].len;
+            memcpy(lstFoundDevice.stAdServiceData[count].pcData, apstBTDeviceInfo->saServices[count].pcData, apstBTDeviceInfo->saServices[count].len);
+
+            BTRCORELOG_TRACE ("ServiceData from %s\n", __FUNCTION__);
+            for (int i =0; i < apstBTDeviceInfo->saServices[count].len; i++){
+                BTRCORELOG_TRACE ("ServiceData[%d] = [%x]\n ", i, lstFoundDevice.stAdServiceData[count].pcData[i]);
             }
         }
     }
