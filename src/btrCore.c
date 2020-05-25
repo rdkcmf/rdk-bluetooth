@@ -3231,7 +3231,7 @@ BTRCore_GetVersionInfo (
 
     if (!BtrCore_BTGetIfceNameVersion(pstlhBTRCore->connHdl, lBtIfceName, lBtVersion)) {
         strncpy(apcBtVersion, lBtIfceName, strlen(lBtIfceName));
-        strncat(apcBtVersion, "-", strlen("-"));
+        strncat(apcBtVersion, "-", strlen("-") + 1);
         strncat(apcBtVersion, lBtVersion, strlen(lBtVersion));
         BTRCORELOG_INFO ("Ifce: %s Version: %s", lBtIfceName, lBtVersion);
         BTRCORELOG_INFO ("Out:  %s\n", apcBtVersion);
