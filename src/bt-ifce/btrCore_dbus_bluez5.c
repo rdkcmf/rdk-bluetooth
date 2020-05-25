@@ -3558,17 +3558,20 @@ BtrCore_BTGetIfceNameVersion (
 
     (void)pstlhBtIfce;
 
-
+    /* strncpy() throws format truncation error on gcc 9.x when same length of src string
+       is given in 3rd argument. Also, strncpy() will fill null terminating characters if
+       3rd argument length is more than the length of src string
+    */
     lfpVersion = popen("/usr/lib/bluez5/bluetooth/bluetoothd --version", "r");
     if ((lfpVersion == NULL)) {
         BTRCORELOG_ERROR ("Failed to run Version command\n");
-        strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
+        strncpy(lcpVersion, "5.XXX", strlen("5.XXX") + 1);
     }
     else {
         do {
             if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
                 BTRCORELOG_ERROR ("Failed to Valid Version\n");
-                strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
+                strncpy(lcpVersion, "5.XXX", strlen("5.XXX") + 1);
             }
         } while (strstr(lcpVersion, "breakpad") || strstr(lcpVersion, "Breakpad"));
 
@@ -3576,12 +3579,12 @@ BtrCore_BTGetIfceNameVersion (
     }
 
 
-    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez"));
-    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion));
+    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez") + 1);
+    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion) + 1);
     strncpy(pstlhBtIfce->pcBTVersion, lcpVersion, strlen(lcpVersion));
 
     BTRCORELOG_WARN ("Bluez Version - %s\n", apBtOutVersion);
-    
+
     return 0;
 }
 
