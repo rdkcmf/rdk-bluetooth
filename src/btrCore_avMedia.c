@@ -46,6 +46,13 @@
 
 #include "btrCore_bt_ifce.h"
 
+// a2dp codec macros forward compatibility
+#ifndef MIN_BITPOOL
+#define MIN_BITPOOL SBC_MIN_BITPOOL
+#endif
+#ifndef MAX_BITPOOL
+#define MAX_BITPOOL SBC_MAX_BITPOOL
+#endif
 
 //#define AAC_SUPPORTED
 
