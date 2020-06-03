@@ -6711,7 +6711,7 @@ btrCore_BTDBusConnectionFilterCb (
     stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apvUserData;
 
 
-    memset(&lstBTAdapterInfo, 0, sizeof(stBTDeviceInfo));
+    memset(&lstBTAdapterInfo, 0, sizeof(stBTAdapterInfo));
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
     memset(&lstBTMediaInfo, 0, sizeof(stBTMediaInfo));
     lstBTDeviceInfo.i32RSSI = INT_MIN;
