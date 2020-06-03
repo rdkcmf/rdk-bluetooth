@@ -230,7 +230,7 @@ enBTRCoreRet BTRCore_LE_StopAdvertisement(tBTRCoreLeHdl hBTRCoreLe, void* apBtCo
  * @return  Returns the pointer to the service added
  * @retval  Returns NULL on failure, appropiate address otherwise.
  */
-int* BtrCore_LE_AddGattServiceInfo(tBTRCoreLeHdl hBTRCoreLe, char* aBtdevAddr, char* aUUID, BOOLEAN aServiceType, int *aNumGattServices);
+int* BTRCore_LE_AddGattServiceInfo(tBTRCoreLeHdl hBTRCoreLe, const char* apBtAdapter, char* aBtdevAddr, char* aUUID, BOOLEAN aServiceType, int *aNumGattServices);
 
 /**
  * @brief  This API is used to add gatt characteristic info for the advertisement
@@ -245,7 +245,7 @@ int* BtrCore_LE_AddGattServiceInfo(tBTRCoreLeHdl hBTRCoreLe, char* aBtdevAddr, c
  * @return  Returns the pointer to the characteristic added
  * @retval  Returns NULL on failure, appropiate address otherwise.
  */
-int* BtrCore_LE_AddGattCharInfo(tBTRCoreLeHdl hBTRCoreLe, char* aBtdevAddr, char* aParentUUID, char* aUUID, unsigned short aCharFlags, char* aValue);
+int* BTRCore_LE_AddGattCharInfo(tBTRCoreLeHdl hBTRCoreLe, const char* apBtAdapter, char* aBtdevAddr, char* aParentUUID, char* aUUID, unsigned short aCharFlags, char* aValue);
 
 /**
  * @brief  This API is used to add gatt descriptor info for the advertisement
@@ -260,7 +260,7 @@ int* BtrCore_LE_AddGattCharInfo(tBTRCoreLeHdl hBTRCoreLe, char* aBtdevAddr, char
  * @return  Returns the pointer to the characteristic added
  * @retval  Returns NULL on failure, appropiate address otherwise.
  */
-int* BtrCore_LE_AddGattDescInfo(tBTRCoreLeHdl hBTRCoreLe, char* aBtdevAddr, char* aParentUUID, char* aUUID, unsigned short aDescFlags, char* aValue);
+int* BTRCore_LE_AddGattDescInfo(tBTRCoreLeHdl hBTRCoreLe, const char* apBtAdapter, char* aBtdevAddr, char* aParentUUID, char* aUUID, unsigned short aDescFlags, char* aValue);
 
 /**
  * @brief  This API Returns the specified property value associated with the UUID

@@ -3231,7 +3231,7 @@ BTRCore_GetVersionInfo (
 
     if (!BtrCore_BTGetIfceNameVersion(pstlhBTRCore->connHdl, lBtIfceName, lBtVersion)) {
         strncpy(apcBtVersion, lBtIfceName, strlen(lBtIfceName));
-        strncat(apcBtVersion, "-", 1);
+        strncat(apcBtVersion, "-", strlen("-"));
         strncat(apcBtVersion, lBtVersion, strlen(lBtVersion));
         BTRCORELOG_INFO ("Ifce: %s Version: %s", lBtIfceName, lBtVersion);
         BTRCORELOG_INFO ("Out:  %s\n", apcBtVersion);
@@ -5142,7 +5142,7 @@ BTRCore_SetEnableTxPower (
     tBTRCoreHandle  hBTRCore,
     BOOLEAN         aTxPower
 ) {
-    stBTRCoreHdl* pstlhBTRCore = NULL;
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
     enBTRCoreRet    lenBTRCoreRet = enBTRCoreFailure;
 
     if (NULL != hBTRCore) {
@@ -5155,17 +5155,17 @@ BTRCore_SetEnableTxPower (
 
 enBTRCoreRet 
 BTRCore_SetServiceInfo (
-    tBTRCoreHandle hBTRCore,
-    char*          aUUID,
-    BOOLEAN        aServiceType
+    tBTRCoreHandle  hBTRCore,
+    char*           aUUID,
+    BOOLEAN         aServiceType
 ) {
-    stBTRCoreHdl* pstlhBTRCore = NULL;
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
     enBTRCoreRet    lenBTRCoreRet = enBTRCoreFailure;
-    int lNumGattServices = 0;
+    int             lNumGattServices = 0;
 
     if ((NULL != hBTRCore) && (NULL != aUUID)) {
         pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
-        if (NULL != BtrCore_LE_AddGattServiceInfo(pstlhBTRCore->leHdl, pstlhBTRCore->curAdapterAddr, aUUID, aServiceType, &lNumGattServices)) {
+        if (NULL != BTRCore_LE_AddGattServiceInfo(pstlhBTRCore->leHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr, aUUID, aServiceType, &lNumGattServices)) {
             //*aNumGattServices = lNumGattServices;
             lenBTRCoreRet = enBTRCoreSuccess;
         }
@@ -5175,26 +5175,26 @@ BTRCore_SetServiceInfo (
 
 enBTRCoreRet
 BTRCore_SetGattInfo (
-    tBTRCoreHandle     hBTRCore,
-    char*              aParentUUID,
-    char*              aUUID,
-    unsigned short     aFlags,
-    char*              aValue,
-    enBTRCoreLeProp    aElement
+    tBTRCoreHandle  hBTRCore,
+    char*           aParentUUID,
+    char*           aUUID,
+    unsigned short  aFlags,
+    char*           aValue,
+    enBTRCoreLeProp aElement
 ) {
     enBTRCoreRet    lenBTRCoreRet = enBTRCoreFailure;
-    stBTRCoreHdl* pstlhBTRCore = NULL;
+    stBTRCoreHdl*   pstlhBTRCore = NULL;
 
     if ((NULL != hBTRCore) && (NULL != aParentUUID) && (NULL != aUUID) && (NULL != aValue)) {
         pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
 
         if (enBTRCoreLePropGChar == aElement) {
-            if (NULL != BtrCore_LE_AddGattCharInfo(pstlhBTRCore->leHdl, pstlhBTRCore->curAdapterAddr, aParentUUID, aUUID, aFlags, aValue)) {
+            if (NULL != BTRCore_LE_AddGattCharInfo(pstlhBTRCore->leHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr, aParentUUID, aUUID, aFlags, aValue)) {
                 lenBTRCoreRet = enBTRCoreSuccess;
             }
         }
         else {
-            if (NULL != BtrCore_LE_AddGattDescInfo(pstlhBTRCore->leHdl, pstlhBTRCore->curAdapterAddr, aParentUUID, aUUID, aFlags, aValue)) {
+            if (NULL != BTRCore_LE_AddGattDescInfo(pstlhBTRCore->leHdl, pstlhBTRCore->curAdapterPath, pstlhBTRCore->curAdapterAddr, aParentUUID, aUUID, aFlags, aValue)) {
                 lenBTRCoreRet = enBTRCoreSuccess;
             }
         }

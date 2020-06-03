@@ -98,6 +98,7 @@ typedef struct _stBtIfceHdl {
 
     char*                                   pcBTAgentPath;
     char*                                   pcBTDAdapterPath;
+    char*                                   pcBTDAdapterAddr;
     char*                                   pcBTAdapterPath;
     char*                                   pcDevTransportPath;
 
@@ -129,6 +130,7 @@ typedef struct _stBtIfceHdl {
 
     stBTLeGattInfo                          stBTLeGatt;
     stBTLeCustomAdv                         stBTLeCustAdvt;
+    char                                    pcBTAdapterGattSrvEpPath[BT_MAX_DEV_PATH_LEN];
 
     fPtr_BtrCore_BTAdapterStatusUpdateCb    fpcBAdapterStatusUpdate;
     fPtr_BtrCore_BTDevStatusUpdateCb        fpcBDevStatusUpdate;
@@ -592,6 +594,12 @@ static int
 btrCore_BTReleaseDefaultAdapterPath (
     stBtIfceHdl*    apstlhBtIfce
 ) {
+    if (apstlhBtIfce->pcBTDAdapterAddr) {
+        BTRCORELOG_WARN ("Adapter Addr is : %s - %p\n", apstlhBtIfce->pcBTDAdapterAddr, apstlhBtIfce->pcBTDAdapterAddr);
+        free(apstlhBtIfce->pcBTDAdapterAddr);
+        apstlhBtIfce->pcBTDAdapterAddr = NULL;
+    }
+
     if (apstlhBtIfce->pcBTDAdapterPath) {
         BTRCORELOG_WARN ("Default Adapter Path is : %s - %p\n", apstlhBtIfce->pcBTDAdapterPath, apstlhBtIfce->pcBTDAdapterPath);
         free(apstlhBtIfce->pcBTDAdapterPath);
@@ -2933,6 +2941,7 @@ BtrCore_BTInitGetConnection (
 
     pstlhBtIfce->pcBTAgentPath                  = NULL;
     pstlhBtIfce->pcBTDAdapterPath               = NULL;
+    pstlhBtIfce->pcBTDAdapterAddr               = NULL;
     pstlhBtIfce->pcBTAdapterPath                = NULL;
     pstlhBtIfce->pcDevTransportPath             = NULL;
 
@@ -2952,6 +2961,7 @@ BtrCore_BTInitGetConnection (
 
     memset(&pstlhBtIfce->stBTLeGatt, 0, sizeof(stBTLeGattInfo));
     memset(&pstlhBtIfce->stBTLeCustAdvt, 0, sizeof(stBTLeCustomAdv));
+    memset(pstlhBtIfce->pcBTAdapterGattSrvEpPath, '\0', sizeof(char) * BT_MAX_DEV_PATH_LEN);
 
     strncpy(pstlhBtIfce->pcDeviceCurrState,   "disconnected", BT_MAX_STR_LEN - 1);
     strncpy(pstlhBtIfce->pcLeDeviceCurrState, "disconnected", BT_MAX_STR_LEN - 1);
@@ -2983,7 +2993,6 @@ BtrCore_BTInitGetConnection (
     pstlhBtIfce->pDBusConn = lpDBusConn;
 
 
-    dbus_bus_add_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" DBUS_SERVICE_DBUS "',interface='" DBUS_INTERFACE_DBUS "',member='NameOwnerChanged'"",arg0='" BT_DBUS_BLUEZ_PATH "'", NULL);
     dbus_bus_add_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesAdded'", NULL);
     dbus_bus_add_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesRemoved'", NULL);
     dbus_bus_add_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
@@ -3022,6 +3031,11 @@ BtrCore_BTDeInitReleaseConnection (
     if (pstlhBtIfce->pcBTAgentPath) {
         free(pstlhBtIfce->pcBTAgentPath);
         pstlhBtIfce->pcBTAgentPath = NULL;
+    }
+
+    if (pstlhBtIfce->pcBTDAdapterAddr) {
+        free(pstlhBtIfce->pcBTDAdapterAddr);
+        pstlhBtIfce->pcBTDAdapterAddr = NULL;
     }
 
     if (pstlhBtIfce->pcBTDAdapterPath) {
@@ -3076,7 +3090,6 @@ BtrCore_BTDeInitReleaseConnection (
     dbus_bus_remove_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_PROPERTIES "',member='PropertiesChanged'"",arg0='" BT_DBUS_BLUEZ_ADAPTER_PATH "'", NULL);
     dbus_bus_remove_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesRemoved'", NULL);
     dbus_bus_remove_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" BT_DBUS_BLUEZ_PATH "',interface='" DBUS_INTERFACE_OBJECT_MANAGER "',member='InterfacesAdded'", NULL);
-    dbus_bus_remove_match(pstlhBtIfce->pDBusConn, "type='signal',sender='" DBUS_SERVICE_DBUS "',interface='" DBUS_INTERFACE_DBUS "',member='NameOwnerChanged'"",arg0='" BT_DBUS_BLUEZ_PATH "'", NULL);
 
     dbus_connection_remove_filter(pstlhBtIfce->pDBusConn, btrCore_BTDBusConnectionFilterCb, pstlhBtIfce);
 
@@ -3589,6 +3602,7 @@ BtrCore_BTGetProp (
 
     const char*         lDBusKey = NULL;
     int                 lDBusType = DBUS_TYPE_INVALID;
+    int                 i32StoreDefAdpAddr = 0;
 
     const char*         pInterface            = NULL;
     const char*         pAdapterInterface     = BT_DBUS_BLUEZ_ADAPTER_PATH;
@@ -3619,6 +3633,9 @@ BtrCore_BTGetProp (
         case enBTAdPropAddress:
             lDBusType = DBUS_TYPE_STRING;
             lDBusKey  = "Address";
+            if (!strncmp(apcBtOpIfcePath, pstlhBtIfce->pcBTDAdapterPath, strlen(pstlhBtIfce->pcBTDAdapterPath))) {
+                i32StoreDefAdpAddr = 1;
+            }
             break;
         case enBTAdPropPowered:
             lDBusType = DBUS_TYPE_BOOLEAN;
@@ -3833,6 +3850,10 @@ BtrCore_BTGetProp (
                                 dbus_message_iter_get_basic(&variant_i, &pParsedValueString);
                                 //BTRCORELOG_ERROR ("Key is %s and the value in string is %s\n", pParsedKey, pParsedValueString);
                                 strncpy (apvVal, pParsedValueString, strlen(pParsedValueString) < BT_MAX_UUID_STR_LEN ? strlen(pParsedValueString) : BT_MAX_UUID_STR_LEN - 1);
+
+                                if (i32StoreDefAdpAddr && !pstlhBtIfce->pcBTDAdapterAddr) {
+                                    pstlhBtIfce->pcBTDAdapterAddr = strndup(pParsedValueString, strlen(pParsedValueString) < BT_MAX_UUID_STR_LEN ? strlen(pParsedValueString) : BT_MAX_UUID_STR_LEN - 1);
+                                }
                             }
                             else if (lDBusType == DBUS_TYPE_UINT16) {
                                 unsigned short* ptr = (unsigned short*) apvVal;
@@ -6579,6 +6600,44 @@ BtrCore_BTRegisterLeGatt (
     if (!apstBtIfceHdl || !apBtAdapter)
         return -1;
 
+    if (!strncmp(apBtAdapter, pstlhBtIfce->pcBTDAdapterPath, strlen(pstlhBtIfce->pcBTDAdapterPath))) {
+
+        char lCurAdapterAddress[BT_MAX_DEV_PATH_LEN] = "\0";
+
+        if (!pstlhBtIfce->pcBTDAdapterAddr) {
+            unBTOpIfceProp     lunBtOpAdapProp;
+            lunBtOpAdapProp.enBtAdapterProp = enBTAdPropAddress;
+
+            /* Get current device address */
+            if (BtrCore_BTGetProp(pstlhBtIfce,
+                                 (BtrCore_BTGetAdapterPath(pstlhBtIfce, NULL)),
+                                 enBTAdapter,
+                                 lunBtOpAdapProp,
+                                 lCurAdapterAddress)) {
+                return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+            }
+        }
+        else {
+            strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, strlen(pstlhBtIfce->pcBTDAdapterAddr));
+        }
+
+        char *current_pos = strchr(lCurAdapterAddress, ':');
+        while (current_pos){
+            *current_pos = '_';
+            current_pos = strchr(current_pos, ':');
+        }
+
+        memset(pstlhBtIfce->pcBTAdapterGattSrvEpPath, '\0', sizeof(char) * BT_MAX_DEV_PATH_LEN);
+        strncpy(pstlhBtIfce->pcBTAdapterGattSrvEpPath, pstlhBtIfce->pcBTDAdapterPath, strlen(pstlhBtIfce->pcBTDAdapterPath));
+        strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, "/dev_", 5);
+        strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, lCurAdapterAddress, strlen(lCurAdapterAddress));
+
+        lpBtLeGattSrvEpPath = pstlhBtIfce->pcBTAdapterGattSrvEpPath;
+    }
+    else {
+        lpBtLeGattSrvEpPath = BT_LE_GATT_SERVER_ENDPOINT;
+    }
+
     dbus_error_init(&lDBusErr);
     lDBusOp = dbus_connection_try_register_object_path(pstlhBtIfce->pDBusConn, lpBtLeGattSrvEpPath, &gDBusLeGattEndpointVTable, pstlhBtIfce, &lDBusErr);
     if (!lDBusOp) {
@@ -6637,7 +6696,7 @@ BtrCore_BTUnRegisterLeGatt (
     stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apstBtIfceHdl;
     DBusMessage*    lpDBusMsg   = NULL;
     dbus_bool_t     lDBusOp;
-    const char*     lpBtLeGattSrvEpPath = BT_LE_GATT_SERVER_ENDPOINT;
+    const char*     lpBtLeGattSrvEpPath;
     const char*     lpBtLeGattAdvEpPath;
 
     if (!apstBtIfceHdl || !apBtAdapter)
@@ -6673,6 +6732,7 @@ BtrCore_BTUnRegisterLeGatt (
         return -1;
     }
 
+    lpBtLeGattSrvEpPath = (pstlhBtIfce->pcBTAdapterGattSrvEpPath[0] == '\0') ? BT_LE_GATT_SERVER_ENDPOINT : pstlhBtIfce->pcBTAdapterGattSrvEpPath;
     dbus_message_append_args(lpDBusMsg, DBUS_TYPE_OBJECT_PATH, &lpBtLeGattSrvEpPath, DBUS_TYPE_INVALID);
 
     lDBusOp = dbus_connection_send(pstlhBtIfce->pDBusConn, lpDBusMsg, NULL);
@@ -6685,17 +6745,24 @@ BtrCore_BTUnRegisterLeGatt (
 
     /* Get object paths */
     stBTLeGattInfo* lpstBTLeGattInfo = &pstlhBtIfce->stBTLeGatt;
-    char               lCurAdapterAddress[BT_MAX_STR_LEN] = "\0";
-    unBTOpIfceProp     lunBtOpAdapProp;
-    lunBtOpAdapProp.   enBtAdapterProp = enBTAdPropAddress;
-    
-    /* Get current device address */
-    if (BtrCore_BTGetProp(pstlhBtIfce,
-                         (BtrCore_BTGetAdapterPath(pstlhBtIfce, NULL)),
-                         enBTAdapter,
-                         lunBtOpAdapProp,
-                         lCurAdapterAddress)) {
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    char            lCurAdapterAddress[BT_MAX_DEV_PATH_LEN] = "\0";
+
+
+    if (!pstlhBtIfce->pcBTDAdapterAddr) {
+        unBTOpIfceProp     lunBtOpAdapProp;
+        lunBtOpAdapProp.enBtAdapterProp = enBTAdPropAddress;
+
+        /* Get current device address */
+        if (BtrCore_BTGetProp(pstlhBtIfce,
+                             (BtrCore_BTGetAdapterPath(pstlhBtIfce, NULL)),
+                             enBTAdapter,
+                             lunBtOpAdapProp,
+                             lCurAdapterAddress)) {
+            return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        }
+    }
+    else {
+        strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr,strlen(pstlhBtIfce->pcBTDAdapterAddr));
     }
 
     //pstlhBtIfce->fpcBTLeLocalGattPath(NULL, lCurAdapterAddress, &lpstBTLeGattSrv, &lNumGattServices, pstlhBtIfce->pcBLePathUserData);
@@ -7235,7 +7302,7 @@ btrCore_BTDBusConnectionFilterCb (
     stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apvUserData;
 
 
-    memset(&lstBTAdapterInfo, 0, sizeof(stBTDeviceInfo));
+    memset(&lstBTAdapterInfo, 0, sizeof(stBTAdapterInfo));
     memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
     memset(&lstBTMediaInfo, 0, sizeof(stBTMediaInfo));
     lstBTDeviceInfo.i32RSSI = INT_MIN;
@@ -7509,7 +7576,7 @@ btrCore_BTDBusConnectionFilterCb (
                                     strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
                                     strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcLeDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                    strncpy(pstlhBtIfce->pcLeDeviceAddress, "none", strlen("none"));
+                                    strncpy(pstlhBtIfce->pcLeDeviceAddress, "none", BT_MAX_STR_LEN - 1);
                                 }
 
                                 lenBTDevType  = enBTDevLE;
@@ -7645,7 +7712,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                             if (!strcmp(pcState, "idle")) {
                                 lenBtMedTransportSt = enBTMedTransportStIdle;
-                                strncpy(pstlhBtIfce->pcMediaCurrState, "connected", strlen("connected"));
+                                strncpy(pstlhBtIfce->pcMediaCurrState, "connected", BT_MAX_STR_LEN - 1);
                             }
                             else if (!strcmp(pcState, "pending")) {
                                 lenBtMedTransportSt = enBTMedTransportStPending;
@@ -7653,7 +7720,7 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                             else if (!strcmp(pcState, "active")) {
                                 lenBtMedTransportSt = enBTMedTransportStActive;
-                                strncpy(pstlhBtIfce->pcMediaCurrState, "playing", strlen("playing"));
+                                strncpy(pstlhBtIfce->pcMediaCurrState, "playing", BT_MAX_STR_LEN - 1);
                             }
 
                             mediaStatusUpdate.aenBtOpIfceType                        = enBTMediaTransport;
@@ -8801,17 +8868,23 @@ btrCore_BTLeGattEndpointHandlerCb (
 
     //TODO: Find the right way to store this and deallocate this memory when not needed anymore
     stBTLeGattInfo* lpstBTLeGattInfo = &pstlhBtIfce->stBTLeGatt;
-    char               lCurAdapterAddress[BT_MAX_STR_LEN] = "\0";
-    unBTOpIfceProp     lunBtOpAdapProp;
+    char            lCurAdapterAddress[BT_MAX_DEV_PATH_LEN] = "\0";
 
-    lunBtOpAdapProp.enBtAdapterProp = enBTAdPropAddress;
-    /* Get current device address */
-    if (BtrCore_BTGetProp(pstlhBtIfce,
-                          (BtrCore_BTGetAdapterPath(pstlhBtIfce, NULL)),
-                          enBTAdapter,
-                          lunBtOpAdapProp,
-                          lCurAdapterAddress)) {
-        return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+    if (!pstlhBtIfce->pcBTDAdapterAddr) {
+        unBTOpIfceProp     lunBtOpAdapProp;
+
+        lunBtOpAdapProp.enBtAdapterProp = enBTAdPropAddress;
+        /* Get current device address */
+        if (BtrCore_BTGetProp(pstlhBtIfce,
+                              (BtrCore_BTGetAdapterPath(pstlhBtIfce, NULL)),
+                              enBTAdapter,
+                              lunBtOpAdapProp,
+                              lCurAdapterAddress)) {
+            return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+        }
+    }
+    else {
+        strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, strlen(pstlhBtIfce->pcBTDAdapterAddr));
     }
 
     BTRCORELOG_TRACE("Current adapter address is : %s\n", lCurAdapterAddress);
