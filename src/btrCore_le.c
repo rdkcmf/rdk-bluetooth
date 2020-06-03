@@ -1104,8 +1104,9 @@ BTRCore_LE_SetEnableTxPower(
 }
 
 int*
-BtrCore_LE_AddGattServiceInfo (
+BTRCore_LE_AddGattServiceInfo (
     tBTRCoreLeHdl   hBTRCoreLe,
+    const char*     apBtAdapter,
     char*           aBtrDevAddr,
     char*           aUUID,
     BOOLEAN         aServiceType,
@@ -1122,8 +1123,21 @@ BtrCore_LE_AddGattServiceInfo (
         if (BTR_MAX_GATT_SERVICE > lpstlhBTRCoreLe->ui16NumOfLocalGattServices) {
             int                 lIndex = lpstlhBTRCoreLe->ui16NumOfLocalGattServices;
             lpstBTRGattService = &lpstlhBTRCoreLe->stBTRLeGattService[lIndex];
-            //const char*         lpBtLeGattSrvEpPath = "/LeGattEndpoint/Server";
-            const char*         lpBtLeGattSrvEpPath = "/org/bluez/hci0/dev_XX_XX_XX_XX_XX_XX";
+            char lpBtLeGattSrvEpPath[BT_MAX_DEV_PATH_LEN] = "\0";
+            char lCurAdapterAddress[BT_MAX_DEV_PATH_LEN] = "\0";
+
+            strncpy(lCurAdapterAddress, aBtrDevAddr, strlen(aBtrDevAddr));
+
+            char *current_pos = strchr(lCurAdapterAddress, ':');
+            while (current_pos){
+                *current_pos = '_';
+                current_pos = strchr(current_pos, ':');
+            }
+
+            memset(lpBtLeGattSrvEpPath, '\0', BT_MAX_DEV_PATH_LEN);
+            strncpy(lpBtLeGattSrvEpPath, apBtAdapter, strlen(apBtAdapter));
+            strncat(lpBtLeGattSrvEpPath, "/dev_", 5);
+            strncat(lpBtLeGattSrvEpPath, lCurAdapterAddress, strlen(lCurAdapterAddress));
 
             /* Set gatt service UUID */
             strncpy(lpstBTRGattService->serviceUuid, aUUID, sizeof(lpstBTRGattService->serviceUuid));
@@ -1145,13 +1159,14 @@ BtrCore_LE_AddGattServiceInfo (
 
 
 int*
-BtrCore_LE_AddGattCharInfo(
-    tBTRCoreLeHdl    hBTRCoreLe,                            /* Handle to CoreLe */
-    char*            aBtrDevAddr,                           /* Bt address of advertising device */
-    char*            aParentUUID,                           /* Service the characteristic belongs to */
-    char*            aUUID,                                 /* UUID of characteristic */
-    unsigned short   aCharFlags,                            /* Bit field to indicate usage of characteristic */
-    char*            aValue                                 /* Value of the characteristic if applicable */
+BTRCore_LE_AddGattCharInfo (
+    tBTRCoreLeHdl   hBTRCoreLe,                            /* Handle to CoreLe */
+    const char*     apBtAdapter,
+    char*           aBtrDevAddr,                           /* Bt address of advertising device */
+    char*           aParentUUID,                           /* Service the characteristic belongs to */
+    char*           aUUID,                                 /* UUID of characteristic */
+    unsigned short  aCharFlags,                            /* Bit field to indicate usage of characteristic */
+    char*           aValue                                 /* Value of the characteristic if applicable */
 ) {
     stBTRCoreLeHdl* lpstlhBTRCoreLe = (stBTRCoreLeHdl*)hBTRCoreLe;
     stBTRCoreLeGattService* lpstBTRGattService = NULL;
@@ -1193,13 +1208,14 @@ BtrCore_LE_AddGattCharInfo(
 }
 
 int*
-BtrCore_LE_AddGattDescInfo(
-    tBTRCoreLeHdl    hBTRCoreLe,                            /* Handle to CoreLe */
-    char*            aBtrDevAddr,                           /* Bt address of advertising device */
-    char*            aParentUUID,                           /* Char the descriptor belongs to */
-    char*            aUUID,                                 /* UUID of descriptor */
-    unsigned short   aDescFlags,                            /* Bit field to indicate usage of descriptor */
-    char*            aValue                                 /* Value of the descriptor if applicable */
+BTRCore_LE_AddGattDescInfo (
+    tBTRCoreLeHdl   hBTRCoreLe,                            /* Handle to CoreLe */
+    const char*     apBtAdapter,
+    char*           aBtrDevAddr,                           /* Bt address of advertising device */
+    char*           aParentUUID,                           /* Char the descriptor belongs to */
+    char*           aUUID,                                 /* UUID of descriptor */
+    unsigned short  aDescFlags,                            /* Bit field to indicate usage of descriptor */
+    char*           aValue                                 /* Value of the descriptor if applicable */
 ) {
     stBTRCoreLeHdl* lpstlhBTRCoreLe = (stBTRCoreLeHdl*)hBTRCoreLe;
     stBTRCoreLeGattChar *lpstBTRGattChar = NULL;
