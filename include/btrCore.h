@@ -111,6 +111,7 @@ typedef enum _enBTRCoreDeviceClass {
     enBTRCore_DC_HID_Mouse          = 0x580u,
     enBTRCore_DC_HID_MouseKeyBoard  = 0x5C0u,
     enBTRCore_DC_HID_Joystick       = 0x504u,
+    enBTRCore_DC_HID_GamePad        = 0x508u,
 
     enBTRCore_DC_Unknown            = 0x000u
 } enBTRCoreDeviceClass;

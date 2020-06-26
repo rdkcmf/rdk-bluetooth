@@ -213,6 +213,7 @@ typedef enum _enBTDeviceClass {
     enBTDCMouse              = 0x580u,
     enBTDCMouseKeyBoard      = 0x5C0u,
     enBTDCJoystick           = 0x504u,
+    enBTDCGamePad            = 0x508u,
     enBTDCAudioRemote        = 0x50Cu,
 
     enBTDCUnknown            = 0x000u
@@ -1140,6 +1141,28 @@ int   BtrCore_BTConnectDevice (void* apBtConn, const char* apDevPath, enBTDevice
  * @retval Returns 0 on success, appropriate error code otherwise.
  */
 int   BtrCore_BTDisconnectDevice (void* apBtConn, const char* apDevPath, enBTDeviceType aenBTDevType);
+
+/**
+ * @brief  This API is used to Enable Enhanced Retransmission on all BT adapter.
+ *
+ * @param[in] apBtConn         The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                             NULL is valid for this API.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTEnableEnhancedRetransmissionMode (void* apstBtIfceHdl);
+
+/**
+ * @brief  This API is used to Disable Enhanced Retransmission on all BT adapter.
+ *
+ * @param[in] apBtConn         The Dbus connection handle as returned by BtrCore_BTInitGetConnection.
+ *                             NULL is valid for this API.
+ *
+ * @return Returns the status of the operation.
+ * @retval Returns 0 on success, appropriate error code otherwise.
+ */
+int   BtrCore_BTDisableEnhancedRetransmissionMode (void* apstBtIfceHdl);
 
 /**
  * @brief  This API is used to register a media device.
