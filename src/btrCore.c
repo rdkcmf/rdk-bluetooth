@@ -488,6 +488,10 @@ btrCore_MapClassIDtoDevClass (
                 BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_Joystick\n");
                 rc = enBTRCore_DC_HID_Joystick;
             }
+            else if (ui32DevClassID == enBTRCore_DC_HID_GamePad) {
+                BTRCORELOG_INFO ("Its a enBTRCore_DC_HID_GamePad\n");
+                rc = enBTRCore_DC_HID_GamePad;
+            }
         }
         else
         {
@@ -602,6 +606,9 @@ btrCore_MapDevClassToDevType (
        lenBTRCoreDevType = enBTRCoreHID;
     }
     else if (aenBTRCoreDevCl == enBTRCore_DC_HID_Joystick) {
+       lenBTRCoreDevType = enBTRCoreHID;
+    }
+    else if (aenBTRCoreDevCl == enBTRCore_DC_HID_GamePad) {
        lenBTRCoreDevType = enBTRCoreHID;
     }
     else if (aenBTRCoreDevCl == enBTRCore_DC_Tile) {
@@ -731,6 +738,7 @@ btrCore_AddDeviceToScannedDevicesArr (
             (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_Mouse)         &&
             (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_AudioRemote)   &&
             (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_Joystick)      &&
+            (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_GamePad)       &&
             (lstFoundDevice.enDeviceType != enBTRCore_DC_HID_MouseKeyBoard) ){
             BTRCORELOG_ERROR("Skipped the device %s DevID = %lld as the it is not interested device\n", lstFoundDevice.pcDeviceAddress, lstFoundDevice.tDeviceId);
             return -1;
@@ -1168,6 +1176,9 @@ btrCore_GetDeviceInfo (
     case enBTRCoreLE:
         *apenBTDeviceType = enBTDevLE;
         break;
+    case enBTRCoreHID:
+        *apenBTDeviceType = enBTDevHID;
+        break;
     case enBTRCoreUnknown:
     default:
         *apenBTDeviceType = enBTDevUnknown;
@@ -1235,6 +1246,9 @@ btrCore_GetDeviceInfoKnown (
     case enBTRCoreMobileAudioIn:
     case enBTRCorePCAudioIn:
         *apenBTDeviceType = enBTDevAudioSource;
+        break;
+    case enBTRCoreHID:
+        *apenBTDeviceType = enBTDevHID;
         break;
     case enBTRCoreUnknown:
     default:
@@ -2034,7 +2048,7 @@ btrCore_OutTask (
                             stBTRCoreBTDevice*      lpstBTRCoreBTDevice         = NULL;
                             stBTRCoreDevStateInfo*  lpstBTRCoreDevStateInfo     = NULL;
 
-                            if (i32KnownDevIdx != -1) {
+                            if ((i32KnownDevIdx != -1) && (leBTDevState != enBTRCoreDevStPaired)) {
 
                                 BTRCORELOG_TRACE ("i32KnownDevIdx = %d\n", i32KnownDevIdx);
                                 BTRCORELOG_TRACE ("leBTDevState = %d\n", leBTDevState);
@@ -2047,11 +2061,31 @@ btrCore_OutTask (
                                     if ((enBTRCoreMobileAudioIn != lenBTRCoreDevType) && (enBTRCorePCAudioIn != lenBTRCoreDevType)) {
 
                                         if ( !(((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected) && (leBTDevState == enBTRCoreDevStDisconnected)) ||
-                                               ((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected) && 
-                                                ((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStPaired) || 
+                                               ((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected) &&
+                                                ((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStPaired) ||
                                                  (pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStConnecting))))) {
                                             bTriggerDevStatusChangeCb = TRUE;
                                         }
+
+                                        if ((enBTRCoreHID == lenBTRCoreDevType) &&
+                                            (((enBTRCoreDevStConnected == pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState) && (enBTRCoreDevStDisconnected == leBTDevState)) ||
+                                             ((enBTRCoreDevStDisconnected == pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState) && (enBTRCoreDevStConnected == leBTDevState)))) {
+                                            bTriggerDevStatusChangeCb = TRUE;
+
+                                            if (strstr(pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].pcDeviceName, "Xbox")) {
+                                                if (leBTDevState == enBTRCoreDevStConnected) {
+                                                    if (BtrCore_BTDisableEnhancedRetransmissionMode(pstlhBTRCore->connHdl) != 0) {
+                                                        BTRCORELOG_ERROR ("Failed to Disable ERTM\n");
+                                                    }
+                                                }
+                                                else if (leBTDevState == enBTRCoreDevStDisconnected) {
+                                                    if (BtrCore_BTEnableEnhancedRetransmissionMode(pstlhBTRCore->connHdl) != 0) {
+                                                        BTRCORELOG_ERROR ("Failed to Enable ERTM\n");
+                                                    }
+                                                }
+                                            }
+                                        }
+
                                         // To make the state changes in a better logical way once the BTRCore dev structures are unified further
 
                                         //workaround for notifying the power Up event of a <paired && !connected> devices, as we are not able to track the
@@ -2099,13 +2133,6 @@ btrCore_OutTask (
                                     else {
                                         bTriggerDevStatusChangeCb = TRUE;
 
-                                        if (enBTRCoreDevStDisconnected == leBTDevState) {
-                                            pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = FALSE;
-                                        }
-                                        else if (enBTRCoreDevStConnected == leBTDevState) {
-                                            pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = TRUE;
-                                        }
-
                                         if (enBTRCoreDevStInitialized != pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState) {
                                             pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState =
                                                                            pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState;
@@ -2136,6 +2163,14 @@ btrCore_OutTask (
                                     BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = %d\n", pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState);
                                     BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = %d\n", pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState);
                                     BTRCORELOG_TRACE ("lpstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType       = %x\n", pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType);
+
+                                    if (pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) {
+                                        pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = FALSE;
+                                    }
+                                    else if (pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected) {
+                                        pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected = TRUE;
+                                    }
+
                                 }
                             }
                             else if (i32ScannedDevIdx != -1) {
@@ -2157,8 +2192,10 @@ btrCore_OutTask (
 
                                     if (lpstBTDeviceInfo->bPaired       &&
                                         lpstBTDeviceInfo->bConnected    &&
-                                        (((pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState == enBTRCoreDevStFound) &&
-                                          (pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState == enBTRCoreDevStConnected)) ||
+                                        (((pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState == enBTRCoreDevStFound)     &&
+                                          (pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState == enBTRCoreDevStConnected))  ||
+                                         ((pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState == enBTRCoreDevStFound)     &&
+                                          (pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState == enBTRCoreDevStPaired))     ||
                                          ((pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState == enBTRCoreDevStConnected) &&
                                           (pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState == enBTRCoreDevStPaired)))) {
 
@@ -3440,7 +3477,8 @@ BTRCore_PairDevice (
         (pstScannedDev->enDeviceType == enBTRCore_DC_HID_Mouse)         ||
         (pstScannedDev->enDeviceType == enBTRCore_DC_HID_MouseKeyBoard) ||
         //(pstScannedDev->enDeviceType == enBTRCore_DC_HID_AudioRemote)   ||
-        (pstScannedDev->enDeviceType == enBTRCore_DC_HID_Joystick))     {
+        (pstScannedDev->enDeviceType == enBTRCore_DC_HID_Joystick)      ||
+        (pstScannedDev->enDeviceType == enBTRCore_DC_HID_GamePad)) {
 
         BTRCORELOG_DEBUG ("We will do a Async Pairing for the HID Devices\n");
         pairingOp = enBTAdpOpCreatePairedDevASync;
@@ -3785,6 +3823,14 @@ BTRCore_ConnectDevice (
     }
 
 
+    if ((lenBTDeviceType == enBTDevHID) &&
+        strstr(lpcBTRCoreBTDeviceName, "Xbox")) {
+        if (BtrCore_BTDisableEnhancedRetransmissionMode(pstlhBTRCore->connHdl) != 0) {
+            BTRCORELOG_ERROR ("Failed to Disable ERTM\n");
+        }
+    }
+
+
     // TODO: Implement a Device State Machine and Check whether the device is in a Connectable State
     // before making the connect call
     if (BtrCore_BTConnectDevice(pstlhBTRCore->connHdl, lpcBTRCoreBTDevicePath, lenBTDeviceType) != 0) {
@@ -3797,9 +3843,13 @@ BTRCore_ConnectDevice (
 
 
     lpstBTRCoreBTDevice->bDeviceConnected      = TRUE;
-    lpstBTRCoreDevStateInfo->eDevicePrevState  = lpstBTRCoreDevStateInfo->eDeviceCurrState;
+    if ((lpstBTRCoreDevStateInfo->eDevicePrevState != enBTRCoreDevStConnected) &&
+        (lpstBTRCoreDevStateInfo->eDeviceCurrState != enBTRCoreDevStPlaying)) {
+        lpstBTRCoreDevStateInfo->eDevicePrevState  = lpstBTRCoreDevStateInfo->eDeviceCurrState;
+    }
 
-     if (lpstBTRCoreDevStateInfo->eDeviceCurrState  != enBTRCoreDevStConnected) {
+     if ((lpstBTRCoreDevStateInfo->eDeviceCurrState  != enBTRCoreDevStConnected) &&
+         (lpstBTRCoreDevStateInfo->eDeviceCurrState  != enBTRCoreDevStPlaying) ) {
          lpstBTRCoreDevStateInfo->eDeviceCurrState   = enBTRCoreDevStConnecting;
 
         lenBTRCoreRet = enBTRCoreSuccess;
@@ -3865,6 +3915,15 @@ BTRCore_DisconnectDevice (
         lenBTRCoreRet = enBTRCoreSuccess;
     }
 
+
+    if ((lenBTDeviceType == enBTDevHID) &&
+        strstr(lpcBTRCoreBTDeviceName, "Xbox")) {
+        if (BtrCore_BTEnableEnhancedRetransmissionMode(pstlhBTRCore->connHdl) != 0) {
+            BTRCORELOG_ERROR ("Failed to Enable ERTM\n");
+        }
+    }
+
+
     BTRCORELOG_DEBUG ("Ret - %d - %llu\n", lenBTRCoreRet, aBTRCoreDevId);
     return enBTRCoreSuccess;
 }
@@ -3906,7 +3965,8 @@ BTRCore_GetDeviceConnected (
 
     (void)lenBTDeviceType;
 
-    if (lpstBTRCoreDevStateInfo->eDeviceCurrState == enBTRCoreDevStConnected) {
+    if ((lpstBTRCoreDevStateInfo->eDeviceCurrState == enBTRCoreDevStConnected) ||
+        (lpstBTRCoreDevStateInfo->eDeviceCurrState == enBTRCoreDevStPlaying)) {
         BTRCORELOG_DEBUG ("enBTRCoreDevStConnected = %s\n", lpcBTRCoreBTDeviceName);
         lenBTRCoreRet = enBTRCoreSuccess;
     }
@@ -3914,7 +3974,7 @@ BTRCore_GetDeviceConnected (
         lenBTRCoreRet = enBTRCoreFailure;
     }
 
-    BTRCORELOG_DEBUG ("Ret - %d\n", lenBTRCoreRet);
+    BTRCORELOG_DEBUG ("Ret - %d : CurrState - %d\n", lenBTRCoreRet, lpstBTRCoreDevStateInfo->eDeviceCurrState);
     return lenBTRCoreRet;
 }
 
@@ -3964,7 +4024,7 @@ BTRCore_GetDeviceDisconnected (
         lenBTRCoreRet = enBTRCoreFailure;
     }
 
-    BTRCORELOG_DEBUG ("Ret - %d\n", lenBTRCoreRet);
+    BTRCORELOG_DEBUG ("Ret - %d : CurrState - %d\n", lenBTRCoreRet, lpstBTRCoreDevStateInfo->eDeviceCurrState);
     return lenBTRCoreRet;
 }
 
@@ -5740,7 +5800,12 @@ btrCore_BTDeviceAuthenticationCb (
                     }
                 }
             }
-            
+            else if ((lenBTRCoreDevType == enBTRCoreHID) &&
+                      strstr(apstBTDeviceInfo->pcName, "Xbox")) {
+                if (BtrCore_BTDisableEnhancedRetransmissionMode(lpstlhBTRCore->connHdl) != 0) {
+                    BTRCORELOG_ERROR ("Failed to Disable ERTM\n");
+                }
+            }
         }
 
     }
@@ -5795,6 +5860,10 @@ btrCore_BTMediaStatusUpdateCb (
         break;
     case eBTRCoreAVMediaTrkStChanged:
         lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.eBTMediaStUpdate = eBTRCoreMediaTrkStChanged;
+        memcpy (&lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.m_mediaTrackInfo, &apMediaStreamStatus->m_mediaTrackInfo, sizeof(stBTRCoreMediaTrackInfo));
+        break;
+    case eBTRCoreAVMediaTrkPosition:
+        lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.eBTMediaStUpdate = eBTRCoreMediaTrkPosition;
         memcpy (&lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.m_mediaTrackInfo, &apMediaStreamStatus->m_mediaTrackInfo, sizeof(stBTRCoreMediaTrackInfo));
         break;
     case eBTRCoreAVMediaPlaybackEnded:

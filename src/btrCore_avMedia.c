@@ -288,6 +288,7 @@ typedef struct _stBTRCoreAVMediaHdl {
 
     GThread*                            pMediaPollingThread;
     void*                               pvThreadData;
+    eBTRCoreAVMediaStatusUpdate        eAVMediaStPrev;
 } stBTRCoreAVMediaHdl;
 
 
@@ -751,7 +752,6 @@ btrCore_AVMedia_PlaybackPositionPolling (
 
     BTRCORELOG_INFO ("Started AVMedia Position Polling thread successfully...\n");
 
-
     pstlhBTRCoreAVM      = (stBTRCoreAVMediaHdl*)arg;
     pstAVMediaStUserData = (stBTRCoreAVMediaStatusUserData*)pstlhBTRCoreAVM->pvThreadData;
 
@@ -796,6 +796,9 @@ btrCore_AVMedia_PlaybackPositionPolling (
         }
         else if (lpstAVMediaPlayer->eAVMediaStatusUpdate == eBTRCoreAVMediaTrkStPaused) {
             mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStPaused;
+            if(pstlhBTRCoreAVM->eAVMediaStPrev != eBTRCoreAVMediaTrkStPaused) {
+               isPlaying  = 1;
+            }
         }
         else if (lpstAVMediaPlayer->eAVMediaStatusUpdate == eBTRCoreAVMediaTrkStStopped) {
             mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStopped;
@@ -816,11 +819,9 @@ btrCore_AVMedia_PlaybackPositionPolling (
         }
 
 
-
         if (isPlaying) {
 
             if (mediaStatus.eAVMediaState != eBTRCoreAVMediaPlaybackEnded && mediaStatus.eAVMediaState != eBTRCoreAVMediaPlaybackError) {
-
                 if (!BtrCore_BTGetMediaPlayerProperty(pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, "Position", (void*)&mediaPosition)) {
                     lpstAVMediaPlayer->m_mediaPlayerPosition = mediaPosition;
                 }
@@ -832,6 +833,12 @@ btrCore_AVMedia_PlaybackPositionPolling (
                     if (lpstAVMediaPlayer->m_mediaTrackChanged) {
                         mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkStStarted;
                         lpstAVMediaPlayer->m_mediaTrackChanged = 0;
+                    }
+                    else {
+                        if(((pstlhBTRCoreAVM->eAVMediaStPrev == eBTRCoreAVMediaTrkStPlaying) || (pstlhBTRCoreAVM->eAVMediaStPrev == eBTRCoreAVMediaTrkPosition) )&&
+                            (mediaStatus.eAVMediaState == eBTRCoreAVMediaTrkStPlaying)) {
+                            mediaStatus.eAVMediaState = eBTRCoreAVMediaTrkPosition;
+                        }
                     }
                 }
                 else {
@@ -863,14 +870,16 @@ btrCore_AVMedia_PlaybackPositionPolling (
             }
         }
 
+        pstlhBTRCoreAVM->eAVMediaStPrev = mediaStatus.eAVMediaState;
 
-        if (eBTRCoreAVMediaTrkStStarted == mediaStatus.eAVMediaState || eBTRCoreAVMediaTrkStPlaying == mediaStatus.eAVMediaState) {
+        if (eBTRCoreAVMediaTrkStStarted == mediaStatus.eAVMediaState || eBTRCoreAVMediaTrkStPlaying == mediaStatus.eAVMediaState || eBTRCoreAVMediaTrkPosition == mediaStatus.eAVMediaState ) {
             sleep(1);           /* polling playback position with 1 sec interval */
         }
         else {
             isPlaying = 0;
             usleep(100000);     /* sleeping 1/10th of a second to check playback status */
-        }    
+        }
+
     }
 
     BTRCORELOG_INFO ("Exiting MediaPosition Polling Thread...\n");
@@ -937,6 +946,7 @@ BTRCore_AVMedia_Init (
     pstlhBTRCoreAVM->pcBMediaStatusUserData         = NULL;
     pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate = NULL;
     pstlhBTRCoreAVM->eAVMTState                     = enAVMTransportStDisconnected;
+    pstlhBTRCoreAVM->eAVMediaStPrev                 = eBTRCoreAVMediaStUnknown;
 
 
     a2dp_sbc_t lstBtA2dpSbcCaps;

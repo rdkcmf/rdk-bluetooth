@@ -133,6 +133,10 @@ typedef struct _stBtIfceHdl {
     char                                    pcLeDeviceAddress[BT_MAX_STR_LEN];
     char                                    pcMediaCurrState[BT_MAX_STR_LEN];
 
+    stBTAdapterInfo                         lstBTAdapterInfo;
+    stBTDeviceInfo                          lstBTDeviceInfo;
+    stBTMediaInfo                           lstBTMediaInfo;
+
     stBTLeGattInfo                          stBTLeGatt;
     stBTLeCustomAdv                         stBTLeCustAdvt;
     char                                    pcBTAdapterGattSrvEpPath[BT_MAX_DEV_PATH_LEN];
@@ -310,7 +314,17 @@ btrCore_BTMapDevClasstoDevType (
         return lenBtDevType;
 
 
-    if (((aui32Class & 0x100u) == 0x100u) || ((aui32Class & 0x200u) == 0x200u) || ((aui32Class & 0x400u) == 0x400u) || ((aui32Class & 0x500u) == 0x500u) || ((aui32Class & 0x50Cu) == 0x50Cu)) {
+    if (((aui32Class & 0x100u) == 0x100u) ||
+        ((aui32Class & 0x200u) == 0x200u) ||
+        ((aui32Class & 0x400u) == 0x400u) ||
+        ((aui32Class & 0x500u) == 0x500u) ||
+        ((aui32Class & 0x540u) == 0x540u) ||
+        ((aui32Class & 0x580u) == 0x580u) ||
+        ((aui32Class & 0x5C0u) == 0x5C0u) ||
+        ((aui32Class & 0x504u) == 0x504u) ||
+        ((aui32Class & 0x508u) == 0x508u) || 
+        ((aui32Class & 0x50Cu) == 0x50Cu)) {
+
         unsigned int ui32DevClassID = aui32Class & 0xFFFu;
 
         switch (ui32DevClassID){
@@ -331,7 +345,8 @@ btrCore_BTMapDevClasstoDevType (
         case enBTDCMouse:
         case enBTDCMouseKeyBoard:
         case enBTDCJoystick:
-	case enBTDCAudioRemote:
+        case enBTDCGamePad:
+        case enBTDCAudioRemote:
             BTRCORELOG_DEBUG ("Its a enBTDevHID\n");
             lenBtDevType = enBTDevHID;
             break;
@@ -1229,7 +1244,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAddress);
                 strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN);
-                BTRCORELOG_DEBUG ("pcAddress       = %s\n", apstBTDeviceInfo->pcAddress);
+                BTRCORELOG_TRACE ("pcAddress       = %s\n", apstBTDeviceInfo->pcAddress);
                
  #if 1
                 char lcDevVen[4] = {'\0'};
@@ -1291,7 +1306,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &ui32Class);
                 apstBTDeviceInfo->ui32Class = ui32Class;
-                BTRCORELOG_TRACE ("ui32Class       = %d\n", apstBTDeviceInfo->ui32Class);
+                BTRCORELOG_DEBUG ("ui32Class       = %d\n", apstBTDeviceInfo->ui32Class);
             }
             else if (strcmp (pcKey, "Paired") == 0) {
                 dbus_message_iter_next(&dict_i);
@@ -2964,6 +2979,10 @@ BtrCore_BTInitGetConnection (
     memset(pstlhBtIfce->pcLeDeviceCurrState,'\0', sizeof(char) * BT_MAX_STR_LEN);
     memset(pstlhBtIfce->pcLeDeviceAddress,  '\0', sizeof(char) * BT_MAX_STR_LEN);
     memset(pstlhBtIfce->pcMediaCurrState,   '\0', sizeof(char) * BT_MAX_STR_LEN);
+
+    memset(&pstlhBtIfce->lstBTAdapterInfo, 0, sizeof(stBTAdapterInfo));
+    memset(&pstlhBtIfce->lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
+    memset(&pstlhBtIfce->lstBTMediaInfo, 0, sizeof(stBTMediaInfo));
 
     memset(&pstlhBtIfce->stBTLeGatt, 0, sizeof(stBTLeGattInfo));
     memset(&pstlhBtIfce->stBTLeCustAdvt, 0, sizeof(stBTLeCustomAdv));
@@ -5418,6 +5437,106 @@ BtrCore_BTDisconnectDevice (
 
 
 int
+BtrCore_BTEnableEnhancedRetransmissionMode (
+    void*           apstBtIfceHdl
+) {
+    stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apstBtIfceHdl;
+    FILE*           lfpBtErtm   = NULL;
+    int             i32OpRet    = -1;
+    char            lcpBtErtmIp[BT_MAX_STR_LEN/2] = {'\0'};
+    char            lcpBtErtmOp[BT_MAX_STR_LEN] = {'\0'};
+
+    if (!apstBtIfceHdl || !pstlhBtIfce)
+        return -1;
+
+
+    memset(lcpBtErtmIp, '\0', BT_MAX_STR_LEN/2);
+    memset(lcpBtErtmOp, '\0', BT_MAX_STR_LEN);
+
+    snprintf(lcpBtErtmIp, BT_MAX_STR_LEN/2, "echo 0 > /sys/module/bluetooth/parameters/disable_ertm");
+    BTRCORELOG_INFO ("lcpBtErtmIp: %s\n", lcpBtErtmIp);
+
+#ifdef LIBSYSWRAPPER_BUILD
+    lfpBtErtm = v_secure_popen("r", lcpBtErtmIp);
+#else
+    lfpBtErtm = popen(lcpBtErtmIp, "r");
+#endif
+    if (lfpBtErtm == NULL) {
+        BTRCORELOG_ERROR ("Failed to run BTEnableEnhancedRetransmissionMode command\n");
+    }
+    else {
+        if (fgets(lcpBtErtmOp, sizeof(lcpBtErtmOp)-1, lfpBtErtm) == NULL) {
+            BTRCORELOG_INFO ("Success  - Output of BtErtm\n");
+            i32OpRet = 0;
+        }
+        else {
+            BTRCORELOG_WARN ("Failed Output of BtErtm =  %s\n", lcpBtErtmOp);
+            if (!strstr(lcpBtErtmOp, "Permission denied")) {
+                BTRCORELOG_WARN ("Check path =  %s\n", lcpBtErtmIp);
+            }
+        }
+#ifdef LIBSYSWRAPPER_BUILD
+        v_secure_pclose(lfpBtErtm);
+#else
+        pclose(lfpBtErtm);
+#endif
+    }
+
+    return i32OpRet;
+}
+
+
+int
+BtrCore_BTDisableEnhancedRetransmissionMode (
+    void*           apstBtIfceHdl
+) {
+    stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apstBtIfceHdl;
+    FILE*           lfpBtErtm   = NULL;
+    int             i32OpRet    = -1;
+    char            lcpBtErtmIp[BT_MAX_STR_LEN/2] = {'\0'};
+    char            lcpBtErtmOp[BT_MAX_STR_LEN] = {'\0'};
+
+    if (!apstBtIfceHdl || !pstlhBtIfce)
+        return -1;
+
+
+    memset(lcpBtErtmIp, '\0', BT_MAX_STR_LEN/2);
+    memset(lcpBtErtmOp, '\0', BT_MAX_STR_LEN);
+
+    snprintf(lcpBtErtmIp, BT_MAX_STR_LEN/2, "echo 1 > /sys/module/bluetooth/parameters/disable_ertm");
+    BTRCORELOG_INFO ("lcpBtErtmIp: %s\n", lcpBtErtmIp);
+
+#ifdef LIBSYSWRAPPER_BUILD
+    lfpBtErtm = v_secure_popen("r", lcpBtErtmIp);
+#else
+    lfpBtErtm = popen(lcpBtErtmIp, "r");
+#endif
+    if ((lfpBtErtm == NULL)) {
+        BTRCORELOG_ERROR ("Failed to run BTDisableEnhancedRetransmissionMode command\n");
+    }
+    else {
+        if (fgets(lcpBtErtmOp, sizeof(lcpBtErtmOp)-1, lfpBtErtm) == NULL) {
+            BTRCORELOG_INFO ("Success  - Output of BtErtm\n");
+            i32OpRet = 0;
+        }
+        else {
+            BTRCORELOG_WARN ("Failed Output of BtErtm =  %s\n", lcpBtErtmOp);
+            if (!strstr(lcpBtErtmOp, "Permission denied")) {
+                BTRCORELOG_WARN ("Check path =  %s\n", lcpBtErtmIp);
+            }
+        }
+#ifdef LIBSYSWRAPPER_BUILD
+        v_secure_pclose(lfpBtErtm);
+#else
+        pclose(lfpBtErtm);
+#endif
+    }
+
+    return i32OpRet;
+}
+
+
+int
 BtrCore_BTRegisterMedia (
     void*           apstBtIfceHdl,
     const char*     apBtAdapter,
@@ -7302,24 +7421,18 @@ BtrCore_BTRegisterLEAdvInfoCb (
 /* Incoming Callbacks */
 static DBusHandlerResult
 btrCore_BTDBusConnectionFilterCb (
-    DBusConnection* apDBusConn,
-    DBusMessage*    apDBusMsg,
-    void*           apvUserData
+    DBusConnection*  apDBusConn,
+    DBusMessage*     apDBusMsg,
+    void*            apvUserData
 ) {
-    int             i32OpRet = -1;
-    stBTAdapterInfo lstBTAdapterInfo;
-    stBTDeviceInfo  lstBTDeviceInfo;
-    stBTMediaInfo   lstBTMediaInfo;
-    int             li32MessageType;
-    const char*     lpcSender;
-    const char*     lpcDestination;
-    stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apvUserData;
-
-
-    memset(&lstBTAdapterInfo, 0, sizeof(stBTAdapterInfo));
-    memset(&lstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
-    memset(&lstBTMediaInfo, 0, sizeof(stBTMediaInfo));
-    lstBTDeviceInfo.i32RSSI = INT_MIN;
+    int              i32OpRet = -1;
+    int              li32MessageType;
+    stBTAdapterInfo* pstBTAdapterInfo   = NULL;
+    stBTDeviceInfo*  pstBTDeviceInfo    = NULL;
+    stBTMediaInfo*   pstBTMediaInfo     = NULL;
+    const char*      lpcSender          = NULL;
+    const char*      lpcDestination     = NULL;
+    stBtIfceHdl*     pstlhBtIfce = (stBtIfceHdl*)apvUserData;
 
     BTRCORELOG_DEBUG ("Connection Filter Activated....\n");
 
@@ -7327,6 +7440,15 @@ btrCore_BTDBusConnectionFilterCb (
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
 
+
+    pstBTAdapterInfo = &pstlhBtIfce->lstBTAdapterInfo;
+    pstBTDeviceInfo  = &pstlhBtIfce->lstBTDeviceInfo;
+    pstBTMediaInfo   = &pstlhBtIfce->lstBTMediaInfo;
+
+    memset(pstBTAdapterInfo, 0, sizeof(stBTAdapterInfo));
+    memset(pstBTDeviceInfo, 0, sizeof(stBTDeviceInfo));
+    memset(pstBTMediaInfo, 0, sizeof(stBTMediaInfo));
+    pstBTDeviceInfo->i32RSSI = INT_MIN;
 
     li32MessageType = dbus_message_get_type(apDBusMsg);
     lpcSender       = dbus_message_get_sender(apDBusMsg);
@@ -7393,11 +7515,11 @@ btrCore_BTDBusConnectionFilterCb (
                     }
 
                     const char* adapter_path = dbus_message_get_path(apDBusMsg);
-                    strncpy (lstBTAdapterInfo.pcPath, adapter_path, strlen(adapter_path) < BT_MAX_DEV_PATH_LEN ? strlen(adapter_path) : BT_MAX_DEV_PATH_LEN - 1);
-                    i32OpRet = btrCore_BTParseAdapter(&lDBusMsgIter, &lstBTAdapterInfo);
+                    strncpy (pstBTAdapterInfo->pcPath, adapter_path, strlen(adapter_path) < BT_MAX_DEV_PATH_LEN ? strlen(adapter_path) : BT_MAX_DEV_PATH_LEN - 1);
+                    i32OpRet = btrCore_BTParseAdapter(&lDBusMsgIter, pstBTAdapterInfo);
 
-                    pstlhBtIfce->ui32IsAdapterDiscovering = lstBTAdapterInfo.bDiscovering;
-                    if (lstBTAdapterInfo.bDiscovering) {
+                    pstlhBtIfce->ui32IsAdapterDiscovering = pstBTAdapterInfo->bDiscovering;
+                    if (pstBTAdapterInfo->bDiscovering) {
                         BTRCORELOG_INFO ("Adapter Started Discovering | %d\n", pstlhBtIfce->ui32IsAdapterDiscovering);
                     }
                     else {
@@ -7406,7 +7528,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                     if (!i32OpRet) {
                         if (pstlhBtIfce->fpcBAdapterStatusUpdate) {
-                            if(pstlhBtIfce->fpcBAdapterStatusUpdate(enBTAdPropDiscoveryStatus, &lstBTAdapterInfo, pstlhBtIfce->pcBAdapterStatusUserData)) {
+                            if(pstlhBtIfce->fpcBAdapterStatusUpdate(enBTAdPropDiscoveryStatus, pstBTAdapterInfo, pstlhBtIfce->pcBAdapterStatusUserData)) {
                             }
                         }
                     }
@@ -7423,13 +7545,13 @@ btrCore_BTDBusConnectionFilterCb (
                     int bConnectEvent = 0; //TODO: Bad way to do this. Live with it for now
                     int bConnected = 0;
 
-                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, pui8DevPath);
+                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, pui8DevPath);
 
                     dbus_message_iter_recurse(&lDBusMsgIter, &lDBusMsgIterDict);
 
                     if (dbus_message_iter_get_arg_type(&lDBusMsgIterDict) == DBUS_TYPE_INVALID) {
                         settingRSSItoZero = 1;
-                        BTRCORELOG_INFO ("Setting Dev %s RSSI to 0...\n", lstBTDeviceInfo.pcAddress);
+                        BTRCORELOG_INFO ("Setting Dev %s RSSI to 0...\n", pstBTDeviceInfo->pcAddress);
                     }
                     else {
                         DBusMessageIter lDBusMsgParse;
@@ -7493,7 +7615,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                     if (!i32OpRet) {
                         enBTDeviceState lenBtDevState = enBTDevStUnknown; 
-                        enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+                        enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
 
                         if (bPairingEvent) {
                             const char* value = NULL;
@@ -7504,35 +7626,35 @@ btrCore_BTDBusConnectionFilterCb (
                             else {
                                     value = "unpaired";
                             }
-                            strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                            strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                            strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                            strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                             strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
                             lenBtDevState = enBTDevStPropChanged;
                             if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                 }
                             }
                         }
-                        else if (lstBTDeviceInfo.bPaired) {
+                        else if (pstBTDeviceInfo->bPaired) {
                             if (pstlhBtIfce->ui32IsAdapterDiscovering && settingRSSItoZero) {
                                 lenBtDevState = enBTDevStRSSIUpdate;
                             }
                             else {
-                                if (lstBTDeviceInfo.bConnected) {
+                                if (pstBTDeviceInfo->bConnected) {
                                     const char* value = "connected";
 
-                                    strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                    strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
                                     lenBtDevState = enBTDevStPropChanged;
                                 }
-                                else if (!lstBTDeviceInfo.bConnected) {
+                                else if (!pstBTDeviceInfo->bConnected) {
                                     const char* value = "disconnected";
 
-                                    strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                    strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
                                     lenBtDevState = enBTDevStPropChanged;
@@ -7546,20 +7668,20 @@ btrCore_BTDBusConnectionFilterCb (
  
                             if (enBTDevAudioSource != lenBTDevType || strcmp(pstlhBtIfce->pcDeviceCurrState, "connected")) {
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
                                 }
                             }
-                            else if ((enBTDevAudioSource == lenBTDevType) && bSrvResolvedEvent && !strcmp(lstBTDeviceInfo.pcDevicePrevState, "connected") && !strcmp(lstBTDeviceInfo.pcDeviceCurrState, "connected")) {
+                            else if ((enBTDevAudioSource == lenBTDevType) && bSrvResolvedEvent && !strcmp(pstBTDeviceInfo->pcDevicePrevState, "connected") && !strcmp(pstBTDeviceInfo->pcDeviceCurrState, "connected")) {
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
                                 }
                             }
                         }
-                        else if (!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected &&
-                                 strncmp(pstlhBtIfce->pcLeDeviceAddress, lstBTDeviceInfo.pcAddress,
-                                     ((BT_MAX_STR_LEN > strlen(lstBTDeviceInfo.pcAddress))?strlen(lstBTDeviceInfo.pcAddress):BT_MAX_STR_LEN))) {
+                        else if (!pstBTDeviceInfo->bPaired && !pstBTDeviceInfo->bConnected &&
+                                 strncmp(pstlhBtIfce->pcLeDeviceAddress, pstBTDeviceInfo->pcAddress,
+                                     ((BT_MAX_STR_LEN > strlen(pstBTDeviceInfo->pcAddress))?strlen(pstBTDeviceInfo->pcAddress):BT_MAX_STR_LEN))) {
 
                             if (pstlhBtIfce->ui32IsAdapterDiscovering && settingRSSItoZero) {
                                 lenBtDevState = enBTDevStRSSIUpdate;
@@ -7569,26 +7691,26 @@ btrCore_BTDBusConnectionFilterCb (
                             }
 
                             if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                 }
                             }
                         }
                         else if (lenBTDevType == enBTDevUnknown) { //TODO: Have to figure out a way to identify it as a LE device
 
                             if (bConnectEvent) {
-                                if (lstBTDeviceInfo.bConnected) {
+                                if (pstBTDeviceInfo->bConnected) {
                                     const char* value = "connected";
 
-                                    strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                    strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcLeDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                    strncpy(pstlhBtIfce->pcLeDeviceAddress, lstBTDeviceInfo.pcAddress, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstlhBtIfce->pcLeDeviceAddress, pstBTDeviceInfo->pcAddress, BT_MAX_STR_LEN - 1);
                                 }
-                                else if (!lstBTDeviceInfo.bConnected) {
+                                else if (!pstBTDeviceInfo->bConnected) {
                                     const char* value = "disconnected";
 
-                                    strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                    strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcLeDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcLeDeviceAddress, "none", BT_MAX_STR_LEN - 1);
                                 }
@@ -7597,14 +7719,14 @@ btrCore_BTDBusConnectionFilterCb (
                                 lenBtDevState = enBTDevStPropChanged;
 
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
                                 }
                             }
 
                             if (bSrvResolvedEvent) {
                                 if (pstlhBtIfce->fpcBTLeGattPath) {
-                                    pstlhBtIfce->fpcBTLeGattPath(enBTDevice, enBTLeGattOpUnknown, pui8DevPath, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, NULL, pstlhBtIfce->pcBLePathUserData);
+                                    pstlhBtIfce->fpcBTLeGattPath(enBTDevice, enBTLeGattOpUnknown, pui8DevPath, pstBTDeviceInfo->pcAddress, enBTDevStPropChanged, NULL, pstlhBtIfce->pcBLePathUserData);
                                 }
                             }
                             else if (!bConnectEvent) {
@@ -7612,7 +7734,7 @@ btrCore_BTDBusConnectionFilterCb (
                                 lenBtDevState = enBTDevStPropChanged;
 
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
                                 }
                             }
@@ -7676,14 +7798,14 @@ btrCore_BTDBusConnectionFilterCb (
                     }
 
                     /* We will eventually try not to call bluez api in its own context? */ 
-                    i32OpRet = btrCore_BTGetMediaInfo(apDBusConn, &lstBTMediaInfo, apcMediaTransIface);
+                    i32OpRet = btrCore_BTGetMediaInfo(apDBusConn, pstBTMediaInfo, apcMediaTransIface);
  
                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                         strncpy(apcDeviceIfce, apcMediaTransIface, ui32DeviceIfceLen);
-                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                         if (!i32OpRet) {
-                            lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                            apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                            lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
+                            apcDevAddr    = pstBTDeviceInfo->pcAddress;
                         }
                     }
 
@@ -7692,16 +7814,16 @@ btrCore_BTDBusConnectionFilterCb (
                         if ((!strcmp(pstlhBtIfce->pcMediaCurrState, "none")) && (!strcmp(pcState, "pending"))) {
                             strcpy(pstlhBtIfce->pcMediaCurrState, pcState);
 
-                            if (!i32OpRet && lstBTDeviceInfo.bConnected) {
+                            if (!i32OpRet && pstBTDeviceInfo->bConnected) {
                                 const char* value = "playing";
                                 enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
-                                strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                 strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
                                 }
                                 //if () {} t avmedia wiht device address info. from which id can be computed 
@@ -7750,17 +7872,17 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                         }
                         else if (lenBTDevType == enBTDevAudioSink) {    // Lets handle AudioOut case for media events for a Paired device which connects at Pairing
-                            if (!i32OpRet && lstBTDeviceInfo.bConnected && lstBTDeviceInfo.bPaired &&
+                            if (!i32OpRet && pstBTDeviceInfo->bConnected && pstBTDeviceInfo->bPaired &&
                                 (!strcmp(pstlhBtIfce->pcMediaCurrState, "none")) && (!strcmp(pcState, "idle"))) {
                                 const char* value = "connected";
                                 enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
-                                strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                 strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if (pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if (pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                     }
                                 }
                             }
@@ -7797,10 +7919,10 @@ btrCore_BTDBusConnectionFilterCb (
 
                     BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
 
-                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, dbus_message_get_path(apDBusMsg));
+                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, dbus_message_get_path(apDBusMsg));
                     if (!i32OpRet) {
-                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                        apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
+                        apcDevAddr    = pstBTDeviceInfo->pcAddress;
                     }
 
                     {
@@ -7848,6 +7970,22 @@ btrCore_BTDBusConnectionFilterCb (
                             dbus_message_iter_next(&lDBusMsgIterDict);
                         }
                     }
+
+
+                    if ((enBTDevAudioSource == lenBTDevType) && pstBTDeviceInfo->bConnected && mediaStatusUpdate.m_mediaPlayerConnected) {
+                        const char* value = "connected";
+                        enBTDeviceState lenBtDevState = enBTDevStPropChanged;
+
+                        strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                        strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                        strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+
+                        if (pstlhBtIfce->fpcBDevStatusUpdate) {
+                            if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                            }
+                        }
+                    }
+
                 }
                 else if (!strcmp(lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH)) {
                     const char*             apcMediaPlayerIface = dbus_message_get_path(apDBusMsg);
@@ -7860,10 +7998,10 @@ btrCore_BTDBusConnectionFilterCb (
                     BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
 
                     strncpy(apcDeviceIfce, apcMediaPlayerIface, ui32DeviceIfceLen);
-                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                     if (!i32OpRet) {
-                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                        apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
+                        apcDevAddr    = pstBTDeviceInfo->pcAddress;
                     }
                     memset (&mediaStatusUpdate, 0, sizeof(stBTMediaStatusUpdate));
 
@@ -8090,10 +8228,10 @@ btrCore_BTDBusConnectionFilterCb (
                     BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_ITEM_PATH);
 
                     strncpy(apcDeviceIfce, apcMediaItemIface, ui32DeviceIfceLen);
-                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                     if (!i32OpRet) {
-                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                        apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
+                        apcDevAddr    = pstBTDeviceInfo->pcAddress;
                     }
 
                     {
@@ -8169,10 +8307,10 @@ btrCore_BTDBusConnectionFilterCb (
                     BTRCORELOG_ERROR ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_FOLDER_PATH);
 
                     strncpy(apcDeviceIfce, apcMediaItemIface, ui32DeviceIfceLen);
-                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                    i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                     if (!i32OpRet) {
-                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                        apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                        lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
+                        apcDevAddr    = pstBTDeviceInfo->pcAddress;
                     }
 
                     {
@@ -8232,10 +8370,10 @@ btrCore_BTDBusConnectionFilterCb (
                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                         strncpy(apcDeviceIfce, pCharIface, ui32DeviceIfceLen);
 
-                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                         if (!i32OpRet) {
                             if (pstlhBtIfce->fpcBTLeGattPath) {
-                                pstlhBtIfce->fpcBTLeGattPath(enBTGattCharacteristic, enBTLeGattOpUnknown, pCharIface, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, NULL, pstlhBtIfce->pcBLePathUserData);
+                                pstlhBtIfce->fpcBTLeGattPath(enBTGattCharacteristic, enBTLeGattOpUnknown, pCharIface, pstBTDeviceInfo->pcAddress, enBTDevStPropChanged, NULL, pstlhBtIfce->pcBLePathUserData);
                             }
                         }
                     }
@@ -8295,17 +8433,17 @@ btrCore_BTDBusConnectionFilterCb (
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_DEVICE_PATH);
 
                                     if (lpcDBusIface) {
-                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, lpcDBusIface);
+                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, lpcDBusIface);
                                          if (!i32OpRet) {
                                             enBTDeviceState lenBtDevState = enBTDevStUnknown;
-                                            enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+                                            enBTDeviceType  lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
 
-                                            if ((!lstBTDeviceInfo.bPaired && !lstBTDeviceInfo.bConnected) ||
-                                                ((enBTDevUnknown == lenBTDevType) && (TRUE == lstBTDeviceInfo.bConnected)) ) {
+                                            if ((!pstBTDeviceInfo->bPaired && !pstBTDeviceInfo->bConnected) ||
+                                                ((enBTDevUnknown == lenBTDevType) && (TRUE == pstBTDeviceInfo->bConnected)) ) {
                                                 lenBtDevState = enBTDevStFound;
 
                                                 if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                                    if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                                     }
                                                 }
                                             }
@@ -8333,10 +8471,10 @@ btrCore_BTDBusConnectionFilterCb (
 
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
-                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
-                                            lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
-                                            apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                                            lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
+                                            apcDevAddr    = pstBTDeviceInfo->pcAddress;
                                         }
                                     }
 
@@ -8503,10 +8641,10 @@ btrCore_BTDBusConnectionFilterCb (
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
                                             if (pstlhBtIfce->fpcBTLeGattPath) {
-                                                pstlhBtIfce->fpcBTLeGattPath(enBTGattService, enBTLeGattOpUnknown, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, NULL, pstlhBtIfce->pcBLePathUserData);
+                                                pstlhBtIfce->fpcBTLeGattPath(enBTGattService, enBTLeGattOpUnknown, lpcDBusIface, pstBTDeviceInfo->pcAddress, enBTDevStFound, NULL, pstlhBtIfce->pcBLePathUserData);
                                             }
                                         }
                                     }
@@ -8519,10 +8657,10 @@ btrCore_BTDBusConnectionFilterCb (
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
                                             if (pstlhBtIfce->fpcBTLeGattPath) {
-                                                pstlhBtIfce->fpcBTLeGattPath(enBTGattCharacteristic, enBTLeGattOpUnknown, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, NULL, pstlhBtIfce->pcBLePathUserData);
+                                                pstlhBtIfce->fpcBTLeGattPath(enBTGattCharacteristic, enBTLeGattOpUnknown, lpcDBusIface, pstBTDeviceInfo->pcAddress, enBTDevStFound, NULL, pstlhBtIfce->pcBLePathUserData);
                                             }
                                         }
                                     }
@@ -8535,10 +8673,10 @@ btrCore_BTDBusConnectionFilterCb (
                                     if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                                         strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                                        i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                                         if (!i32OpRet) {
                                             if (pstlhBtIfce->fpcBTLeGattPath) {
-                                                pstlhBtIfce->fpcBTLeGattPath(enBTGattDescriptor, enBTLeGattOpUnknown, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStFound, NULL, pstlhBtIfce->pcBLePathUserData);
+                                                pstlhBtIfce->fpcBTLeGattPath(enBTGattDescriptor, enBTLeGattOpUnknown, lpcDBusIface, pstBTDeviceInfo->pcAddress, enBTDevStFound, NULL, pstlhBtIfce->pcBLePathUserData);
                                             }
                                         }
                                     }
@@ -8586,14 +8724,14 @@ btrCore_BTDBusConnectionFilterCb (
                         if (lpcDBusIface) {
                             enBTDeviceType  lenBTDevType = enBTDevUnknown;
                             /* On InterfacesRemoved signal of BT_DBUS_BLUEZ_DEVICE_PATH, query to get DevInfo is invalid 
-                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, lpcDBusIface);
+                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, lpcDBusIface);
                             if (!i32OpRet) {
-                                lenBTDevType  = btrCore_BTMapDevClasstoDevType(lstBTDeviceInfo.ui32Class);
+                                lenBTDevType  = btrCore_BTMapDevClasstoDevType(pstBTDeviceInfo->ui32Class);
 
                             }*/
                             if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                btrCore_BTGetDevAddressFromDevPath(lpcDBusIface, lstBTDeviceInfo.pcAddress);
-                                if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, enBTDevStLost, &lstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                btrCore_BTGetDevAddressFromDevPath(lpcDBusIface, pstBTDeviceInfo->pcAddress);
+                                if(pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, enBTDevStLost, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
                                 }
                             }
                         }
@@ -8624,12 +8762,12 @@ btrCore_BTDBusConnectionFilterCb (
 
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                             strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
-                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                             if (!i32OpRet) {
-                                apcDevAddr    = lstBTDeviceInfo.pcAddress;
+                                apcDevAddr    = pstBTDeviceInfo->pcAddress;
                             }
                            else {
-                                btrCore_BTGetDevAddressFromDevPath(lpcDBusIface, lstBTDeviceInfo.pcAddress);
+                                btrCore_BTGetDevAddressFromDevPath(lpcDBusIface, pstBTDeviceInfo->pcAddress);
                                 i32OpRet = 0;
                            }
                         }
@@ -8660,10 +8798,10 @@ btrCore_BTDBusConnectionFilterCb (
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                             strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                             if (!i32OpRet) {
                                 if (pstlhBtIfce->fpcBTLeGattPath) {
-                                    pstlhBtIfce->fpcBTLeGattPath(enBTGattService, enBTLeGattOpUnknown, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStLost, NULL, pstlhBtIfce->pcBLePathUserData);
+                                    pstlhBtIfce->fpcBTLeGattPath(enBTGattService, enBTLeGattOpUnknown, lpcDBusIface, pstBTDeviceInfo->pcAddress, enBTDevStLost, NULL, pstlhBtIfce->pcBLePathUserData);
                                 }
                             }
                         }
@@ -8676,10 +8814,10 @@ btrCore_BTDBusConnectionFilterCb (
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                             strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                             if (!i32OpRet) {
                                 if (pstlhBtIfce->fpcBTLeGattPath) {
-                                    pstlhBtIfce->fpcBTLeGattPath(enBTGattCharacteristic, enBTLeGattOpUnknown, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStLost, NULL, pstlhBtIfce->pcBLePathUserData);
+                                    pstlhBtIfce->fpcBTLeGattPath(enBTGattCharacteristic, enBTLeGattOpUnknown, lpcDBusIface, pstBTDeviceInfo->pcAddress, enBTDevStLost, NULL, pstlhBtIfce->pcBLePathUserData);
                                 }
                             }
                         }
@@ -8692,10 +8830,10 @@ btrCore_BTDBusConnectionFilterCb (
                         if ((ui32DeviceIfceLen > 0) && (ui32DeviceIfceLen < (BT_MAX_STR_LEN - 1))) {
                             strncpy(apcDeviceIfce, lpcDBusIface, ui32DeviceIfceLen);
 
-                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, &lstBTDeviceInfo, apcDeviceIfce);
+                            i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, apcDeviceIfce);
                             if (!i32OpRet) {
                                 if (pstlhBtIfce->fpcBTLeGattPath) {
-                                    pstlhBtIfce->fpcBTLeGattPath(enBTGattDescriptor, enBTLeGattOpUnknown, lpcDBusIface, lstBTDeviceInfo.pcAddress, enBTDevStLost, NULL, pstlhBtIfce->pcBLePathUserData);
+                                    pstlhBtIfce->fpcBTLeGattPath(enBTGattDescriptor, enBTLeGattOpUnknown, lpcDBusIface, pstBTDeviceInfo->pcAddress, enBTDevStLost, NULL, pstlhBtIfce->pcBLePathUserData);
                                 }
                             }
                         }
