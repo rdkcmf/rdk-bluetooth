@@ -3539,27 +3539,24 @@ BtrCore_BTGetIfceNameVersion (
 
     (void)pstlhBtIfce;
 
-    /* strncpy() throws format truncation error on gcc 9.x when same length of src string
-       is given in 3rd argument. Also, strncpy() will fill null terminating characters if
-       3rd argument length is more than the length of src string
-    */
+
     lfpVersion = popen("/usr/lib/bluez5/bluetooth/bluetoothd --version", "r");
     if ((lfpVersion == NULL)) {
         BTRCORELOG_ERROR ("Failed to run Version command\n");
-        strncpy(lcpVersion, "5.XXX", strlen("5.XXX") + 1);
+        strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
     }
     else {
         if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
             BTRCORELOG_ERROR ("Failed to Valid Version\n");
-            strncpy(lcpVersion, "5.XXX", strlen("5.XXX") + 1);
+            strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
         }
 
         pclose(lfpVersion);
     }
 
 
-    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez") + 1);
-    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion) + 1);
+    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez"));
+    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion));
     
     return 0;
 }
@@ -7512,7 +7509,7 @@ btrCore_BTDBusConnectionFilterCb (
                                     strncpy(lstBTDeviceInfo.pcDevicePrevState, pstlhBtIfce->pcLeDeviceCurrState, BT_MAX_STR_LEN - 1);
                                     strncpy(lstBTDeviceInfo.pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
                                     strncpy(pstlhBtIfce->pcLeDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                    strncpy(pstlhBtIfce->pcLeDeviceAddress, "none", strlen("none") + 1);
+                                    strncpy(pstlhBtIfce->pcLeDeviceAddress, "none", strlen("none"));
                                 }
 
                                 lenBTDevType  = enBTDevLE;
@@ -7648,7 +7645,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                             if (!strcmp(pcState, "idle")) {
                                 lenBtMedTransportSt = enBTMedTransportStIdle;
-                                strncpy(pstlhBtIfce->pcMediaCurrState, "connected", strlen("connected") + 1);
+                                strncpy(pstlhBtIfce->pcMediaCurrState, "connected", strlen("connected"));
                             }
                             else if (!strcmp(pcState, "pending")) {
                                 lenBtMedTransportSt = enBTMedTransportStPending;
@@ -7656,7 +7653,7 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                             else if (!strcmp(pcState, "active")) {
                                 lenBtMedTransportSt = enBTMedTransportStActive;
-                                strncpy(pstlhBtIfce->pcMediaCurrState, "playing", strlen("playing") + 1);
+                                strncpy(pstlhBtIfce->pcMediaCurrState, "playing", strlen("playing"));
                             }
 
                             mediaStatusUpdate.aenBtOpIfceType                        = enBTMediaTransport;
