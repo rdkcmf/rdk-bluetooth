@@ -82,6 +82,10 @@
 #define BT_LE_GATT_SERVER_ENDPOINT          "/org/bluez/hci0/dev_XX_XX_XX_XX_XX_XX"
 #define BT_LE_GATT_SERVER_ADVERTISEMENT     "/LeGattAdvert"
 
+#define BT_BLUEZ_VERSION_5_45               "5.45"
+#define BT_BLUEZ_VERSION_5_48               "5.48"
+#define BT_BLUEZ_VERSION_5_54               "5.54"
+
 
 typedef struct _stBTMediaInfo {
     unsigned char   ui8Codec;
@@ -123,6 +127,7 @@ typedef struct _stBtIfceHdl {
 
     unsigned int                            ui32IsAdapterDiscovering;
 
+    char                                    pcBTVersion[BT_MAX_STR_LEN];
     char                                    pcDeviceCurrState[BT_MAX_STR_LEN];
     char                                    pcLeDeviceCurrState[BT_MAX_STR_LEN];
     char                                    pcLeDeviceAddress[BT_MAX_STR_LEN];
@@ -2954,6 +2959,7 @@ BtrCore_BTInitGetConnection (
 
     pstlhBtIfce->ui32IsAdapterDiscovering       = 0;
 
+    memset(pstlhBtIfce->pcBTVersion,        '\0', sizeof(char) * BT_MAX_STR_LEN);
     memset(pstlhBtIfce->pcDeviceCurrState,  '\0', sizeof(char) * BT_MAX_STR_LEN);
     memset(pstlhBtIfce->pcLeDeviceCurrState,'\0', sizeof(char) * BT_MAX_STR_LEN);
     memset(pstlhBtIfce->pcLeDeviceAddress,  '\0', sizeof(char) * BT_MAX_STR_LEN);
@@ -3544,7 +3550,7 @@ BtrCore_BTGetIfceNameVersion (
 ) {
     stBtIfceHdl*    pstlhBtIfce = (stBtIfceHdl*)apstBtIfceHdl;
     FILE*           lfpVersion = NULL;
-    char            lcpVersion[8] = {'\0'};
+    char            lcpVersion[BT_MAX_STR_LEN] = {'\0'};
 
     if (!apstBtIfceHdl || !apBtOutIfceName || !apBtOutVersion)
         return -1;
@@ -3559,10 +3565,12 @@ BtrCore_BTGetIfceNameVersion (
         strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
     }
     else {
-        if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
-            BTRCORELOG_ERROR ("Failed to Valid Version\n");
-            strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
-        }
+        do {
+            if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
+                BTRCORELOG_ERROR ("Failed to Valid Version\n");
+                strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
+            }
+        } while (strstr(lcpVersion, "breakpad") || strstr(lcpVersion, "Breakpad"));
 
         pclose(lfpVersion);
     }
@@ -3570,6 +3578,9 @@ BtrCore_BTGetIfceNameVersion (
 
     strncpy(apBtOutIfceName, "Bluez", strlen("Bluez"));
     strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion));
+    strncpy(pstlhBtIfce->pcBTVersion, lcpVersion, strlen(lcpVersion));
+
+    BTRCORELOG_WARN ("Bluez Version - %s\n", apBtOutVersion);
     
     return 0;
 }
@@ -7615,6 +7626,9 @@ btrCore_BTDBusConnectionFilterCb (
                     unsigned short          lVolume = 0;
                     char*                   pcState = 0;
 
+                    if (!strncmp(pstlhBtIfce->pcBTVersion, BT_BLUEZ_VERSION_5_54, strlen(BT_BLUEZ_VERSION_5_54))) {
+                        ui32DeviceIfceLen = strstr(apcMediaTransIface, "/sep") - apcMediaTransIface;
+                    }
 
                     BTRCORELOG_INFO ("Property Changed! : %s\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH);
                     {
