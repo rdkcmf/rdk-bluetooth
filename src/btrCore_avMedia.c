@@ -2644,26 +2644,60 @@ btrCore_AVMedia_TransportPathCb (
                 a2dp_sbc_t*     lpstBTAVMMediaSbcConfig = NULL;
 
                 if (!strncmp(apBtMediaUuid, BT_UUID_A2DP_SOURCE, strlen(BT_UUID_A2DP_SOURCE))) {
-                    lpstBTAVMMediaSbcConfig         = pstlhBTRCoreAVM->pstBTMediaConfigOut;
-                    pstlhBTRCoreAVM->eAVMediaTypeOut= eBTRCoreAVMTypeSBC;
+                    lpstBTAVMMediaSbcConfig             = pstlhBTRCoreAVM->pstBTMediaConfigOut;
+                    pstlhBTRCoreAVM->eAVMediaTypeOut    = eBTRCoreAVMTypeSBC;
+
+                    BTRCORELOG_INFO ("max_bitpool Incoming = %d Stored/Calculated = %d\n", lstBTMediaSbcConfig.max_bitpool, lpstBTAVMMediaSbcConfig->max_bitpool);
+                    if (lstBTMediaSbcConfig.frequency == BTR_SBC_SAMPLING_FREQ_44100) {
+                        /* Reuse - Negotiated lpstBTAVMMediaSbcConfig->max_bitpool */
+                        lpstBTAVMMediaSbcConfig->frequency  = BTR_SBC_SAMPLING_FREQ_48000;
+                    }
+                    else {
+                        lpstBTAVMMediaSbcConfig->frequency  = lstBTMediaSbcConfig.frequency;
+                    }
+
+                    if (apBtMediaSBCCaps->max_bitpool == MAX_BITPOOL) {
+                        lpstBTAVMMediaSbcConfig->max_bitpool = (uint8_t) MIN(btrCore_AVMedia_GetA2DPDefaultBitpool(lpstBTAVMMediaSbcConfig->frequency,
+                                                                                                                   lstBTMediaSbcConfig.channel_mode),
+                                                                                                                   apBtMediaSBCCaps->max_bitpool);
+                    }
+                    else if (lstBTMediaSbcConfig.max_bitpool < lpstBTAVMMediaSbcConfig->max_bitpool) {
+                        lpstBTAVMMediaSbcConfig->max_bitpool = lstBTMediaSbcConfig.max_bitpool;
+                    }
                 }
                 else if (!strncmp(apBtMediaUuid, BT_UUID_A2DP_SINK, strlen(BT_UUID_A2DP_SINK))) {
-                    lpstBTAVMMediaSbcConfig         = pstlhBTRCoreAVM->pstBTMediaConfigIn;
-                    pstlhBTRCoreAVM->eAVMediaTypeIn = eBTRCoreAVMTypeSBC;
+                    lpstBTAVMMediaSbcConfig             = pstlhBTRCoreAVM->pstBTMediaConfigIn;
+                    pstlhBTRCoreAVM->eAVMediaTypeIn     = eBTRCoreAVMTypeSBC;
+                    lpstBTAVMMediaSbcConfig->frequency  = lstBTMediaSbcConfig.frequency;
+                    lpstBTAVMMediaSbcConfig->max_bitpool=  lstBTMediaSbcConfig.max_bitpool;
                 }
                 else {
-                    lpstBTAVMMediaSbcConfig         = pstlhBTRCoreAVM->pstBTMediaConfigOut;
-                    pstlhBTRCoreAVM->eAVMediaTypeOut= eBTRCoreAVMTypeSBC;
+                    lpstBTAVMMediaSbcConfig             = pstlhBTRCoreAVM->pstBTMediaConfigOut;
+                    pstlhBTRCoreAVM->eAVMediaTypeOut    = eBTRCoreAVMTypeSBC;
+                    if (lstBTMediaSbcConfig.frequency == BTR_SBC_SAMPLING_FREQ_44100) {
+                        /* Reuse - Negotiated lpstBTAVMMediaSbcConfig->max_bitpool */
+                        lpstBTAVMMediaSbcConfig->frequency  = BTR_SBC_SAMPLING_FREQ_48000;
+                    }
+                    else {
+                        lpstBTAVMMediaSbcConfig->frequency  = lstBTMediaSbcConfig.frequency;
+                    }
+
+                    if (apBtMediaSBCCaps->max_bitpool == MAX_BITPOOL) {
+                        lpstBTAVMMediaSbcConfig->max_bitpool = (uint8_t) MIN(btrCore_AVMedia_GetA2DPDefaultBitpool(lpstBTAVMMediaSbcConfig->frequency,
+                                                                                                                   lstBTMediaSbcConfig.channel_mode),
+                                                                                                                   apBtMediaSBCCaps->max_bitpool);
+                    }
+                    else if (lstBTMediaSbcConfig.max_bitpool < lpstBTAVMMediaSbcConfig->max_bitpool) {
+                        lpstBTAVMMediaSbcConfig->max_bitpool = lstBTMediaSbcConfig.max_bitpool;
+                    }
                 }
 
                 if (lpstBTAVMMediaSbcConfig) {
                     lpstBTAVMMediaSbcConfig->channel_mode        =  lstBTMediaSbcConfig.channel_mode;
-                    lpstBTAVMMediaSbcConfig->frequency           =  lstBTMediaSbcConfig.frequency;
                     lpstBTAVMMediaSbcConfig->allocation_method   =  lstBTMediaSbcConfig.allocation_method;
                     lpstBTAVMMediaSbcConfig->subbands            =  lstBTMediaSbcConfig.subbands;
                     lpstBTAVMMediaSbcConfig->block_length        =  lstBTMediaSbcConfig.block_length;
                     lpstBTAVMMediaSbcConfig->min_bitpool         =  lstBTMediaSbcConfig.min_bitpool;
-                    lpstBTAVMMediaSbcConfig->max_bitpool         =  lstBTMediaSbcConfig.max_bitpool;
                     i32BtRet = 0;
                 }
             }
@@ -2763,6 +2797,12 @@ btrCore_AVMedia_TransportPathCb (
 
                     lpstBTAVMMediaConfig = pstlhBTRCoreAVM->pstBTMediaConfigOut;
                     i32BtRet = 0;
+
+                    if (lpstBTAVMMediaConfig) {
+                        BTRCORELOG_TRACE("Retain Media Configuration\n");
+                        /* memcpy(lpstBTAVMMediaConfig, &lstBtA2dpSbcCaps, sizeof(a2dp_sbc_t)); */
+                        /* Ensure that last connected Audio-Out device uses Negotiated Media Config on PowerOff-PowerOn */
+                    }
                 }
             }
 
@@ -2776,13 +2816,14 @@ btrCore_AVMedia_TransportPathCb (
 
                     lpstBTAVMMediaConfig = pstlhBTRCoreAVM->pstBTMediaConfigIn;
                     i32BtRet = 0;
+
+                    if (lpstBTAVMMediaConfig) {
+                        BTRCORELOG_TRACE("Reset Media Configuration\n");
+                        memcpy(lpstBTAVMMediaConfig, &lstBtA2dpSbcCaps, sizeof(a2dp_sbc_t));
+                    }
                 }
             }
 
-            if (lpstBTAVMMediaConfig) {
-                BTRCORELOG_TRACE("Reset Media Configuration\n");
-                memcpy(lpstBTAVMMediaConfig, &lstBtA2dpSbcCaps, sizeof(a2dp_sbc_t));
-            }
         }
     }
 
