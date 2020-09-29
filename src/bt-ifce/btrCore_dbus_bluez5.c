@@ -3581,13 +3581,14 @@ BtrCore_BTGetIfceNameVersion (
     lfpVersion = popen("/usr/lib/bluez5/bluetooth/bluetoothd --version", "r");
     if ((lfpVersion == NULL)) {
         BTRCORELOG_ERROR ("Failed to run Version command\n");
-        strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
+	strncpy(lcpVersion, "5.XXX", strlen("5.XXX")+1);
     }
     else {
         do {
             if (fgets(lcpVersion, sizeof(lcpVersion)-1, lfpVersion) == NULL) {
                 BTRCORELOG_ERROR ("Failed to Valid Version\n");
-                strncpy(lcpVersion, "5.XXX", strlen("5.XXX"));
+                strncpy(lcpVersion, "5.XXX", sizeof(lcpVersion));
+                lcpVersion[sizeof(lcpVersion) - 1] = '\0';
             }
         } while (strstr(lcpVersion, "breakpad") || strstr(lcpVersion, "Breakpad"));
 
@@ -3595,7 +3596,7 @@ BtrCore_BTGetIfceNameVersion (
     }
 
 
-    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez"));
+    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez")+1);
     strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion));
     strncpy(pstlhBtIfce->pcBTVersion, lcpVersion, strlen(lcpVersion));
 
@@ -6669,9 +6670,8 @@ BtrCore_BTRegisterLeAdvertisement (
     BTRCORELOG_INFO("Registering advertisement\n");
    
     memset(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath, '\0', BT_MAX_STR_LEN);
-    strncpy(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath, apBtAdapter, strlen(apBtAdapter)); 
-    strncat(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath, BT_LE_GATT_SERVER_ADVERTISEMENT, strlen(BT_LE_GATT_SERVER_ADVERTISEMENT));
-
+    strncpy(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath, apBtAdapter, strlen(apBtAdapter));
+    strncat(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath, BT_LE_GATT_SERVER_ADVERTISEMENT, (sizeof(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath) - strlen(pstlhBtIfce->stBTLeCustAdvt.pui8AdvertPath) -1));
 
     lpDBusMsg = dbus_message_new_method_call(BT_DBUS_BLUEZ_PATH,
                                             apBtAdapter,
@@ -6759,7 +6759,7 @@ BtrCore_BTRegisterLeGatt (
 
         memset(pstlhBtIfce->pcBTAdapterGattSrvEpPath, '\0', sizeof(char) * BT_MAX_DEV_PATH_LEN);
         strncpy(pstlhBtIfce->pcBTAdapterGattSrvEpPath, pstlhBtIfce->pcBTDAdapterPath, strlen(pstlhBtIfce->pcBTDAdapterPath));
-        strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, "/dev_", 5);
+        strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, "/dev_", (sizeof(pstlhBtIfce->pcBTAdapterGattSrvEpPath) - strlen(pstlhBtIfce->pcBTAdapterGattSrvEpPath) -1));
         strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, lCurAdapterAddress, strlen(lCurAdapterAddress));
 
         lpBtLeGattSrvEpPath = pstlhBtIfce->pcBTAdapterGattSrvEpPath;
