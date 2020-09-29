@@ -110,6 +110,13 @@
 #define BTR_SBC_BLOCK_LENGTH_12             SBC_BLOCK_LENGTH_12
 #define BTR_SBC_BLOCK_LENGTH_16             SBC_BLOCK_LENGTH_16
 
+#ifndef MIN_BITPOOL
+#define MIN_BITPOOL                         SBC_MIN_BITPOOL
+#endif
+
+#ifndef MAX_BITPOOL
+#define MAX_BITPOOL                         SBC_MAX_BITPOOL
+#endif
 
 #if defined(AAC_SUPPORTED)
 

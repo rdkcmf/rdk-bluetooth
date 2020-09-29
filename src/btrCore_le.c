@@ -1136,7 +1136,7 @@ BTRCore_LE_AddGattServiceInfo (
 
             memset(lpBtLeGattSrvEpPath, '\0', BT_MAX_DEV_PATH_LEN);
             strncpy(lpBtLeGattSrvEpPath, apBtAdapter, strlen(apBtAdapter));
-            strncat(lpBtLeGattSrvEpPath, "/dev_", 5);
+            strncat(lpBtLeGattSrvEpPath, "/dev_", (sizeof(lpBtLeGattSrvEpPath) - strlen(lpBtLeGattSrvEpPath) -1));
             strncat(lpBtLeGattSrvEpPath, lCurAdapterAddress, strlen(lCurAdapterAddress));
 
             /* Set gatt service UUID */
@@ -1191,7 +1191,10 @@ BTRCore_LE_AddGattCharInfo (
                 /* Set parent service */
                 lpstBTRCoreLeGattChar->parentService = pParent;
                 /* Set char path */
-                snprintf(lpstBTRCoreLeGattChar->charPath, BT_MAX_STR_LEN - 1, "%s/%s%04d", lpstBTRGattService->servicePath, "char", lIndex);
+                int ret = snprintf(lpstBTRCoreLeGattChar->charPath, BT_MAX_STR_LEN - 1, "%s/%s%04d", lpstBTRGattService->servicePath, "char", lIndex);
+		if (ret > (BT_MAX_STR_LEN - 1)) {
+			BTRCORELOG_INFO("lpstBTRCoreLeGattChar->charPath truncated\n");
+		}
                 /* Set char flags */
                 lpstBTRCoreLeGattChar->charFlags = aCharFlags;
                 /* Set the value of the characteristic after checking it is a characteristic to be read */
@@ -1239,7 +1242,10 @@ BTRCore_LE_AddGattDescInfo (
                 /* Set desc parent char */
                 lpstBTRGattDesc->parentChar = pParent;
                 /* Set desc path */
-                snprintf(lpstBTRGattDesc->descPath, BT_MAX_STR_LEN - 1, "%s/%s%03d", lpstBTRGattChar->charPath, "desc", lIndex);
+                int ret = snprintf(lpstBTRGattDesc->descPath, BT_MAX_STR_LEN - 1, "%s/%s%03d", lpstBTRGattChar->charPath, "desc", lIndex);
+		if (ret > (BT_MAX_STR_LEN - 1)) {
+			BTRCORELOG_INFO("lpstBTRGattDesc->descPath truncated\n");
+		}
                 BTRCORELOG_INFO("Desc path %s\n", lpstBTRGattDesc->descPath);
                 /* Set desc flags */
                 lpstBTRGattDesc->descFlags = aDescFlags;
