@@ -2244,8 +2244,29 @@ btrCore_OutTask (
                             }
 
                             if (bTriggerDevStatusChangeCb == TRUE) {
+
+                                if (lpstBTRCoreBTDevice->enDeviceType == enBTRCore_DC_Unknown) {
+                                    for (i32LoopIdx = 0; i32LoopIdx < lpstBTRCoreBTDevice->stDeviceProfile.numberOfService; i32LoopIdx++) {
+                                        if (lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_A2SNK, NULL, 16)) {
+                                            lpstBTRCoreBTDevice->enDeviceType = enBTRCore_DC_Loudspeaker;
+                                        }
+                                        else if (lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_A2SRC, NULL, 16)) {
+                                            lpstBTRCoreBTDevice->enDeviceType = enBTRCore_DC_SmartPhone;
+                                        }
+                                        else if ((lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_GATT_TILE_1, NULL, 16)) ||
+                                                 (lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_GATT_TILE_2, NULL, 16)) ||
+                                                 (lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_GATT_TILE_3, NULL, 16))) {
+                                            lpstBTRCoreBTDevice->enDeviceType = enBTRCore_DC_Tile;
+                                        }
+                                        else if (lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_HID_1, NULL, 16) ||
+                                                 lpstBTRCoreBTDevice->stDeviceProfile.profile[i32LoopIdx].uuid_value == strtol(BTR_CORE_HID_2, NULL, 16)) {
+                                            lpstBTRCoreBTDevice->enDeviceType = enBTRCore_DC_HID_Keyboard;
+                                        }
+                                    }
+                                }
+
                                 pstlhBTRCore->stDevStatusCbInfo.deviceId           = lBTRCoreDevId;
-                                pstlhBTRCore->stDevStatusCbInfo.eDeviceType        = lenBTRCoreDevType;
+                                pstlhBTRCore->stDevStatusCbInfo.eDeviceType        = btrCore_MapDevClassToDevType(lpstBTRCoreBTDevice->enDeviceType);
                                 pstlhBTRCore->stDevStatusCbInfo.eDevicePrevState   = lpstBTRCoreDevStateInfo->eDevicePrevState;
                                 pstlhBTRCore->stDevStatusCbInfo.eDeviceCurrState   = leBTDevState;
                                 pstlhBTRCore->stDevStatusCbInfo.eDeviceClass       = lpstBTRCoreBTDevice->enDeviceType;
