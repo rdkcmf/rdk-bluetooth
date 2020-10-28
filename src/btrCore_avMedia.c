@@ -241,6 +241,7 @@ typedef struct _stBTRCoreAVMediaItem {
     char                               pcAVMediaItemName[BTRCORE_MAX_STR_LEN];
     unsigned int                       ui32AVMediaNumberOfItems;    /* thing about populated items count */
     tBTRCoreAVMediaElementId           ui32AVMediaItemId;
+    eBTRCoreAVMElementType             eMediaItemType;
 
     union {
         struct _stBTRCoreAVMediaItem**   pstAVMediaSubItems;
@@ -296,6 +297,8 @@ typedef struct _stBTRCoreAVMediaHdl {
     GThread*                            pMediaPollingThread;
     void*                               pvThreadData;
     eBTRCoreAVMediaStatusUpdate        eAVMediaStPrev;
+    tBTRCoreAVMediaElementId           SelectedaBtrAVMediaItemId;
+    stBTRCoreAVMediaTrackInfo          SelectedapstBTAVMediaTrackInfo;
 } stBTRCoreAVMediaHdl;
 
 
@@ -323,6 +326,8 @@ static int btrCore_AVMedia_TransportPathCb (const char* apBtMediaTransportPath, 
 static int btrCore_AVMedia_MediaPlayerPathCb (const char* apcBTMediaPlayerPath, void* apUserData);
 static int btrCore_AVMedia_MediaStatusUpdateCb (enBTDeviceType aeBtDeviceType, stBTMediaStatusUpdate* apstBtMediaStUpdate, const char* apcBtDevAddr, void* apUserData);
 static int btrCore_AVMedia_MediaBrowserUpdateCb (stBTMediaBrowserUpdate* apstBtMediaBrUpdate, unsigned char ucItemScope, const char* apcBtDevAddr, void* apUserData);
+
+
 
 
 /* Static Function Definition */
@@ -728,6 +733,9 @@ btrCore_AVMedia_MapFolderTypeToElementType (
         break;
     case enBTMediaFldTypTrackList:
         leAVMElementType = eBTRCoreAVMETypeTrackList;
+        break;
+    case enBTMediaFldTypTrack:
+        leAVMElementType = eBTRCoreAVMETypeTrack;
         break;
     default:
         leAVMElementType = eBTRCoreAVMETypeTrackList;
@@ -1735,6 +1743,53 @@ BTRCore_AVMedia_GetTrackInfo (
     return lenBTRCoreRet;
 }
 
+enBTRCoreRet
+BTRCore_AVMedia_GetElementTrackInfo (
+    tBTRCoreAVMediaHdl         hBTRCoreAVM,
+    const char*                apBtDevAddr,
+    tBTRCoreAVMediaElementId    aBtrAVMediaItemId,
+    stBTRCoreAVMediaTrackInfo* apstBTAVMediaTrackInfo
+) {
+    stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
+    enBTRCoreRet            lenBTRCoreRet   = enBTRCoreSuccess;
+
+    if (!hBTRCoreAVM || !apBtDevAddr || !apstBTAVMediaTrackInfo)  {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+        //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
+        //      Seems to be the root cause of the stack corruption as part of DELIA-25861
+        char*   lpcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath (pstlhBTRCoreAVM->btIfceHdl, apBtDevAddr);
+        if (!lpcAVMediaPlayerPath || !(pstlhBTRCoreAVM->pcAVMediaPlayerPath = strndup(lpcAVMediaPlayerPath, BTRCORE_MAX_STR_LEN - 1))) {
+            BTRCORELOG_ERROR ("Failed to get Media Player Object!!!");
+            return enBTRCoreFailure;
+        }
+    }
+
+    if (aBtrAVMediaItemId && (pstlhBTRCoreAVM->SelectedaBtrAVMediaItemId == aBtrAVMediaItemId)) {
+          if (apstBTAVMediaTrackInfo) {
+              memset (apstBTAVMediaTrackInfo, 0 ,sizeof(stBTRCoreAVMediaTrackInfo));
+              memcpy (apstBTAVMediaTrackInfo,&pstlhBTRCoreAVM->SelectedapstBTAVMediaTrackInfo,sizeof(stBTRCoreAVMediaTrackInfo));
+              BTRCORELOG_DEBUG (" Get track success");
+              return lenBTRCoreRet;
+          }
+    }
+
+    // if aBtrAVMediaItemId is zero , get fetch the current playing elemet below
+
+    if (BtrCore_BTGetTrackInformation (pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, (stBTMediaTrackInfo*)apstBTAVMediaTrackInfo)) {
+       BTRCORELOG_WARN ("Failed to get Track information!!! from Bluez !");
+       lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    return lenBTRCoreRet;
+}
+
+
 
 //Combine TrackInfo, PositionInfo and basic info in GetMediaProperty handling with enums and switch?
 enBTRCoreRet
@@ -2019,6 +2074,7 @@ BTRCore_AVMedia_GetMediaElementList (
     tBTRCoreAVMediaElementId            aBtrAVMediaElementId,
     unsigned short                      aui16StartIdx,
     unsigned short                      aui16EndIdx,
+    eBTRCoreAVMElementType              aeBtrAVMElementType,
     stBTRCoreAVMediaElementInfoList*    aAVMediaElementInfoList
 ) {
     stBTRCoreAVMediaHdl*          lpstlhBTRCoreAVM   = NULL;
@@ -2073,13 +2129,23 @@ BTRCore_AVMedia_GetMediaElementList (
 
         while (aui16StartIdx <= aui16EndIdx && aui16StartIdx < lpstBtAVMediaItem->ui32AVMediaNumberOfItems && lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]) {
 
-            aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].eAVMElementType        = eBTRCoreAVMETypeTrackList; //TODO 
-            aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].ui32AVMediaElementId   = lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->ui32AVMediaItemId;
-            aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].bIsPlayable            = lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->bIsMediaItemPlayable;
-            strncpy(aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].m_mediaElementName, lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->pcAVMediaItemName, BTRCORE_MAX_STR_LEN -1);
-            memcpy (&aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements++].m_mediaTrackInfo, &lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx++]->mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
-        }
+            if ((aeBtrAVMElementType == eBTRCoreAVMETypeUnknown) || (aeBtrAVMElementType == lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->eMediaItemType)) {
+                if (aeBtrAVMElementType == eBTRCoreAVMETypeUnknown) {
+                    aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].eAVMElementType = eBTRCoreAVMETypeTrackList;
+                }
+                else {
+                    aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].eAVMElementType = lpstBtAVMediaItem->eMediaItemType;
+                }
 
+                aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].ui32AVMediaElementId   = lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->ui32AVMediaItemId;
+                aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].bIsPlayable            = lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->bIsMediaItemPlayable;
+                strncpy(aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements].m_mediaElementName, lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx]->pcAVMediaItemName, BTRCORE_MAX_STR_LEN -1);
+                memcpy (&aAVMediaElementInfoList->m_mediaElementInfo[m_numOfElements++].m_mediaTrackInfo, &lpstBtAVMediaItem->pstAVMediaSubItems[aui16StartIdx++]->mediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+            }
+            else {
+                aui16StartIdx++;
+            }
+        }
         aAVMediaElementInfoList->m_numOfElements = m_numOfElements;
         lenBTRCoreRet = enBTRCoreSuccess;
         BTRCORELOG_INFO ("Number of MediaItems retrived : %d\n", aAVMediaElementInfoList->m_numOfElements);
@@ -2145,6 +2211,70 @@ BTRCore_AVMedia_PlayTrack (
 
     return lenBTRCoreRet;
 }
+
+
+enBTRCoreRet
+BTRCore_AVMedia_SelectTrack (
+    tBTRCoreAVMediaHdl         hBTRCoreAVM,
+    const char*                apBtDevAddr,
+    tBTRCoreAVMediaElementId   aBtrAVMediaItemId
+) {
+    stBTRCoreAVMediaHdl*           pstlhBTRCoreAVM = NULL;
+    stBTRCoreAVMediaItem*          ptrBsr          = NULL;
+    stBTRCoreAVMediaItem*          ptrTrack        = NULL;
+    stBTRCoreAVMediaTrackInfo apstBTAVMediaTrackInfo;
+    enBTRCoreRet                   lenBTRCoreRet   = enBTRCoreFailure;
+
+    if (!hBTRCoreAVM || !apBtDevAddr) {
+       BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+       return enBTRCoreInvalidArg;
+    }
+
+   BTRCORELOG_DEBUG (" SetTrack Entered \n");
+    pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
+
+    if (!(ptrBsr = (aBtrAVMediaItemId & BTR_MEDIA_PLAYLIST_ID)? pstlhBTRCoreAVM->pstAVMediaPlayList : pstlhBTRCoreAVM->pstAVMediaBrowser)) {
+        BTRCORELOG_ERROR ("Media Browser doesn't exist!\n");
+        return lenBTRCoreRet;
+    }
+
+    if (btrCore_AVMedia_FindMediaItem (ptrBsr, aBtrAVMediaItemId, &ptrTrack)) {
+        BTRCORELOG_ERROR ("Failed to Search MediaTrack by Id(%llu) !\n", aBtrAVMediaItemId);
+        return lenBTRCoreRet;
+    }
+
+
+    if (ptrTrack) {
+        if (ptrTrack->bIsMediaItemPlayable) {
+            if (ptrTrack->pcAVMediaItemPath[0]) {
+                if(BtrCore_BTGetTrackInformation(pstlhBTRCoreAVM->btIfceHdl,
+                                     ptrTrack->pcAVMediaItemPath, (stBTMediaTrackInfo*)&apstBTAVMediaTrackInfo))
+                {
+                    BTRCORELOG_ERROR ("Failed to get media info!!!");
+                    lenBTRCoreRet = enBTRCoreFailure;
+                } else {
+                    pstlhBTRCoreAVM->SelectedaBtrAVMediaItemId = aBtrAVMediaItemId;
+                    memset(&pstlhBTRCoreAVM->SelectedapstBTAVMediaTrackInfo, 0, sizeof(stBTRCoreAVMediaTrackInfo));
+                    memcpy(&pstlhBTRCoreAVM->SelectedapstBTAVMediaTrackInfo, &apstBTAVMediaTrackInfo, sizeof(stBTRCoreAVMediaTrackInfo));
+                    BTRCORELOG_DEBUG (" Get track info success ");
+                    lenBTRCoreRet = enBTRCoreSuccess;
+                }
+            }
+            else {
+                BTRCORELOG_ERROR ("Media Item Path is not present!\n");
+            }
+        }
+        else {
+             BTRCORELOG_ERROR ("Media Item %llu is not Playable!\n", aBtrAVMediaItemId);
+        }
+    }
+    else {
+        BTRCORELOG_ERROR ("Media Track Item(%llu) not found!\n", aBtrAVMediaItemId);
+    }
+
+    return lenBTRCoreRet;
+}
+
 
 enBTRCoreRet
 BTRCore_AVMedia_IsMediaElementPlayable (
@@ -3440,6 +3570,7 @@ btrCore_AVMedia_MediaBrowserUpdateCb (
 
                 lpstBroswer->pvAVMediaParentItem        = ptr;
                 lpstBroswer->ui32AVMediaNumberOfItems   = 0;
+                lpstBroswer->eMediaItemType             = btrCore_AVMedia_MapFolderTypeToElementType (apstBtMediaBsrUpdate->eMediaFolderType);
                 lpstBroswer->ui32AVMediaItemId          = apstBtMediaBsrUpdate->ui32BTMediaItemId;
                 strncpy(lpstBroswer->pcAVMediaItemPath, apstBtMediaBsrUpdate->pcMediaItemPath, BTRCORE_MAX_STR_LEN -1);
                 strncpy(lpstBroswer->pcAVMediaItemName, apstBtMediaBsrUpdate->pcMediaItemName, BTRCORE_MAX_STR_LEN -1);

@@ -173,6 +173,8 @@ typedef enum _enBTRCoreMediaCtrl {
     enBTRCoreMediaCtrlScanOff,
     enBTRCoreMediaCtrlScanAllTracks,
     enBTRCoreMediaCtrlScanGroup,
+    enBTRCoreMediaCtrlMute,
+    enBTRCoreMediaCtrlUnMute,
     enBTRCoreMediaCtrlUnknown
 } enBTRCoreMediaCtrl;
 
@@ -210,7 +212,8 @@ typedef enum _eBTRCoreMedElementType {
     enBTRCoreMedETypeGenre,
     enBTRCoreMedETypeCompilation,
     enBTRCoreMedETypePlayList,
-    enBTRCoreMedETypeTrackList
+    enBTRCoreMedETypeTrackList,
+    enBTRCoreMedETypeTrack
 } eBTRCoreMedElementType;
 
 typedef enum _enBTRCoreLeOp {
@@ -991,6 +994,21 @@ enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCor
 enBTRCoreRet BTRCore_GetMediaTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaTrackInfo* apstBTMediaTrackInfo);
 
 /**
+ * @brief  This API is used to retrieve the media track information.
+ *
+ * @param[in]  hBTRCore              Bluetooth core handle.
+ * @param[in]  aBTRCoreDevId         Device Id of the remote device.
+ * @param[in]  aenBTRCoreDevType     Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
+ * @param[in]  aBtrMediaElementId           Media Element Id
+ * @param[out] apstBTMediaTrackInfo  Structure which represents the media track information.
+ *
+ * @return  Returns the status of the operation.
+ * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
+ */
+enBTRCoreRet BTRCore_GetMediaElementTrackInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType,tBTRCoreMediaElementId  aBtrMediaElementId, stBTRCoreMediaTrackInfo* apstBTMediaTrackInfo);
+
+
+/**
  * @brief  This API returns the duration and the current position of the media.
  *
  * @param[in]  hBTRCore                  Bluetooth core handle.
@@ -1042,13 +1060,13 @@ enBTRCoreRet BTRCore_SetMediaElementActive (tBTRCoreHandle hBTRCore, tBTRCoreDev
  * @param[in]  aui16BtrMedElementStartIdx   Starting index of the list.
  * @param[in]  aui16BtrMedElementEndIdx     ending index of the list
  * @param[in]  aenBTRCoreDevType            Type of bluetooth device HFP(Hands Free Profile) headset, audio source etc.
- * @param[in]  aeBTRCoreMedElementType      Media Element type (Albums, Artists, ...)
+ * @param[in]  aenBTRCoreMedElementType      Media Element type (Albums, Artists, ...)
  * @param[out] apstMediaElementListInfo     Retrived Media Element List.
  *
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_GetMediaElementList (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, unsigned short aui16BtrMedElementStartIdx, unsigned short aui16BtrMedElementEndIdx, enBTRCoreDeviceType aenBTRCoreDevType, stBTRCoreMediaElementInfoList* apstMediaElementListInfo);
+enBTRCoreRet BTRCore_GetMediaElementList (tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, tBTRCoreMediaElementId aBtrMediaElementId, unsigned short aui16BtrMedElementStartIdx, unsigned short aui16BtrMedElementEndIdx, enBTRCoreDeviceType aenBTRCoreDevType, eBTRCoreMedElementType aenBTRCoreMedElementType, stBTRCoreMediaElementInfoList* apstMediaElementListInfo);
 
 /**
  * @brief  This API performs operation according to the element type selected.

@@ -601,7 +601,8 @@ typedef enum _enBTMediaFolderType {
     enBTMediaFldTypCompilation,
     //enBTMediaFldTypMixed,
     enBTMediaFldTypPlayList,
-    enBTMediaFldTypTrackList
+    enBTMediaFldTypTrackList,
+    enBTMediaFldTypTrack
 } enBTMediaFolderType;
 
 /* Union Types */

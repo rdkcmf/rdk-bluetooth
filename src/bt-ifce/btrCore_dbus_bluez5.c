@@ -398,20 +398,31 @@ btrCore_BTGetMediaItemIdFromMediaPath (
     tBTMediaItemId  mediaItemId = 0;
     char*           ptr         = 0;
     unsigned int    ui32Index   = 0;
-    char            iArray[20]  = {'\0'};
+    char            iArray[BT_MAX_STR_LEN]  = {'\0'};
     /* To change the logic later to enable index based searching for better performance */
     ptr = strstr(mediaIfcePath, "item");
 
-    while (ptr && *ptr) {
-        if (*ptr<=57 && *ptr>=48) {
-            iArray[ui32Index++] = *ptr;
+    if (ptr != NULL) {
+
+        while (ptr && *ptr) {
+          if (*ptr<=57 && *ptr>=48) {
+              iArray[ui32Index++] = *ptr;
+          }
+          ptr++;
         }
-        ptr++;
+
+        iArray[ui32Index] = '\0';
+
+        /* In mediaIfcePath if big value comes,
+         * mediaItemId is limiting the range from the 1 to LLONG_MAX.
+         * mediaItemId MSB bit is used for differentiating the items from which path
+         * either NowPlaying or Filesystem.
+         */
+        ui32Index = 0;
+        do {
+            mediaItemId = strtoull (iArray + ui32Index++, NULL, 10);
+        } while ((mediaItemId > LLONG_MAX) || (mediaItemId == 0));
     }
-
-    iArray[ui32Index] = '\0';
-
-    mediaItemId = (tBTMediaItemId) strtoll (iArray, NULL, 10);
 
     if (strstr(mediaIfcePath, "NowPlaying")) {
         mediaItemId |= 0x8000000000000000;
@@ -461,7 +472,7 @@ btrCore_BTGetMediaFolderType (
     if (!strncmp(apcFolderType, "compilation", strlen("compilation"))) {
         eMediaFolderType    = enBTMediaFldTypCompilation;
     } else
-    if (!strncmp(apcFolderType, "playlist",    strlen("playlists"))) {
+    if (!strncmp(apcFolderType, "playlists",    strlen("playlists"))) {
         eMediaFolderType    = enBTMediaFldTypPlayList;
     } else
     if (!strncmp(apcFolderType, "titles",      strlen("titles"))) {
@@ -469,6 +480,9 @@ btrCore_BTGetMediaFolderType (
     } else
     if (!strncmp(apcFolderType, "mixed",       strlen("mixed"))) {
         eMediaFolderType    = enBTMediaFldTypTrackList;
+    } else
+    if (!strncmp(apcFolderType, "track",       strlen("track"))) {
+        eMediaFolderType    = enBTMediaFldTypTrack;
     }
     else {
         eMediaFolderType    = enBTMediaFldTypTrackList;
@@ -561,7 +575,8 @@ btrCore_BTGetDefaultAdapterPath (
                                         dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
                                         if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
                                             dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
-                                            strcpy(objectData, dbusObject3);
+                                            memset(objectData, '\0', BT_MAX_DEV_PATH_LEN);
+                                            strncpy(objectData, dbusObject3, (strlen(dbusObject3) < BT_MAX_DEV_PATH_LEN) ? strlen(dbusObject3) : BT_MAX_DEV_PATH_LEN - 1);
                                             ++b;
                                         }
                                         else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
@@ -3427,7 +3442,8 @@ BtrCore_BTGetAdapterList (
                                         dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
                                         if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
                                             dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
-                                            strcpy(objectData, dbusObject3);
+                                            memset(objectData, '\0', BT_MAX_DEV_PATH_LEN);
+                                            strncpy(objectData, dbusObject3, (strlen(dbusObject3) < BT_MAX_DEV_PATH_LEN) ? strlen(dbusObject3) : BT_MAX_DEV_PATH_LEN - 1);
                                             ++b;
                                         }
                                         else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
@@ -3590,11 +3606,14 @@ BtrCore_BTGetIfceNameVersion (
 
     (void)pstlhBtIfce;
 
-
+    /* strncpy() throws format truncation error on gcc 9.x when same length of src string
+       is given in 3rd argument. Also, strncpy() will fill null terminating characters if
+       3rd argument length is more than the length of src string
+    */
     lfpVersion = popen("/usr/lib/bluez5/bluetooth/bluetoothd --version", "r");
     if ((lfpVersion == NULL)) {
         BTRCORELOG_ERROR ("Failed to run Version command\n");
-	strncpy(lcpVersion, "5.XXX", strlen("5.XXX")+1);
+        strncpy(lcpVersion, "5.XXX", strlen("5.XXX") + 1);
     }
     else {
         do {
@@ -3609,12 +3628,12 @@ BtrCore_BTGetIfceNameVersion (
     }
 
 
-    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez")+1);
-    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion));
+    strncpy(apBtOutIfceName, "Bluez", strlen("Bluez") + 1);
+    strncpy(apBtOutVersion, lcpVersion, strlen(lcpVersion) + 1);
     strncpy(pstlhBtIfce->pcBTVersion, lcpVersion, strlen(lcpVersion));
 
     BTRCORELOG_WARN ("Bluez Version - %s\n", apBtOutVersion);
-    
+
     return 0;
 }
 
@@ -4710,7 +4729,8 @@ BtrCore_BTGetPairedDeviceInfo (
                                         dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
                                         if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
                                             dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
-                                            strcpy(objectData, dbusObject3);
+                                            memset(objectData, '\0', BT_MAX_DEV_PATH_LEN);
+                                            strncpy(objectData, dbusObject3, (strlen(dbusObject3) < BT_MAX_DEV_PATH_LEN) ? strlen(dbusObject3) : BT_MAX_DEV_PATH_LEN - 1);
                                             ++b;
                                         }
                                         else if (DBUS_TYPE_BOOLEAN == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
@@ -5066,7 +5086,7 @@ BtrCore_BTPerformAdapterOp (
 
                     if (DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type(&dictEntryIter)) {
                         dbus_message_iter_get_basic(&dictEntryIter, &adapter_path);
-                        strcpy(objectPath, adapter_path);
+                        strncpy(objectPath, adapter_path, (strlen(adapter_path) < BT_MAX_DEV_PATH_LEN) ? strlen(adapter_path) : BT_MAX_DEV_PATH_LEN - 1);
                         ++a;
                     }
 
@@ -5111,7 +5131,8 @@ BtrCore_BTPerformAdapterOp (
                                             dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
                                             if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
                                                 dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
-                                                strcpy(objectData, dbusObject3);
+                                                memset(objectData, '\0', BT_MAX_DEV_PATH_LEN);
+                                                strncpy(objectData, dbusObject3, (strlen(dbusObject3) < BT_MAX_DEV_PATH_LEN) ? strlen(dbusObject3) : BT_MAX_DEV_PATH_LEN - 1);
 
                                                 if (strcmp(apcDevPath, objectData) == 0) {
                                                     ++b;
@@ -5200,7 +5221,7 @@ BtrCore_BTPerformAdapterOp (
 
                     if (DBUS_TYPE_OBJECT_PATH == dbus_message_iter_get_arg_type(&dictEntryIter)) {
                         dbus_message_iter_get_basic(&dictEntryIter, &adapter_path);
-                        strcpy(objectPath, adapter_path);
+                        strncpy(objectPath, adapter_path, (strlen(adapter_path) < BT_MAX_DEV_PATH_LEN) ? strlen(adapter_path) : BT_MAX_DEV_PATH_LEN - 1);
                         ++a;
                     }
 
@@ -5244,7 +5265,8 @@ BtrCore_BTPerformAdapterOp (
                                             dbus_message_iter_recurse(&innerDictEntryIter2,&innerDictEntryIter3);
                                             if (DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&innerDictEntryIter3)) {
                                                 dbus_message_iter_get_basic(&innerDictEntryIter3, &dbusObject3);
-                                                strcpy(objectData, dbusObject3);
+                                                memset(objectData, '\0', BT_MAX_DEV_PATH_LEN);
+                                                strncpy(objectData, dbusObject3, (strlen(dbusObject3) < BT_MAX_DEV_PATH_LEN) ? strlen(dbusObject3) : BT_MAX_DEV_PATH_LEN - 1);
                                                 if (strcmp(apcDevPath, objectData) == 0) {
                                                     ++b;
                                                     strcpy(deviceObjectPath,adapter_path);
@@ -8599,36 +8621,43 @@ btrCore_BTDBusConnectionFilterCb (
                                             strncpy(mediaBrowserUpdate.pcMediaItemPath, lpcDBusIface, BT_MAX_STR_LEN - 1);
 
                                             itemName = mediaBrowserUpdate.pcMediaItemName;
+                                            if (itemType != NULL) {
 
-                                            if (!strncmp(itemType, "audio", strlen("audio"))) {
+                                                if (!strncmp(itemType, "audio", strlen("audio"))) {
 
-                                                /*if (BtrCore_BTGetTrackInformation(apDBusConn, lpcDBusIface, &mediaBrowserUpdate.mediaTrackInfo)) {
+                                                    /*if (BtrCore_BTGetTrackInformation(apDBusConn, lpcDBusIface, &mediaBrowserUpdate.mediaTrackInfo)) {
                                                     BTRCORELOG_ERROR ("Failed to get Metadata Info for %s\n", lpcDBusIface);
                                                     i32OpRet = -1;
-                                                }*/
-                                                strncpy(mediaBrowserUpdate.mediaTrackInfo.pcTitle, itemName, BT_MAX_STR_LEN -1);
-                                                mediaBrowserUpdate.eMediaItemType   = enBTMediaItemTypAudio;
-                                                mediaBrowserUpdate.ui32BTMediaItemId  = btrCore_BTGetMediaItemIdFromMediaPath (lpcDBusIface);
+                                                    }*/
+                                                    strncpy(mediaBrowserUpdate.mediaTrackInfo.pcTitle, itemName, BT_MAX_STR_LEN -1);
+                                                    mediaBrowserUpdate.eMediaItemType   = enBTMediaItemTypAudio;
+                                                    mediaBrowserUpdate.ui32BTMediaItemId  = btrCore_BTGetMediaItemIdFromMediaPath (lpcDBusIface);
+                                                    mediaBrowserUpdate.eMediaFolderType  = enBTMediaFldTypTrack;
+                                                    BTRCORELOG_DEBUG ("MediaBrowser Audio Item : %s [ID: %llu]\n", itemName, mediaBrowserUpdate.ui32BTMediaItemId);
+                                                }
+                                                else if (!strncmp(itemType, "folder", strlen("folder"))) {
+                                                    char* folderType          = 0;
 
-                                                BTRCORELOG_DEBUG ("MeidaBrowser Audio Item : %s [ID: %llu]\n", itemName, mediaBrowserUpdate.ui32BTMediaItemId);
-                                            }
-                                            else if (!strncmp(itemType, "folder", strlen("folder"))) {
-                                                char* folderType          = 0;
+                                                    btrCore_BTGetMediaIfceProperty (apDBusConn, lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH, "FolderType", (void*)&folderType);
 
-                                                btrCore_BTGetMediaIfceProperty (apDBusConn, lpcDBusIface, BT_DBUS_BLUEZ_MEDIA_ITEM_PATH, "FolderType", (void*)&folderType);
+                                                    mediaBrowserUpdate.eMediaItemType       = enBTMediaItemTypFolder;
+                                                    mediaBrowserUpdate.ui32BTMediaItemId    = btrCore_BTGetMediaItemIdFromMediaPath (lpcDBusIface);
+                                                    mediaBrowserUpdate.eMediaFolderType     = btrCore_BTGetMediaFolderType (folderType);
 
-                                                mediaBrowserUpdate.eMediaItemType       = enBTMediaItemTypFolder;
-                                                mediaBrowserUpdate.ui32BTMediaItemId    = btrCore_BTGetMediaItemIdFromMediaPath (lpcDBusIface);
-                                                mediaBrowserUpdate.eMediaFolderType     = btrCore_BTGetMediaFolderType (folderType);
-
-                                                BTRCORELOG_DEBUG ("MediaBrowser - Folder Item(%s) : %s [ID: %llu]\n", folderType, itemName, mediaBrowserUpdate.ui32BTMediaItemId);
-                                            }
-                                            else if (!strncmp(itemType, "video", strlen("video"))) {
-                                                BTRCORELOG_DEBUG ("Its a video Item : %s\n", itemName);
-                                                mediaBrowserUpdate.eMediaItemType = enBTMediaItemTypVideo;
+                                                    BTRCORELOG_DEBUG ("MediaBrowser - Folder Item(%s) : %s [ID: %llu]\n", folderType, itemName, mediaBrowserUpdate.ui32BTMediaItemId);
+                                                }
+                                                else if (!strncmp(itemType, "video", strlen("video"))) {
+                                                    BTRCORELOG_DEBUG ("Its a video Item : %s\n", itemName);
+                                                    mediaBrowserUpdate.eMediaItemType = enBTMediaItemTypVideo;
+                                                }
+                                                else {
+                                                    BTRCORELOG_ERROR ("Unknown item type : %s !\n", itemType);
+                                                    mediaBrowserUpdate.eMediaItemType = enBTMediaItemTypUnknown;
+                                                    i32OpRet = -1;
+                                                }
                                             }
                                             else {
-                                                BTRCORELOG_ERROR ("Unknown item type : %s !\n", itemType);
+                                                BTRCORELOG_ERROR (" item type is NULL ");
                                                 mediaBrowserUpdate.eMediaItemType = enBTMediaItemTypUnknown;
                                                 i32OpRet = -1;
                                             }

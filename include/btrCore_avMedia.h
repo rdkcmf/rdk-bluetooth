@@ -125,7 +125,8 @@ typedef enum _eBTRCoreAVMElementType {
     eBTRCoreAVMETypeGenre,
     eBTRCoreAVMETypeCompilation,
     eBTRCoreAVMETypePlayList,
-    eBTRCoreAVMETypeTrackList
+    eBTRCoreAVMETypeTrackList,
+    eBTRCoreAVMETypeTrack
 } eBTRCoreAVMElementType;
 
 typedef struct _stBTRMgrAVMediaPcmInfo {
@@ -305,6 +306,21 @@ enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, const
  */
 enBTRCoreRet BTRCore_AVMedia_GetTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, stBTRCoreAVMediaTrackInfo* apstBTAVMediaTrackInfo);
 
+
+/**
+ * @brief  This API is used to retrieve the information about the track that is being played on the media device.
+ *
+ * @param[in] hBTRCoreAVM     Bluetooth core AV media handle.
+ * @param[in] apBtDevAddr     Bluetooth device address.
+ * @param[in] aBtrAVMediaElementId  target browsing locations' media element id.
+ * @param[out] apstBTAVMediaTrackInfo   Track information that has to be retrieved.
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+ */
+enBTRCoreRet BTRCore_AVMedia_GetElementTrackInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId, stBTRCoreAVMediaTrackInfo* apstBTAVMediaTrackInfo);
+
+
 /**
  * @brief  This API is used to retrieve the position information about the media device.
  *
@@ -364,12 +380,13 @@ enBTRCoreRet BTRCore_AVMedia_SelectMediaBrowserElements (tBTRCoreAVMediaHdl hBTR
  * @param[in] aBtrAVMediaElementId  target browsing locations' media element id
  * @param[in] aui16StartIdx         Starting index of the list to retrive.
  * @param[in] aui16EndIdx           Ending index of the list to retrive.
+ * @param[in] aeBtrAVMElementType   media element type (Albums, Artist, ...)
  * @param[out] aAVMediaElementInfoList  Fetched media element list
  *
  * @return Returns the status of the operation.
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
 */
-enBTRCoreRet BTRCore_AVMedia_GetMediaElementList (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId, unsigned short aui16StartIdx, unsigned short aui16EndIdx, stBTRCoreAVMediaElementInfoList*  aAVMediaElementInfoList);
+enBTRCoreRet BTRCore_AVMedia_GetMediaElementList (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId, unsigned short aui16StartIdx, unsigned short aui16EndIdx, eBTRCoreAVMElementType aeBtrAVMElementType, stBTRCoreAVMediaElementInfoList*  aAVMediaElementInfoList);
 
 /**
  * @brief  This API starts playing the mentioned media item.
@@ -382,6 +399,18 @@ enBTRCoreRet BTRCore_AVMedia_GetMediaElementList (tBTRCoreAVMediaHdl hBTRCoreAVM
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
 */
 enBTRCoreRet BTRCore_AVMedia_PlayTrack (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId);
+
+/**
+ * @brief  This API select track the mentioned media item.
+ *
+ * @param[in] hBTRCoreAVM           Bluetooth core AV media handle
+ * @param[in] apBtDevAddr           Bluetooth device address.
+ * @param[in] aBtrAVMediaElementId  target browsing locations' media element id
+ *
+ * @return Returns the status of the operation.
+ * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
+*/
+enBTRCoreRet BTRCore_AVMedia_SelectTrack (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, tBTRCoreAVMediaElementId aBtrAVMediaElementId);
 
 /**
  * @brief  This API is used to find if a MediaElement is Playable or Non-Playable

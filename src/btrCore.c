@@ -653,6 +653,9 @@ btrCore_GetMediaElementType (
     case eBTRCoreAVMETypeTrackList:
         lenMedElementType = enBTRCoreMedETypeTrackList;
         break;
+    case eBTRCoreAVMETypeTrack:
+        lenMedElementType = enBTRCoreMedETypeTrack;
+        break;
     default:
         lenMedElementType = enBTRCoreMedETypeTrackList;
     }
@@ -4682,6 +4685,63 @@ BTRCore_GetMediaTrackInfo (
 }
 
 enBTRCoreRet
+BTRCore_GetMediaElementTrackInfo (
+    tBTRCoreHandle            hBTRCore,
+    tBTRCoreDevId             aBTRCoreDevId,
+    enBTRCoreDeviceType       aenBTRCoreDevType,
+    tBTRCoreMediaElementId  aBtrMediaElementId,
+    stBTRCoreMediaTrackInfo*  apstBTMediaTrackInfo
+) {
+    stBTRCoreHdl*           pstlhBTRCore    = NULL;
+
+    const char*             pDeviceAddress      = NULL;
+    stBTRCoreBTDevice*      pstKnownDevice      = NULL;
+    stBTRCoreDevStateInfo*  lpstKnownDevStInfo  = NULL;
+    enBTDeviceType          lenBTDeviceType     = enBTDevUnknown;
+    enBTRCoreRet            lenBTRCoreRet       = enBTRCoreFailure;
+
+    BOOLEAN                 lbBTDeviceConnected = FALSE; 
+
+
+    if (!hBTRCore) {
+	BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
+	return enBTRCoreNotInitialized;
+    }
+
+    if (aBTRCoreDevId < 0) {
+	BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
+	return enBTRCoreInvalidArg;
+    }
+
+    pstlhBTRCore = (stBTRCoreHdl*)hBTRCore;
+
+
+    if ((lenBTRCoreRet = btrCore_GetDeviceInfoKnown(pstlhBTRCore, aBTRCoreDevId, aenBTRCoreDevType,
+						    &lenBTDeviceType, &pstKnownDevice, &lpstKnownDevStInfo, &pDeviceAddress)) != enBTRCoreSuccess) {
+	BTRCORELOG_ERROR ("Failed to Get Device Information\n");
+	return lenBTRCoreRet;
+    }
+
+    if ((lbBTDeviceConnected = pstKnownDevice->bDeviceConnected) == FALSE) {
+       BTRCORELOG_ERROR ("Device is not Connected!!!\n");
+       return enBTRCoreFailure;
+    }
+
+
+    if (BTRCore_AVMedia_GetElementTrackInfo(pstlhBTRCore->avMediaHdl,
+				     pDeviceAddress,
+                                     aBtrMediaElementId,
+				     (stBTRCoreAVMediaTrackInfo*)apstBTMediaTrackInfo) != enBTRCoreSuccess)  {
+	BTRCORELOG_ERROR ("AVMedia get media track information Failed!!!\n");
+	return enBTRCoreFailure;
+    }
+
+    return enBTRCoreSuccess;
+}
+
+
+
+enBTRCoreRet
 BTRCore_GetMediaPositionInfo (
     tBTRCoreHandle              hBTRCore,
     tBTRCoreDevId               aBTRCoreDevId,
@@ -4853,6 +4913,9 @@ BTRCore_SelectMediaElement (
     case enBTRCoreMedETypeTrackList:
         lAVMediaElementType = eBTRCoreAVMETypeTrackList;
         break;
+    case enBTRCoreMedETypeTrack:
+        lAVMediaElementType = eBTRCoreAVMETypeTrack;
+        break;
     default:
         break;
     }
@@ -4896,6 +4959,7 @@ BTRCore_GetMediaElementList (
     unsigned short                  aui16BtrMedElementStartIdx,
     unsigned short                  aui16BtrMedElementEndIdx,
     enBTRCoreDeviceType             aenBTRCoreDevType,
+    eBTRCoreMedElementType          aenBTRCoreMedElementType,
     stBTRCoreMediaElementInfoList*  apstMediaElementListInfo
 ) {
     stBTRCoreHdl*           pstlhBTRCore        = NULL;
@@ -4950,6 +5014,7 @@ BTRCore_GetMediaElementList (
                                              aBtrMediaElementId,
                                              aui16BtrMedElementStartIdx,
                                              aui16BtrMedElementEndIdx,
+                                             aenBTRCoreMedElementType,
                                              &lpstAVMediaElementInfoList) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("AVMedia Get Media Item List Failed for %llu (%u - %u)!\n", aBtrMediaElementId, aui16BtrMedElementStartIdx, aui16BtrMedElementEndIdx);
         return enBTRCoreFailure;
@@ -4975,7 +5040,8 @@ BTRCore_SetMediaElementActive (
     stBTRCoreDevStateInfo*  lpstKnownDevStInfo  = NULL;
     enBTDeviceType          lenBTDeviceType     = enBTDevUnknown;
     enBTRCoreRet            lenBTRCoreRet       = enBTRCoreFailure;
-
+    char                    isPlayable          = 0;
+    
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
@@ -5001,6 +5067,28 @@ BTRCore_SetMediaElementActive (
     }
 
     /* Enhance */
+
+        BTRCORELOG_ERROR ("BTRCore_AVMedia_IsMediaElementPlayable calling !\n");
+    if (BTRCore_AVMedia_IsMediaElementPlayable (pstlhBTRCore->avMediaHdl,
+                                                pDeviceAddress,
+                                                aBtrMediaElementId,
+                                                &isPlayable) != enBTRCoreSuccess) {
+        BTRCORELOG_ERROR ("Failed to MediaElement's playable state!\n");
+        return enBTRCoreFailure;
+    }
+
+    if (isPlayable) {
+
+        if ((lenBTRCoreRet = BTRCore_AVMedia_SelectTrack (pstlhBTRCore->avMediaHdl, 
+                                    pDeviceAddress, aBtrMediaElementId)) != enBTRCoreSuccess)  {
+            BTRCORELOG_ERROR ("AVMedia Set Media Track by Element Id(%llu) Failed!!!\n", aBtrMediaElementId);
+            return enBTRCoreFailure;
+        }
+    }
+    else {
+             // TODO
+    }
+
 
     return lenBTRCoreRet;
 }
