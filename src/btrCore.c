@@ -154,8 +154,9 @@ static enBTRCoreDeviceType btrCore_MapClassIDToDevType(unsigned int aui32ClassId
 static enBTRCoreDeviceType btrCore_MapDevClassToDevType(enBTRCoreDeviceClass aenBTRCoreDevCl);
 static void btrCore_ClearScannedDevicesList (stBTRCoreHdl* apsthBTRCore);
 static int btrCore_AddDeviceToScannedDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo, stBTRCoreBTDevice* apstFoundDevice); 
-static int btrCore_AddDeviceToKnownDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo);
 static enBTRCoreRet btrCore_RemoveDeviceFromScannedDevicesArr (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId, stBTRCoreBTDevice* astRemovedDevice);
+static int btrCore_AddDeviceToKnownDevicesArr (stBTRCoreHdl* apsthBTRCore, stBTDeviceInfo* apstBTDeviceInfo);
+static enBTRCoreRet btrCore_RemoveDeviceFromKnownDevicesArr (stBTRCoreHdl* apstlhBTRCore, tBTRCoreDevId aBTRCoreDevId);
 static enBTRCoreRet btrCore_PopulateListOfPairedDevices(stBTRCoreHdl* apsthBTRCore, const char* pAdapterPath);
 static void btrCore_MapKnownDeviceListFromPairedDeviceInfo (stBTRCoreBTDevice* knownDevicesArr, stBTPairedDeviceInfo* pairedDeviceInfo);
 static const char* btrCore_GetScannedDeviceAddress (stBTRCoreHdl* apsthBTRCore, tBTRCoreDevId aBTRCoreDevId);
@@ -871,6 +872,45 @@ btrCore_AddDeviceToKnownDevicesArr (
     BTRCORELOG_TRACE ("Added in stKnownDevicesArr - DevID = %lld  i32KnownDevIdx = %d  NumOfPairedDevices = %d\n", ltDeviceId, i32KnownDevIdx, apsthBTRCore->numOfPairedDevices);
 
     return i32KnownDevIdx;
+}
+
+
+static enBTRCoreRet
+btrCore_RemoveDeviceFromKnownDevicesArr (
+    stBTRCoreHdl*       apstlhBTRCore,
+    tBTRCoreDevId       aBTRCoreDevId
+) {
+    enBTRCoreRet    retResult   = enBTRCoreSuccess;
+    int             i32LoopIdx  = -1;
+
+    for (i32LoopIdx = 0; i32LoopIdx < apstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
+        if (apstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId == aBTRCoreDevId) {
+            break;
+        }
+    }
+
+    if (i32LoopIdx != apstlhBTRCore->numOfPairedDevices) {
+        BTRCORELOG_TRACE ("i32ScannedDevIdx = %d\n", i32LoopIdx);
+        BTRCORELOG_TRACE ("pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].eDeviceCurrState = %d\n", apstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState);
+        BTRCORELOG_TRACE ("pstlhBTRCore->stKnownDevicesArr[i32LoopIdx].eDevicePrevState = %d\n", apstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState);
+
+        // Clean flipping logic. This will suffice
+        if (i32LoopIdx != apstlhBTRCore->numOfScannedDevices - 1) {
+            memcpy (&apstlhBTRCore->stKnownDevicesArr[i32LoopIdx], &apstlhBTRCore->stKnownDevicesArr[apstlhBTRCore->numOfPairedDevices - 1], sizeof(stBTRCoreBTDevice));
+            memcpy (&apstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx], &apstlhBTRCore->stKnownDevStInfoArr[apstlhBTRCore->numOfPairedDevices - 1], sizeof(stBTRCoreDevStateInfo));
+        }
+
+        memset(&apstlhBTRCore->stKnownDevicesArr[apstlhBTRCore->numOfPairedDevices - 1], 0, sizeof(stBTRCoreBTDevice));
+        memset(&apstlhBTRCore->stScannedDevStInfoArr[apstlhBTRCore->numOfPairedDevices - 1], 0, sizeof(stBTRCoreDevStateInfo));
+
+        apstlhBTRCore->numOfPairedDevices--;
+    }
+    else {
+        BTRCORELOG_ERROR ("Device %lld not found in Paired List!\n", aBTRCoreDevId);
+        retResult = enBTRCoreDeviceNotFound;
+    }
+
+    return retResult;
 }
 
 
@@ -2207,8 +2247,12 @@ btrCore_OutTask (
                                                 pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState = enBTRCoreDevStConnected;
                                             }
 
-                                            pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState;
-                                            pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState;
+                                            if (!((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState == enBTRCoreDevStPaired) &&
+                                                  (pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected))) {
+                                                pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState = pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDevicePrevState;
+                                                pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState = pstlhBTRCore->stScannedDevStInfoArr[i32ScannedDevIdx].eDeviceCurrState;
+                                            }
+
                                             BTRCORELOG_DEBUG ("btrCore_AddDeviceToKnownDevicesArr - Success Index = %d\n", i32KnownDevIdx);
                                         }
 
@@ -3565,6 +3609,9 @@ BTRCore_UnPairDevice (
         BTRCORELOG_ERROR ("Failed to unpair a device\n");
         return enBTRCorePairingFailed;
     }
+
+
+    btrCore_RemoveDeviceFromKnownDevicesArr(pstlhBTRCore, aBTRCoreDevId);
 
     //Calling this api will update the KnownDevList appropriately
     btrCore_PopulateListOfPairedDevices(pstlhBTRCore, pstlhBTRCore->curAdapterPath);
