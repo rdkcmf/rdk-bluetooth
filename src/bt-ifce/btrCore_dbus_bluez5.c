@@ -3298,6 +3298,19 @@ BtrCore_BTUnregisterAgent (
         return -1;
     }
 
+    /* UnregisterAgent in bluez5.54 internal it is setting Pairable false.
+     * due to this pairing is failing, to avoid this implicitly setting
+     * Pairable true here */
+    if (!strncmp(pstlhBtIfce->pcBTVersion, BT_BLUEZ_VERSION_5_54, strlen(BT_BLUEZ_VERSION_5_54))) {
+        unBTOpIfceProp  lunBtOpAdapProp;
+        int             isPairable = 1;
+        lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPairable;
+        if (BtrCore_BTSetProp(apstBtIfceHdl, apBtAdapter, enBTAdapter, lunBtOpAdapProp, &isPairable)) {
+	    BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPairable - FAILED\n");
+	    return -1;
+        }
+    }
+
     return 0;
 }
 
@@ -3679,6 +3692,10 @@ BtrCore_BTGetProp (
             lDBusType = DBUS_TYPE_UINT32;
             lDBusKey  = "DiscoverableTimeout";
             break;
+        case enBTAdPropPairable:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Pairable";
+            break;
         case enBTAdPropUnknown:
         default:
             BTRCORELOG_ERROR ("Invalid Adapter Property\n");
@@ -4024,6 +4041,10 @@ BtrCore_BTSetProp (
         case enBTAdPropDiscoverableTimeOut:
             lDBusType = DBUS_TYPE_UINT32;
             lDBusKey  = "DiscoverableTimeout";
+            break;
+        case enBTAdPropPairable:
+            lDBusType = DBUS_TYPE_BOOLEAN;
+            lDBusKey  = "Pairable";
             break;
         case enBTAdPropUnknown:
         default:

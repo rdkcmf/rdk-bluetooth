@@ -299,6 +299,7 @@ typedef enum _enBTAdapterProp {
     enBTAdPropDiscoverable,
     enBTAdPropDiscoverableTimeOut,
     enBTAdPropDiscoveryStatus,
+    enBTAdPropPairable,
     enBTAdPropUnknown
 } enBTAdapterProp;
 
