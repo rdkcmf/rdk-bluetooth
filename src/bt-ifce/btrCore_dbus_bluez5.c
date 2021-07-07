@@ -6009,7 +6009,7 @@ BtrCore_BTSetDevDataAckTimeout (
 
     (void)pstlhBtIfce;
 
-    snprintf(lcpHciDataWriteAckTOutIp, BT_MAX_STR_LEN/2, "hcitool -i hci0 cmd 0x03 0x0028 0x0C 0x00 0x%2x 0x00", aui32AckTOutms);
+    snprintf(lcpHciDataWriteAckTOutIp, BT_MAX_STR_LEN/2, "hcitool -i hci0 cmd 0x03 0x0028 0x0C 0x00 0x%02x 0x00", aui32AckTOutms);
     BTRCORELOG_INFO ("lcpHciDataWriteAckTOutIp: %s\n", lcpHciDataWriteAckTOutIp);
 
     lHciDataAck = popen(lcpHciDataWriteAckTOutIp, "r");
