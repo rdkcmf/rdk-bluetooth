@@ -3301,7 +3301,8 @@ BtrCore_BTUnregisterAgent (
     /* UnregisterAgent in bluez5.54 internal it is setting Pairable false.
      * due to this pairing is failing, to avoid this implicitly setting
      * Pairable true here */
-    if (!strncmp(pstlhBtIfce->pcBTVersion, BT_BLUEZ_VERSION_5_54, strlen(BT_BLUEZ_VERSION_5_54))) {
+    if (!strncmp(pstlhBtIfce->pcBTVersion, BT_BLUEZ_VERSION_5_54, strlen(BT_BLUEZ_VERSION_5_54)) || !strncmp(pstlhBtIfce->pcBTVersion, BT_BLUEZ_VERSION_5_48, strlen(BT_BLUEZ_VERSION_5_48)) ) 
+    {
         unBTOpIfceProp  lunBtOpAdapProp;
         int             isPairable = 1;
         lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPairable;
