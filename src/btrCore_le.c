@@ -1500,7 +1500,9 @@ BtrCore_LE_PerformGattOp (
     else if ((lenBTOpIfceType == enBTGattCharacteristic) ||
              (lenBTOpIfceType == enBTGattDescriptor))  {
         stBTRCoreLeGattProfile* pProfile        = btrCore_LE_FindGattProfile(lpstlhBTRCoreLe, atBTRCoreDevId);
-        lpDevicePath = pProfile->devicePath;
+
+        if (pProfile)
+            lpDevicePath = pProfile->devicePath;
     } 
 
     // Validate UUID 
@@ -1657,7 +1659,7 @@ btrCore_LE_GattInfoCb (
                         }
                     }
 
-                    if (pProfile->ui16NumberOfGattService < BTR_MAX_GATT_SERVICE) {
+                    if (pProfile && pProfile->ui16NumberOfGattService < BTR_MAX_GATT_SERVICE) {
                         if (!(pService = btrCore_LE_FindGattService(pProfile, apBtGattPath))) {
                             pService = &pProfile->astBTRGattService[pProfile->ui16NumberOfGattService];
                             strncpy(pService->serviceUuid, lBtUuid, BT_MAX_UUID_STR_LEN - 1);
