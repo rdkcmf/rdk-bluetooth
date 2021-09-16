@@ -2659,19 +2659,6 @@ BTRCore_DeInit (
 
     BTRCORELOG_INFO ("hBTRCore   =   %8p\n", hBTRCore);
 
-    /* Free any memory allotted for use in BTRCore */
-    
-    /* DeInitialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
-    if (pstlhBTRCore->leHdl && (BTRCore_LE_DeInit(pstlhBTRCore->leHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath) != enBTRCoreSuccess)) {
-        BTRCORELOG_ERROR ("Failed to DeInit LE Subsystem\n");
-        lenBTRCoreRet = enBTRCoreFailure;
-    }
-
-    if (pstlhBTRCore->avMediaHdl && (BTRCore_AVMedia_DeInit(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath) != enBTRCoreSuccess)) {
-        BTRCORELOG_ERROR ("Failed to DeInit AV Media Subsystem\n");
-        lenBTRCoreRet = enBTRCoreFailure;
-    }
-
 
     /* Stop BTRCore Task Threads */
     if (pstlhBTRCore->pThreadRunTask) {
@@ -2721,6 +2708,20 @@ BTRCore_DeInit (
     if (pstlhBTRCore->pGAQueueOutTask) {
         g_async_queue_unref(pstlhBTRCore->pGAQueueOutTask);
         pstlhBTRCore->pGAQueueOutTask = NULL;
+    }
+
+
+    /* Free any memory allotted for use in BTRCore */
+
+    /* DeInitialize BTRCore SubSystems - AVMedia/Telemetry..etc. */
+    if (pstlhBTRCore->leHdl && (BTRCore_LE_DeInit(pstlhBTRCore->leHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath) != enBTRCoreSuccess)) {
+        BTRCORELOG_ERROR ("Failed to DeInit LE Subsystem\n");
+        lenBTRCoreRet = enBTRCoreFailure;
+    }
+
+    if (pstlhBTRCore->avMediaHdl && (BTRCore_AVMedia_DeInit(pstlhBTRCore->avMediaHdl, pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath) != enBTRCoreSuccess)) {
+        BTRCORELOG_ERROR ("Failed to DeInit AV Media Subsystem\n");
+        lenBTRCoreRet = enBTRCoreFailure;
     }
 
     if (pstlhBTRCore->curAdapterPath) {

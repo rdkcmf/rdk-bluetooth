@@ -2728,7 +2728,9 @@ btrCore_BTLEGattOps (
         BTRCORELOG_DEBUG("Received data is %s with length %d\n", propertyValue, strlen(propertyValue));
 
         /* Update data to the LE layer */
-        apstlhBtIfce->fpcBTLeGattPath(aenIfceType, aenGattOp, path, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, propertyValue, apstlhBtIfce->pcBLePathUserData);
+        if (apstlhBtIfce->fpcBTLeGattPath) {
+            apstlhBtIfce->fpcBTLeGattPath(aenIfceType, aenGattOp, path, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, propertyValue, apstlhBtIfce->pcBLePathUserData);
+        }
     }
         break;
     case enBTLeGattOpReadValue: {
@@ -2770,7 +2772,9 @@ btrCore_BTLEGattOps (
         BTRCORELOG_DEBUG("device address is %s\n", lstBTDeviceInfo.pcAddress);
 
         /* Get data from LE layer */
-        apstlhBtIfce->fpcBTLeGattPath(aenIfceType, aenGattOp, path, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, propertyValue, apstlhBtIfce->pcBLePathUserData);
+        if (apstlhBtIfce->fpcBTLeGattPath) {
+            apstlhBtIfce->fpcBTLeGattPath(aenIfceType, aenGattOp, path, lstBTDeviceInfo.pcAddress, enBTDevStPropChanged, propertyValue, apstlhBtIfce->pcBLePathUserData);
+        }
         BTRCORELOG_INFO("Property value is %s\n", propertyValue);
         lDataLength = strlen(propertyValue);
         lpLEGattOutput = (void*)propertyValue;
@@ -6939,7 +6943,9 @@ BtrCore_BTUnRegisterLeGatt (
     }
 
     //pstlhBtIfce->fpcBTLeLocalGattPath(NULL, lCurAdapterAddress, &lpstBTLeGattSrv, &lNumGattServices, pstlhBtIfce->pcBLePathUserData);
-    pstlhBtIfce->fpcBTLeGattPath(enBTAdvertisement, enBTLeGattOpUnknown, NULL, lCurAdapterAddress, enBTDevStUnknown, (void*)lpstBTLeGattInfo, pstlhBtIfce->pcBLePathUserData);
+    if (pstlhBtIfce->fpcBTLeGattPath) {
+        pstlhBtIfce->fpcBTLeGattPath(enBTAdvertisement, enBTLeGattOpUnknown, NULL, lCurAdapterAddress, enBTDevStUnknown, (void*)lpstBTLeGattInfo, pstlhBtIfce->pcBLePathUserData);
+    }
 
     for (int serviceIndex = 0; serviceIndex < lpstBTLeGattInfo->nNumGattServices; serviceIndex++) {
         stBTLeGattService *lpstBTLeGattService = &lpstBTLeGattInfo->astBTRGattService[serviceIndex];
