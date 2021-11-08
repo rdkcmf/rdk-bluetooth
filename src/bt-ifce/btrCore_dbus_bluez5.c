@@ -7590,6 +7590,8 @@ btrCore_BTDBusConnectionFilterCb (
                     int bSrvResolved = 0;
                     int bConnectEvent = 0; //TODO: Bad way to do this. Live with it for now
                     int bConnected = 0;
+                    int bRssiEvent = 0; //TODO: Bad way to do this. Live with it for now
+                    int i32Rssi = 0;
 
                     i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, pui8DevPath);
 
@@ -7633,6 +7635,14 @@ btrCore_BTDBusConnectionFilterCb (
                                     bSrvResolvedEvent = 1;
                                     BTRCORELOG_DEBUG ("bServicesResolved = %d\n", bSrvResolved);
                                 }
+                                else if (strcmp (pNameOfProperty, "RSSI") == 0) {
+                                    dbus_message_iter_next(&lDBusMsgParse);
+                                    dbus_message_iter_recurse(&lDBusMsgParse, &lDBusMsgPropertyValue);
+                                    dbus_message_iter_get_basic(&lDBusMsgPropertyValue, &i32Rssi);
+                                    bRssiEvent = 1;
+                                    BTRCORELOG_DEBUG ("bi32Rssi = %d\n", i32Rssi);
+                                }
+
 
                                 /* Can listen on below events if required
                                 Name
@@ -7683,8 +7693,10 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                         }
                         else if (pstBTDeviceInfo->bPaired) {
-                            if (pstlhBtIfce->ui32IsAdapterDiscovering && settingRSSItoZero) {
-                                lenBtDevState = enBTDevStRSSIUpdate;
+                            if (settingRSSItoZero || bRssiEvent) {
+                                if (pstlhBtIfce->ui32IsAdapterDiscovering || pstBTDeviceInfo->bConnected) {
+                                    lenBtDevState = enBTDevStRSSIUpdate;
+                                }
                             }
                             else {
                                 if (pstBTDeviceInfo->bConnected) {
