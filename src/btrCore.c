@@ -26,6 +26,7 @@
 #include <sched.h>      //for StopDiscovery test
 #include <string.h>     //for strcnp
 #include <errno.h>      //for error numbers
+#include <stdint.h>
 
 /* Ext lib Headers */
 #include <glib.h>
