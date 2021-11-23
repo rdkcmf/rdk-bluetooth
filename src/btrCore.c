@@ -4384,7 +4384,8 @@ BTRCore_AcquireDeviceDataPath (
     enBTRCoreDeviceType aenBTRCoreDevType,
     int*                aiDataPath,
     int*                aidataReadMTU,
-    int*                aidataWriteMTU
+    int*                aidataWriteMTU,
+    unsigned int*       apui32Delay
 ) {
     stBTRCoreHdl*           pstlhBTRCore        = NULL;
 
@@ -4397,13 +4398,14 @@ BTRCore_AcquireDeviceDataPath (
     int                     liDataPath      = 0;
     int                     lidataReadMTU   = 0;
     int                     lidataWriteMTU  = 0;
+    unsigned int            ui32Delay       = 0xFFFFu;
 
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
         return enBTRCoreNotInitialized;
     }
-    else if (!aiDataPath || !aidataReadMTU || !aidataWriteMTU || (aBTRCoreDevId < 0)) {
+    else if (!aiDataPath || !aidataReadMTU || !aidataWriteMTU || !apui32Delay || (aBTRCoreDevId < 0)) {
         BTRCORELOG_ERROR ("enBTRCoreInvalidArg\n");
         return enBTRCoreInvalidArg;
     }
@@ -4417,12 +4419,11 @@ BTRCore_AcquireDeviceDataPath (
         return lenBTRCoreRet;
     }
 
-
     BTRCORELOG_INFO (" We will Acquire Data Path for %s\n", pDeviceAddress);
 
     // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
     // before making the call
-    if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->avMediaHdl, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU) != enBTRCoreSuccess) {
+    if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->avMediaHdl, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU, &ui32Delay) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
         return enBTRCoreFailure;
     }
@@ -4430,7 +4431,7 @@ BTRCore_AcquireDeviceDataPath (
     *aiDataPath     = liDataPath;
     *aidataReadMTU  = lidataReadMTU;
     *aidataWriteMTU = lidataWriteMTU;
-
+    *apui32Delay    = ui32Delay;
 
     lpstKnownDevStInfo->eDevicePrevState = lpstKnownDevStInfo->eDeviceCurrState;
     if (lpstKnownDevStInfo->eDeviceCurrState != enBTRCoreDevStPlaying) {

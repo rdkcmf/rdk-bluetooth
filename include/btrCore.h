@@ -942,7 +942,7 @@ enBTRCoreRet BTRCore_GetDeviceMediaInfo (tBTRCoreHandle hBTRCore, tBTRCoreDevId 
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropriate error code otherwise.
  */
-enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath, int* aidataReadMTU, int* aidataWriteMTU);
+enBTRCoreRet BTRCore_AcquireDeviceDataPath(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, int* aiDataPath, int* aidataReadMTU, int* aidataWriteMTU, unsigned int* apui32Delay);
 
 /**
  * @brief  This API release the bluetooth device address.

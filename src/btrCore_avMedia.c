@@ -1530,16 +1530,17 @@ BTRCore_AVMedia_AcquireDataPath (
     const char*         apBtDevAddr,
     int*                apDataPath,
     int*                apDataReadMTU,
-    int*                apDataWriteMTU
+    int*                apDataWriteMTU,
+    unsigned int*       apui32Delay
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM = NULL;
     char*                   lpcAVMediaTransportPath = NULL;
     int                     lBtAVMediaRet = -1;
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
     unBTOpIfceProp          lunBtOpMedTProp;
-    unsigned int            ui16Delay = 0xFFFFu;
+    unsigned int            ui32Delay = 0xFFFFu;
 
-    if (!hBTRCoreAVM || !apBtDevAddr) {
+    if (!hBTRCoreAVM || !apBtDevAddr || !apui32Delay) {
         return enBTRCoreInvalidArg;
     }
 
@@ -1562,10 +1563,11 @@ BTRCore_AVMedia_AcquireDataPath (
         lenBTRCoreRet = enBTRCoreSuccess;
 
     lunBtOpMedTProp.enBtMediaTransportProp = enBTMedTPropDelay;
-    if ((lBtAVMediaRet = BtrCore_BTGetProp(pstlhBTRCoreAVM->btIfceHdl, lpcAVMediaTransportPath, enBTMediaTransport, lunBtOpMedTProp, &ui16Delay)))
+    if ((lBtAVMediaRet = BtrCore_BTGetProp(pstlhBTRCoreAVM->btIfceHdl, lpcAVMediaTransportPath, enBTMediaTransport, lunBtOpMedTProp, &ui32Delay)))
         lenBTRCoreRet = enBTRCoreFailure;
 
-    BTRCORELOG_INFO ("BTRCore_AVMedia_AcquireDataPath: Delay value = %d\n", ui16Delay);
+    *apui32Delay = ui32Delay;
+    BTRCORELOG_INFO ("BTRCore_AVMedia_AcquireDataPath: Delay value = %d\n", ui32Delay);
 
     return lenBTRCoreRet;
 }

@@ -271,7 +271,7 @@ enBTRCoreRet BTRCore_AVMedia_GetCurMediaInfo (tBTRCoreAVMediaHdl hBTRCoreAVM, co
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU);
+enBTRCoreRet BTRCore_AVMedia_AcquireDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, int* apDataPath, int* apDataReadMTU, int* apDataWriteMTU, unsigned int* apui32Delay);
 /**
  * @brief This API releases the acquired data path of the media device.
  *

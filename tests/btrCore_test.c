@@ -48,6 +48,7 @@ typedef struct appDataStruct{
     int                     iDataPath;
     int                     iDataReadMTU;
     int                     iDataWriteMTU;
+    unsigned int            ui32DevDelay;
 } appDataStruct;
 
 
@@ -239,17 +240,20 @@ GetTransport (
     pstAppData->iDataPath = 0;
     pstAppData->iDataReadMTU = 0;
     pstAppData->iDataWriteMTU = 0;
+    pstAppData->ui32DevDelay = 0;
 
     BTRCore_AcquireDeviceDataPath ( pstAppData->hBTRCore, 
                                     connectedDeviceIndex,
                                     enBTRCoreMobileAudioIn,
                                     &pstAppData->iDataPath,
                                     &pstAppData->iDataReadMTU,
-                                    &pstAppData->iDataWriteMTU);
+                                    &pstAppData->iDataWriteMTU,
+                                    &pstAppData->ui32DevDelay);
 
     fprintf(stderr, "%d\t: %s - Device Data Path = %d \n", __LINE__, __FUNCTION__,      pstAppData->iDataPath);
     fprintf(stderr, "%d\t: %s - Device Data Read MTU = %d \n", __LINE__, __FUNCTION__,  pstAppData->iDataReadMTU);
     fprintf(stderr, "%d\t: %s - Device Data Write MTU= %d \n", __LINE__, __FUNCTION__,  pstAppData->iDataWriteMTU);
+    fprintf(stderr, "%d\t: %s - Device Delay = %d \n", __LINE__, __FUNCTION__,  pstAppData->ui32DevDelay);
 
     if (pstAppData->stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
 		if (pstAppData->stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
@@ -835,12 +839,14 @@ main (
                 stAppData.iDataPath = 0;
                 stAppData.iDataReadMTU = 0;
                 stAppData.iDataWriteMTU = 0;
+                stAppData.ui32DevDelay = 0;
 
-                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU);
+                BTRCore_AcquireDeviceDataPath(lhBTRCore, devnum, enBTRCoreSpeakers, &stAppData.iDataPath, &stAppData.iDataReadMTU, &stAppData.iDataWriteMTU, &stAppData.ui32DevDelay);
 
                 fprintf(stderr, "%d\t: %s - Device Data Path = %d \n", __LINE__, __FUNCTION__, stAppData.iDataPath);
                 fprintf(stderr, "%d\t: %s - Device Data Read MTU = %d \n", __LINE__, __FUNCTION__, stAppData.iDataReadMTU);
                 fprintf(stderr, "%d\t: %s - Device Data Write MTU= %d \n", __LINE__, __FUNCTION__, stAppData.iDataWriteMTU);
+                fprintf(stderr, "%d\t: %s - Device Delay = %d \n", __LINE__, __FUNCTION__, stAppData.ui32DevDelay);
 
                 if (stAppData.stBtrCoreDevMediaInfo.eBtrCoreDevMType == eBTRCoreDevMediaTypeSBC) {
 					if (stAppData.stBtrCoreDevMediaInfo.pstBtrCoreDevMCodecInfo) {
