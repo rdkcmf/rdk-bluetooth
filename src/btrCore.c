@@ -3527,6 +3527,9 @@ BTRCore_PairDevice (
     stBTRCoreBTDevice*      pstScannedDev       = NULL;
     int                     i32LoopIdx          = 0;
     enBTAdapterOp           pairingOp           = enBTAdpOpCreatePairedDev;
+    unBTOpIfceProp          lunBtOpAdapProp;
+    int                     ispairable = 1;
+    char                    lpcBtVersion[BTRCORE_STR_LEN] = {'\0'};
 
     if (!hBTRCore) {
         BTRCORELOG_ERROR ("enBTRCoreNotInitialized\n");
@@ -3571,6 +3574,20 @@ BTRCore_PairDevice (
         (pstScannedDev->enDeviceType == enBTRCore_DC_HID_Joystick)      ||
         (pstScannedDev->enDeviceType == enBTRCore_DC_HID_GamePad)) {
 
+        if ((pstScannedDev->enDeviceType == enBTRCore_DC_HID_GamePad) &&
+            (enBTRCoreSuccess == BTRCore_GetVersionInfo(hBTRCore, lpcBtVersion))
+             && (!strncmp(lpcBtVersion, "Bluez-5.48", strlen("Bluez-5.48")))) {
+            BTRCORELOG_DEBUG (" sky devices Bluez-5.48 \n");
+            lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPairable;
+
+           if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter,
+                   lunBtOpAdapProp, &ispairable)) {
+                BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPairable - FAILED\n");
+                return enBTRCoreFailure;
+            }
+        } else {
+            BTRCORELOG_DEBUG (" Non sky devices or non HID Gamepad\n");
+        }
         BTRCORELOG_DEBUG ("We will do a Async Pairing for the HID Devices\n");
         pairingOp = enBTAdpOpCreatePairedDevASync;
     }
