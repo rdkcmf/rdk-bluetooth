@@ -5369,10 +5369,39 @@ BtrCore_BTIsDeviceConnectable (
     char            lcpL2PingIp[BT_MAX_STR_LEN/2] = {'\0'};
     char            lcpL2PingOp[BT_MAX_STR_LEN] = {'\0'};
 
+    FILE*           lfpReboot   = NULL;
+    char            lcpRebootIp[BT_MAX_STR_LEN/2] = {'\0'};
+    char            lcpRebootOp[BT_MAX_STR_LEN] = {'\0'};
+
     if (!apstBtIfceHdl || !apcDevPath)
         return -1;
 
     (void)pstlhBtIfce;
+
+    snprintf(lcpRebootIp, BT_MAX_STR_LEN/2, "grep Previous.*MAINTENANCE_REBOOT /opt/logs/rebootInfo.log");
+    BTRCORELOG_INFO ("lcpRebootIp: %s\n", lcpRebootIp);
+#ifdef LIBSYSWRAPPER_BUILD
+    lfpReboot = v_secure_popen("r", "%s", lcpRebootIp);
+#else
+    lfpReboot = popen(lcpRebootIp, "r");
+#endif
+    if (lfpReboot != NULL) {
+        if (fread(lcpRebootOp, 1, sizeof(lcpRebootOp)-1, lfpReboot) != 0) {
+            BTRCORELOG_WARN ("Output of grep =  %s\n", lcpRebootOp);
+            if (strstr(lcpRebootOp, "MAINTENANCE_REBOOT")) {
+                i32OpRet = 0;
+            }
+        }
+#ifdef LIBSYSWRAPPER_BUILD
+        v_secure_pclose(lfpReboot);
+#else
+        pclose(lfpReboot);
+#endif
+
+        if (!i32OpRet)
+            return -1;
+    }
+
 
     snprintf(lcpL2PingIp, BT_MAX_STR_LEN/2, "l2ping -i hci0 -c 3 -s 2 -d 2 %s", apcDevPath);
     BTRCORELOG_INFO ("lcpL2PingIp: %s\n", lcpL2PingIp);
