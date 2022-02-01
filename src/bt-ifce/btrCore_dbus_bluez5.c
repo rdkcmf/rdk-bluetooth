@@ -2726,7 +2726,7 @@ btrCore_BTLEGattOps (
         stBTDeviceInfo  lstBTDeviceInfo;
         btrCore_BTGetDeviceInfo(apstlhBtIfce->pDBusConn, &lstBTDeviceInfo, objectPath);
         BTRCORELOG_DEBUG("device address is %s\n", lstBTDeviceInfo.pcAddress);
-        BTRCORELOG_DEBUG("Received data is %s with length %d\n", propertyValue, strlen(propertyValue));
+        BTRCORELOG_DEBUG("Received data is %s with length %lu\n", propertyValue, (unsigned long)strlen(propertyValue));
 
         /* Update data to the LE layer */
         if (apstlhBtIfce->fpcBTLeGattPath) {
@@ -4199,7 +4199,7 @@ BtrCore_BTSetProp (
     
     if (aenBtOpIfceType == enBTGattCharacteristic) {
         char* pVlaue = (char*)apvVal;
-        BTRCORELOG_INFO("Notified Value is %s with length %d\n", pVlaue, strlen(pVlaue));
+        BTRCORELOG_INFO("Notified Value is %s with length %lu\n", pVlaue, (unsigned long)strlen(pVlaue));
             
         DBusMessageIter lDBusMsgIter, signal_iter;
         DBusMessageIter lDBusMsgIterDictStr, lDBusMsgIterSubArray, lDBusMsgIterVariant;

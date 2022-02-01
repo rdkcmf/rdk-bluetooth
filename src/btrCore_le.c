@@ -1854,7 +1854,7 @@ btrCore_LE_GattInfoCb (
 
                                     aunBtOpIfceProp.enBtGattCharProp = enBTGattCPropValue;
                                     if (!BtrCore_BTGetProp(lpstlhBTRCoreLe->btIfceHdl, apBtGattPath, enBTGattCharacteristic, aunBtOpIfceProp, (void*)&value)) {
-                                        BTRCORELOG_TRACE("Obtained Characteristic Value \"%s\" with len %d\n", value, strlen(value));
+                                        BTRCORELOG_TRACE("Obtained Characteristic Value \"%s\" with len %lu\n", value, (unsigned long)strlen(value));
 
                                         if (!strlen(value)) {
                                             lstBtrLeInfo.enLeOper = enBTRCoreLEGOpStartNotify; //TODO: Differentiate between enBTRCoreLEGOpStartNotify & enBTRCoreLEGOpStopNotify
