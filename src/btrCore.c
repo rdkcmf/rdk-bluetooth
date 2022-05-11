@@ -2126,7 +2126,8 @@ btrCore_OutTask (
 
                                     if ((enBTRCoreMobileAudioIn != lenBTRCoreDevType) && (enBTRCorePCAudioIn != lenBTRCoreDevType)) {
 
-                                        if ( !(((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected) && (leBTDevState == enBTRCoreDevStDisconnected)) ||
+                                        if ( !(((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStPlaying) &&
+                                                (pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStConnected) && (leBTDevState == enBTRCoreDevStDisconnected)) ||
                                                ((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDeviceCurrState == enBTRCoreDevStDisconnected) && (leBTDevState == enBTRCoreDevStConnected) &&
                                                 ((pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStPaired) ||
                                                  (pstlhBTRCore->stKnownDevStInfoArr[i32KnownDevIdx].eDevicePrevState != enBTRCoreDevStConnecting))))) {
@@ -4412,6 +4413,8 @@ BTRCore_AcquireDeviceDataPath (
     stBTRCoreDevStateInfo*  lpstKnownDevStInfo  = NULL;
     enBTDeviceType          lenBTDeviceType     = enBTDevUnknown;
     enBTRCoreRet            lenBTRCoreRet       = enBTRCoreFailure;
+    enBTRCoreDeviceState    lenDevPrevState     = enBTRCoreDevStUnknown;
+    enBTRCoreDeviceState    lenDevCurrState     = enBTRCoreDevStUnknown;
 
     int                     liDataPath      = 0;
     int                     lidataReadMTU   = 0;
@@ -4437,12 +4440,18 @@ BTRCore_AcquireDeviceDataPath (
         return lenBTRCoreRet;
     }
 
-    BTRCORELOG_INFO (" We will Acquire Data Path for %s\n", pDeviceAddress);
+    lenDevPrevState = lpstKnownDevStInfo->eDevicePrevState;
+    lenDevCurrState = lpstKnownDevStInfo->eDeviceCurrState;
+    lpstKnownDevStInfo->eDevicePrevState = lpstKnownDevStInfo->eDeviceCurrState;
+    if (lpstKnownDevStInfo->eDeviceCurrState != enBTRCoreDevStPlaying) {
+        lpstKnownDevStInfo->eDeviceCurrState = enBTRCoreDevStPlaying;
+    }
 
-    // TODO: Implement a Device State Machine and Check whether the device is in a State  to acquire Device Data path
-    // before making the call
+    BTRCORELOG_INFO (" We will Acquire Data Path for %s\n", pDeviceAddress);
     if (BTRCore_AVMedia_AcquireDataPath(pstlhBTRCore->avMediaHdl, pDeviceAddress, &liDataPath, &lidataReadMTU, &lidataWriteMTU, &ui32Delay) != enBTRCoreSuccess) {
         BTRCORELOG_ERROR ("AVMedia_AcquireDataPath ERROR occurred\n");
+        lpstKnownDevStInfo->eDevicePrevState = lenDevPrevState;
+        lpstKnownDevStInfo->eDeviceCurrState = lenDevCurrState;
         return enBTRCoreFailure;
     }
 
@@ -4450,12 +4459,6 @@ BTRCore_AcquireDeviceDataPath (
     *aidataReadMTU  = lidataReadMTU;
     *aidataWriteMTU = lidataWriteMTU;
     *apui32Delay    = ui32Delay;
-
-    lpstKnownDevStInfo->eDevicePrevState = lpstKnownDevStInfo->eDeviceCurrState;
-    if (lpstKnownDevStInfo->eDeviceCurrState != enBTRCoreDevStPlaying) {
-        lpstKnownDevStInfo->eDeviceCurrState = enBTRCoreDevStPlaying; 
-    }
-
 
     return enBTRCoreSuccess;
 }
@@ -5991,10 +5994,13 @@ btrCore_BTDeviceAuthenticationCb (
                 for (i32LoopIdx = 0; i32LoopIdx < lpstlhBTRCore->numOfPairedDevices; i32LoopIdx++) {
                     if (lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].tDeviceId == lpstlhBTRCore->stConnCbInfo.stKnownDevice.tDeviceId) {
                         BTRCORELOG_DEBUG("ACCEPTED INCOMING CONNECT stKnownDevice : %s\n", lpstlhBTRCore->stKnownDevicesArr[i32LoopIdx].pcDeviceName);
-                        lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
+                        if ((lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState != enBTRCoreDevStPlaying) &&
+                            (lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState != enBTRCoreDevStConnected)) {
+                            lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDevicePrevState = lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState;
 
-                        if (lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState != enBTRCoreDevStPlaying)
-                            lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = enBTRCoreDevStConnected;
+                            if (lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState != enBTRCoreDevStPlaying)
+                                lpstlhBTRCore->stKnownDevStInfoArr[i32LoopIdx].eDeviceCurrState = enBTRCoreDevStConnected;
+                        }
                     }
                 }
             }
