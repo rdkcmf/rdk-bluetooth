@@ -7592,7 +7592,7 @@ btrCore_BTDBusConnectionFilterCb (
                     int bConnectEvent = 0; //TODO: Bad way to do this. Live with it for now
                     int bConnected = 0;
                     int bRssiEvent = 0; //TODO: Bad way to do this. Live with it for now
-                    int i32Rssi = 0;
+                    short i16RSSI = 0;
 
                     i32OpRet = btrCore_BTGetDeviceInfo(apDBusConn, pstBTDeviceInfo, pui8DevPath);
 
@@ -7639,9 +7639,10 @@ btrCore_BTDBusConnectionFilterCb (
                                 else if (strcmp (pNameOfProperty, "RSSI") == 0) {
                                     dbus_message_iter_next(&lDBusMsgParse);
                                     dbus_message_iter_recurse(&lDBusMsgParse, &lDBusMsgPropertyValue);
-                                    dbus_message_iter_get_basic(&lDBusMsgPropertyValue, &i32Rssi);
+                                    dbus_message_iter_get_basic(&lDBusMsgPropertyValue, &i16RSSI);
+                                    pstBTDeviceInfo->i32RSSI = i16RSSI;
                                     bRssiEvent = 1;
-                                    BTRCORELOG_DEBUG ("bi32Rssi = %d\n", i32Rssi);
+                                    BTRCORELOG_DEBUG ("Event - bi32Rssi = %d\n", pstBTDeviceInfo->i32RSSI);
                                 }
 
 
