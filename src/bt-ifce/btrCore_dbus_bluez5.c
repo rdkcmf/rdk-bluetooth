@@ -1259,7 +1259,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAddress);
-                strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN);
+                strncpy(apstBTDeviceInfo->pcAddress, pcAddress, BT_MAX_STR_LEN-1); //CID-163720 -Buffer not null terminated
                 BTRCORELOG_TRACE ("pcAddress       = %s\n", apstBTDeviceInfo->pcAddress);
                
  #if 1
@@ -1278,7 +1278,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcName);
-                strncpy(apstBTDeviceInfo->pcName, pcName, BT_MAX_STR_LEN);
+                strncpy(apstBTDeviceInfo->pcName, pcName, BT_MAX_STR_LEN-1); //CID-163720 -Buffer not null terminated
                 BTRCORELOG_TRACE ("pcName          = %s\n", apstBTDeviceInfo->pcName);
 
             }
@@ -1314,7 +1314,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcIcon);
-                strncpy(apstBTDeviceInfo->pcIcon, pcIcon, BT_MAX_STR_LEN);
+                strncpy(apstBTDeviceInfo->pcIcon, pcIcon, BT_MAX_STR_LEN-1); //CID-163720 -Buffer not null terminated
                 BTRCORELOG_TRACE ("pcIcon          = %s\n", apstBTDeviceInfo->pcIcon);
             }
             else if (strcmp (pcKey, "Class") == 0) {
@@ -1356,7 +1356,7 @@ btrCore_BTParseDevice (
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcAlias);
-                strncpy(apstBTDeviceInfo->pcAlias, pcAlias, BT_MAX_STR_LEN);
+                strncpy(apstBTDeviceInfo->pcAlias, pcAlias, BT_MAX_STR_LEN-1); //CID-163720 -Buffer not null terminated
                 BTRCORELOG_TRACE ("pcAlias         = %s\n", apstBTDeviceInfo->pcAlias);
             }
             else if (strcmp (pcKey, "Adapter") == 0) {
@@ -1855,7 +1855,7 @@ btrCore_BTParseMediaTransport (
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcState);
-                strncpy(apstBTMediaInfo->pcState, pcState, BT_MAX_STR_LEN);
+                strncpy(apstBTMediaInfo->pcState, pcState, BT_MAX_STR_LEN-1); //CID-163623 : Buffer not null terminated
                 BTRCORELOG_INFO ("apstBTMediaInfo->pcState: %s\n", apstBTMediaInfo->pcState);
 
             }
@@ -1863,7 +1863,7 @@ btrCore_BTParseMediaTransport (
                 dbus_message_iter_next(&dict_i);
                 dbus_message_iter_recurse(&dict_i, &variant_i);
                 dbus_message_iter_get_basic(&variant_i, &pcUUID);
-                strncpy(apstBTMediaInfo->pcUUID, pcUUID, BT_MAX_STR_LEN);
+                strncpy(apstBTMediaInfo->pcUUID, pcUUID, BT_MAX_STR_LEN-1); //CID-163623 : Buffer not null terminated
                 BTRCORELOG_INFO ("apstBTMediaInfo->pcUUID: %s\n", apstBTMediaInfo->pcUUID);
             }
             else if (strcmp (pcKey, "Delay") == 0) {
@@ -6796,7 +6796,8 @@ BtrCore_BTRegisterLeGatt (
             }
         }
         else {
-            strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, strlen(pstlhBtIfce->pcBTDAdapterAddr));
+            //CID:156558-Copy into fixed size buffer
+            strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, (strlen(pstlhBtIfce->pcBTDAdapterAddr) < BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterAddr) : BT_MAX_DEV_PATH_LEN - 1);
         }
 
         char *current_pos = strchr(lCurAdapterAddress, ':');
@@ -6806,7 +6807,8 @@ BtrCore_BTRegisterLeGatt (
         }
 
         memset(pstlhBtIfce->pcBTAdapterGattSrvEpPath, '\0', sizeof(char) * BT_MAX_DEV_PATH_LEN);
-        strncpy(pstlhBtIfce->pcBTAdapterGattSrvEpPath, pstlhBtIfce->pcBTDAdapterPath, strlen(pstlhBtIfce->pcBTDAdapterPath));
+	//CID:156558-Copy into fixed size buffer
+        strncpy(pstlhBtIfce->pcBTAdapterGattSrvEpPath, pstlhBtIfce->pcBTDAdapterPath, (strlen(pstlhBtIfce->pcBTDAdapterPath) < BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterPath) : BT_MAX_DEV_PATH_LEN-1); 
         strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, "/dev_", (sizeof(pstlhBtIfce->pcBTAdapterGattSrvEpPath) - strlen(pstlhBtIfce->pcBTAdapterGattSrvEpPath) -1));
         strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, lCurAdapterAddress, strlen(lCurAdapterAddress));
 
@@ -6940,7 +6942,8 @@ BtrCore_BTUnRegisterLeGatt (
         }
     }
     else {
-        strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr,strlen(pstlhBtIfce->pcBTDAdapterAddr));
+	//CID: 156557 Copy into fixed size buffer
+        strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, (strlen(pstlhBtIfce->pcBTDAdapterAddr) < BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterAddr) : BT_MAX_DEV_PATH_LEN - 1);
     }
 
     //pstlhBtIfce->fpcBTLeLocalGattPath(NULL, lCurAdapterAddress, &lpstBTLeGattSrv, &lNumGattServices, pstlhBtIfce->pcBLePathUserData);
@@ -8540,6 +8543,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                                     if (strstr(lpcDBusIface, "NowPlaying")) {
                                         stBTMediaBrowserUpdate mediaBrowserUpdate;
+					memset (&mediaBrowserUpdate, 0, sizeof(stBTMediaBrowserUpdate)); //CID:163772 - Uninitialized scalar variable
                                         BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "/NowPlaying"));
 
                                         if (strstr(lpcDBusIface, "item")) {
@@ -9106,7 +9110,8 @@ btrCore_BTLeGattEndpointHandlerCb (
         }
     }
     else {
-        strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, strlen(pstlhBtIfce->pcBTDAdapterAddr));
+	 //CID: 156556 Copy into fixed size buffer
+        strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, (strlen(pstlhBtIfce->pcBTDAdapterAddr)< BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterAddr) : BT_MAX_DEV_PATH_LEN - 1);
     }
 
     BTRCORELOG_TRACE("Current adapter address is : %s\n", lCurAdapterAddress);
