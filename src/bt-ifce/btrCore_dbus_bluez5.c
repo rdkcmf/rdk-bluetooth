@@ -6087,8 +6087,8 @@ BtrCore_BTDevMediaControl (
     dbus_bool_t         lDBusOp;
     DBusMessage*        lpDBusMsg      = NULL;
     char                mediaOper[16]  = "\0";
-    char*               mediaProp      = 0;
-    char*               propValue      = 0;
+    char*               mediaProp      = NULL;
+    char*               propValue      = NULL;
 
     if (!apstBtIfceHdl || !apMediaPlayerPath) {
         BTRCORELOG_ERROR ("Invalid args!!!");
@@ -6807,7 +6807,7 @@ BtrCore_BTRegisterLeGatt (
         }
 
         memset(pstlhBtIfce->pcBTAdapterGattSrvEpPath, '\0', sizeof(char) * BT_MAX_DEV_PATH_LEN);
-	//CID:156558-Copy into fixed size buffer
+        //CID:156558-Copy into fixed size buffer
         strncpy(pstlhBtIfce->pcBTAdapterGattSrvEpPath, pstlhBtIfce->pcBTDAdapterPath, (strlen(pstlhBtIfce->pcBTDAdapterPath) < BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterPath) : BT_MAX_DEV_PATH_LEN-1); 
         strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, "/dev_", (sizeof(pstlhBtIfce->pcBTAdapterGattSrvEpPath) - strlen(pstlhBtIfce->pcBTAdapterGattSrvEpPath) -1));
         strncat(pstlhBtIfce->pcBTAdapterGattSrvEpPath, lCurAdapterAddress, strlen(lCurAdapterAddress));
@@ -6942,7 +6942,7 @@ BtrCore_BTUnRegisterLeGatt (
         }
     }
     else {
-	//CID: 156557 Copy into fixed size buffer
+        //CID: 156557 Copy into fixed size buffer
         strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, (strlen(pstlhBtIfce->pcBTDAdapterAddr) < BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterAddr) : BT_MAX_DEV_PATH_LEN - 1);
     }
 
@@ -7961,7 +7961,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                             mediaStatusUpdate.aenBtOpIfceType                        = enBTMediaTransport;
                             mediaStatusUpdate.aunBtOpIfceProp.enBtMediaTransportProp = lenBTMedTransProp;
-                            mediaStatusUpdate.m_mediaTransportVolume                 = lVolume;
+                            mediaStatusUpdate.m_mediaTransportVolume                 = (unsigned char)((lVolume == 127) ? 255 : lVolume * 2);
 
                             if (pstlhBtIfce->fpcBMediaStatusUpdate) {
                                 if(pstlhBtIfce->fpcBMediaStatusUpdate(lenBTDevType, &mediaStatusUpdate, apcDevAddr, pstlhBtIfce->pcBMediaStatusUserData)) {
@@ -8516,6 +8516,9 @@ btrCore_BTDBusConnectionFilterCb (
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_TRANSPORT_PATH);
                                 }
+                                else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH)) {
+                                    BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
+                                }
                                 else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH)) {
                                     BTRCORELOG_INFO ("InterfacesAdded : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
 
@@ -8543,7 +8546,7 @@ btrCore_BTDBusConnectionFilterCb (
 
                                     if (strstr(lpcDBusIface, "NowPlaying")) {
                                         stBTMediaBrowserUpdate mediaBrowserUpdate;
-					memset (&mediaBrowserUpdate, 0, sizeof(stBTMediaBrowserUpdate)); //CID:163772 - Uninitialized scalar variable
+                                        memset (&mediaBrowserUpdate, 0, sizeof(stBTMediaBrowserUpdate)); //CID:163772 - Uninitialized scalar variable
                                         BTRCORELOG_INFO ("MediaItem InterfacesAdded : %s\n", strstr(lpcDBusIface, "/NowPlaying"));
 
                                         if (strstr(lpcDBusIface, "item")) {
@@ -8814,6 +8817,9 @@ btrCore_BTDBusConnectionFilterCb (
                        
                         //TODO: What if some other devices transport interface gets removed with delay ? 
                         strncpy(pstlhBtIfce->pcMediaCurrState, "none", BT_MAX_STR_LEN - 1); 
+                    }
+                    else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_CTRL_PATH)) {
+                        BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_CTRL_PATH);
                     }
                     else if (!strcmp(lpcDBusIfaceInternal, BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH)) {
                         BTRCORELOG_INFO ("InterfacesRemoved : %s\n", BT_DBUS_BLUEZ_MEDIA_PLAYER_PATH);
@@ -9110,7 +9116,7 @@ btrCore_BTLeGattEndpointHandlerCb (
         }
     }
     else {
-	 //CID: 156556 Copy into fixed size buffer
+        //CID: 156556 Copy into fixed size buffer
         strncpy(lCurAdapterAddress, pstlhBtIfce->pcBTDAdapterAddr, (strlen(pstlhBtIfce->pcBTDAdapterAddr)< BT_MAX_DEV_PATH_LEN) ? strlen(pstlhBtIfce->pcBTDAdapterAddr) : BT_MAX_DEV_PATH_LEN - 1);
     }
 

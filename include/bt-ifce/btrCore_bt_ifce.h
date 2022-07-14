@@ -702,7 +702,7 @@ typedef struct _stBTMediaStatusUpdate {
 
     union {
       enBTMediaTransportState   m_mediaTransportState;
-      unsigned short            m_mediaTransportVolume;
+      unsigned char             m_mediaTransportVolume;
       enBTMediaPlayerType       enMediaPlayerType;
       enBTMediaPlayerSubtype    enMediaPlayerSubtype;
       enBTMediaPlayerEqualizer  enMediaPlayerEqualizer;

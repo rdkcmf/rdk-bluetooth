@@ -420,7 +420,7 @@ typedef struct _stBTRCoreMediaStatusUpdate {
       stBTRCoreMediaPositionInfo      m_mediaPositionInfo;
       stBTRCoreMediaElementInfo       m_mediaElementInfo;
       char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
-      unsigned char                   m_mediaPlayerVolumePercentage;
+      unsigned char                   m_mediaPlayerVolume;
     };
 } stBTRCoreMediaStatusUpdate;
 

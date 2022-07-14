@@ -205,7 +205,7 @@ typedef struct _stBTRCoreAVMediaStatusUpdate {
         stBTRCoreAVMediaPositionInfo    m_mediaPositionInfo;
         stBTRCoreAVMediaElementInfo     m_mediaElementInfo;
         char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
-        unsigned char                   m_mediaPlayerVolumePercentage;
+        unsigned char                   m_mediaPlayerTransportVolume;
     };
 } stBTRCoreAVMediaStatusUpdate;
 
@@ -293,7 +293,7 @@ enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, co
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl);
+enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl, eBTRCoreAVMediaFlow aenBTRCoreAVMediaFlow);
 /**
  * @brief  This API is used to retrieve the information about the track that is being played on the media device.
  *

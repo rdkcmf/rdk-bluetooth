@@ -1193,9 +1193,9 @@ BTRCore_LE_AddGattCharInfo (
                 lpstBTRCoreLeGattChar->parentService = pParent;
                 /* Set char path */
                 int ret = snprintf(lpstBTRCoreLeGattChar->charPath, BT_MAX_STR_LEN - 1, "%s/%s%04d", lpstBTRGattService->servicePath, "char", lIndex);
-		if (ret > (BT_MAX_STR_LEN - 1)) {
-			BTRCORELOG_INFO("lpstBTRCoreLeGattChar->charPath truncated\n");
-		}
+                if (ret > (BT_MAX_STR_LEN - 1)) {
+                    BTRCORELOG_INFO("lpstBTRCoreLeGattChar->charPath truncated\n");
+                }
                 /* Set char flags */
                 lpstBTRCoreLeGattChar->charFlags = aCharFlags;
                 /* Set the value of the characteristic after checking it is a characteristic to be read */
@@ -1244,9 +1244,9 @@ BTRCore_LE_AddGattDescInfo (
                 lpstBTRGattDesc->parentChar = pParent;
                 /* Set desc path */
                 int ret = snprintf(lpstBTRGattDesc->descPath, BT_MAX_STR_LEN - 1, "%s/%s%03d", lpstBTRGattChar->charPath, "desc", lIndex);
-		if (ret > (BT_MAX_STR_LEN - 1)) {
-			BTRCORELOG_INFO("lpstBTRGattDesc->descPath truncated\n");
-		}
+                if (ret > (BT_MAX_STR_LEN - 1)) {
+                    BTRCORELOG_INFO("lpstBTRGattDesc->descPath truncated\n");
+                }
                 BTRCORELOG_INFO("Desc path %s\n", lpstBTRGattDesc->descPath);
                 /* Set desc flags */
                 lpstBTRGattDesc->descFlags = aDescFlags;

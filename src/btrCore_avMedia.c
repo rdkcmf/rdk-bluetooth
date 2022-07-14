@@ -244,8 +244,8 @@ typedef struct _stBTRCoreAVMediaItem {
     eBTRCoreAVMElementType             eMediaItemType;
 
     union {
-        struct _stBTRCoreAVMediaItem**   pstAVMediaSubItems;
-        stBTRCoreAVMediaTrackInfo        mediaTrackInfo;
+        struct _stBTRCoreAVMediaItem** pstAVMediaSubItems;
+        stBTRCoreAVMediaTrackInfo      mediaTrackInfo;
     };
 } stBTRCoreAVMediaItem;
     
@@ -277,10 +277,12 @@ typedef struct _stBTRCoreAVMediaHdl {
     char*                               pcAVMediaTransportPathOut;
     char*                               pcAVMediaTransportPathIn;
 
-    unsigned short                      ui16BTMediaTransportVolume;
+    unsigned char                       ui8AVMediaTransportVolume;
+    BOOLEAN                             bAVMediaTrVolAvrcp; 
     enBTRCoreAVMTransportPathState      eAVMTState;
 
     char*                               pcAVMediaPlayerPath;
+    char*                               pcAVMediaControlPath;
     unsigned char                       bAVMediaPlayerConnected;
     stBTRCoreAVMediaPlayer              pstAVMediaPlayer;
 
@@ -296,9 +298,9 @@ typedef struct _stBTRCoreAVMediaHdl {
 
     GThread*                            pMediaPollingThread;
     void*                               pvThreadData;
-    eBTRCoreAVMediaStatusUpdate        eAVMediaStPrev;
-    tBTRCoreAVMediaElementId           SelectedaBtrAVMediaItemId;
-    stBTRCoreAVMediaTrackInfo          SelectedapstBTAVMediaTrackInfo;
+    eBTRCoreAVMediaStatusUpdate         eAVMediaStPrev;
+    tBTRCoreAVMediaElementId            SelectedaBtrAVMediaItemId;
+    stBTRCoreAVMediaTrackInfo           SelectedapstBTAVMediaTrackInfo;
 } stBTRCoreAVMediaHdl;
 
 
@@ -957,6 +959,7 @@ BTRCore_AVMedia_Init (
     pstlhBTRCoreAVM->pcAVMediaTransportPathOut      = NULL;
     pstlhBTRCoreAVM->pcAVMediaTransportPathIn       = NULL;
     pstlhBTRCoreAVM->pcAVMediaPlayerPath            = NULL;
+    pstlhBTRCoreAVM->pcAVMediaControlPath           = NULL;
     pstlhBTRCoreAVM->pvThreadData                   = NULL;
     pstlhBTRCoreAVM->pcBMediaStatusUserData         = NULL;
     pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate = NULL;
@@ -1151,6 +1154,11 @@ BTRCore_AVMedia_DeInit (
         pstlhBTRCoreAVM->pcAVMediaTransportPathOut = NULL;
     }
 
+    if (pstlhBTRCoreAVM->pcAVMediaControlPath) {
+        free(pstlhBTRCoreAVM->pcAVMediaControlPath);
+        pstlhBTRCoreAVM->pcAVMediaControlPath = NULL;
+    }
+
     if (pstlhBTRCoreAVM->pcAVMediaTransportPathIn) {
         free(pstlhBTRCoreAVM->pcAVMediaTransportPathIn);
         pstlhBTRCoreAVM->pcAVMediaTransportPathIn = NULL;
@@ -1180,11 +1188,13 @@ BTRCore_AVMedia_DeInit (
         pstlhBTRCoreAVM->pstAVMediaPlayList = NULL;
     }
 
-    pstlhBTRCoreAVM->btIfceHdl               = NULL;
-    pstlhBTRCoreAVM->pvThreadData            = NULL;
-    pstlhBTRCoreAVM->pcBMediaStatusUserData  = NULL;
-    pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate  = NULL;
-    pstlhBTRCoreAVM->eAVMTState = enAVMTransportStDisconnected;
+    pstlhBTRCoreAVM->ui8AVMediaTransportVolume      = 0;
+    pstlhBTRCoreAVM->bAVMediaTrVolAvrcp             = FALSE;
+    pstlhBTRCoreAVM->btIfceHdl                      = NULL;
+    pstlhBTRCoreAVM->pvThreadData                   = NULL;
+    pstlhBTRCoreAVM->pcBMediaStatusUserData         = NULL;
+    pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate = NULL;
+    pstlhBTRCoreAVM->eAVMTState                     = enAVMTransportStDisconnected;
 
     if (!lBtAVMediaASrcUnRegRet && !lBtAVMediaASinkUnRegRet)
         lenBTRCoreRet = enBTRCoreSuccess;
@@ -1539,6 +1549,7 @@ BTRCore_AVMedia_AcquireDataPath (
     enBTRCoreRet            lenBTRCoreRet = enBTRCoreFailure;
     unBTOpIfceProp          lunBtOpMedTProp;
     unsigned int            ui32Delay = 0xFFFFu;
+    unsigned short          ui16Vol = 0xFFFFu;
 
     if (!hBTRCoreAVM || !apBtDevAddr || !apui32Delay) {
         return enBTRCoreInvalidArg;
@@ -1566,8 +1577,12 @@ BTRCore_AVMedia_AcquireDataPath (
     if ((lBtAVMediaRet = BtrCore_BTGetProp(pstlhBTRCoreAVM->btIfceHdl, lpcAVMediaTransportPath, enBTMediaTransport, lunBtOpMedTProp, &ui32Delay)))
         lenBTRCoreRet = enBTRCoreFailure;
 
+    lunBtOpMedTProp.enBtMediaTransportProp = enBTMedTPropVol;
+    if ((lBtAVMediaRet = BtrCore_BTGetProp(pstlhBTRCoreAVM->btIfceHdl, lpcAVMediaTransportPath, enBTMediaTransport, lunBtOpMedTProp, &ui16Vol)))
+        lenBTRCoreRet = enBTRCoreFailure;
+
     *apui32Delay = ui32Delay;
-    BTRCORELOG_INFO ("BTRCore_AVMedia_AcquireDataPath: Delay value = %d\n", ui32Delay);
+    BTRCORELOG_INFO ("BTRCore_AVMedia_AcquireDataPath: Delay value = %d Volume = %d\n", ui32Delay, ui16Vol);
 
     return lenBTRCoreRet;
 }
@@ -1614,11 +1629,14 @@ enBTRCoreRet
 BTRCore_AVMedia_MediaControl (
     tBTRCoreAVMediaHdl      hBTRCoreAVM,
     const char*             apBtDevAddr,
-    enBTRCoreAVMediaCtrl    aenBTRCoreAVMediaCtrl 
+    enBTRCoreAVMediaCtrl    aenBTRCoreAVMediaCtrl,
+    eBTRCoreAVMediaFlow     aenBTRCoreAVMediaFlow
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM   = NULL;
     enBTRCoreRet            lenBTRCoreRet     = enBTRCoreSuccess;
     enBTMediaControlCmd     aenBTMediaControl = 0;
+    unBTOpIfceProp          lunBtOpMedTProp;
+    unsigned short          lui16TranspVol = 0xFFFFu;
 
 
     if (!hBTRCoreAVM)  {
@@ -1628,7 +1646,8 @@ BTRCore_AVMedia_MediaControl (
 
     pstlhBTRCoreAVM = (stBTRCoreAVMediaHdl*)hBTRCoreAVM;
 
-    if (!pstlhBTRCoreAVM->pcAVMediaPlayerPath) {
+    if ((aenBTRCoreAVMediaFlow == eBTRCoreAVMediaFlowIn) && 
+        (!pstlhBTRCoreAVM->pcAVMediaPlayerPath)) {
         //TODO: The pcAVMediaPlayerPath changes during transition between Players on Smartphone (Local->Youtube->Local)
         //      Seems to be the root cause of the stack corruption as part of DELIA-25861
         char*   lpcAVMediaPlayerPath = BtrCore_BTGetMediaPlayerPath(pstlhBTRCoreAVM->btIfceHdl, apBtDevAddr);
@@ -1662,9 +1681,11 @@ BTRCore_AVMedia_MediaControl (
         break;
     case enBTRCoreAVMediaCtrlVolumeUp:
         aenBTMediaControl = enBTMediaCtrlVolumeUp;
+        lui16TranspVol = (pstlhBTRCoreAVM->ui8AVMediaTransportVolume < 240) ? ((pstlhBTRCoreAVM->ui8AVMediaTransportVolume + 10) / 2) : 127;
         break;
     case enBTRCoreAVMediaCtrlVolumeDown:
         aenBTMediaControl = enBTMediaCtrlVolumeDown;
+        lui16TranspVol = (pstlhBTRCoreAVM->ui8AVMediaTransportVolume > 15) ? ((pstlhBTRCoreAVM->ui8AVMediaTransportVolume - 10) / 2) : 0;
         break;
     case enBTRcoreAVMediaCtrlEqlzrOff:
         aenBTMediaControl = enBTMediaCtrlEqlzrOff;
@@ -1701,10 +1722,26 @@ BTRCore_AVMedia_MediaControl (
         BTRCORELOG_ERROR ("Unknown Media Control option!\n");
         lenBTRCoreRet = enBTRCoreFailure;
     }
-    else
-    if (BtrCore_BTDevMediaControl(pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aenBTMediaControl)) {
-       BTRCORELOG_ERROR ("Failed to set the Media control option!");
-       lenBTRCoreRet = enBTRCoreFailure;
+    else if (aenBTRCoreAVMediaFlow == eBTRCoreAVMediaFlowIn) {
+        if (BtrCore_BTDevMediaControl(pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaPlayerPath, aenBTMediaControl)) {
+           BTRCORELOG_ERROR ("Failed to set the Media control eBTRCoreAVMediaFlowIn!");
+           lenBTRCoreRet = enBTRCoreFailure;
+        }
+    }
+    else if (aenBTRCoreAVMediaFlow == eBTRCoreAVMediaFlowOut) {
+        if (((pstlhBTRCoreAVM->bAVMediaTrVolAvrcp == TRUE) || (pstlhBTRCoreAVM->bAVMediaPlayerConnected == TRUE)) && (pstlhBTRCoreAVM->pcAVMediaTransportPathOut != NULL)) {
+            lunBtOpMedTProp.enBtMediaTransportProp = enBTMedTPropVol;
+            if (!BtrCore_BTSetProp(pstlhBTRCoreAVM->btIfceHdl, pstlhBTRCoreAVM->pcAVMediaTransportPathOut, enBTMediaTransport, lunBtOpMedTProp, &lui16TranspVol)) {
+                pstlhBTRCoreAVM->ui8AVMediaTransportVolume = (lui16TranspVol == 127) ? 255 : lui16TranspVol * 2;
+            }
+            else {
+                lenBTRCoreRet = enBTRCoreFailure;
+            }
+        } 
+        else {
+           BTRCORELOG_ERROR ("Failed to set the Media control eBTRCoreAVMediaFlowOut!\n");
+           lenBTRCoreRet = enBTRCoreFailure;
+        }
     }
 
     return lenBTRCoreRet;
@@ -3089,8 +3126,10 @@ btrCore_AVMedia_MediaStatusUpdateCb (
 
         case enBTMedTPropVol:
             mediaStatus.eAVMediaState = eBTRCoreAVMediaPlyrVolume;
-            mediaStatus.m_mediaPlayerVolumePercentage = pstlhBTRCoreAVM->ui16BTMediaTransportVolume = (apstBtMediaStUpdate->m_mediaTransportVolume * 100)/127;
-            BTRCORELOG_DEBUG ("AV Media Transport Volume : %d%%\n", pstlhBTRCoreAVM->ui16BTMediaTransportVolume);
+            mediaStatus.m_mediaPlayerTransportVolume    = apstBtMediaStUpdate->m_mediaTransportVolume;
+            pstlhBTRCoreAVM->ui8AVMediaTransportVolume  = apstBtMediaStUpdate->m_mediaTransportVolume;
+            pstlhBTRCoreAVM->bAVMediaTrVolAvrcp         = TRUE;
+            BTRCORELOG_DEBUG ("AV Media Transport Volume : %d%%\n", pstlhBTRCoreAVM->ui8AVMediaTransportVolume);
             postEvent = TRUE;
             break;
         default:
@@ -3193,7 +3232,9 @@ btrCore_AVMedia_MediaStatusUpdateCb (
                 pstlhBTRCoreAVM->bAVMediaPlayerConnected = apstBtMediaStUpdate->m_mediaPlayerConnected;
             }
             else {
-                BTRCORELOG_DEBUG ("Device Type : %d\n", aeBtDeviceType);
+                pstlhBTRCoreAVM->bAVMediaPlayerConnected    = apstBtMediaStUpdate->m_mediaPlayerConnected;
+                pstlhBTRCoreAVM->pcAVMediaControlPath       = strndup(apcBtDevAddr, BTRCORE_MAX_STR_LEN - 1);
+                BTRCORELOG_DEBUG ("Device Type : %d Control Path : %s\n", aeBtDeviceType, pstlhBTRCoreAVM->pcAVMediaControlPath);
             }
 
             BTRCORELOG_DEBUG ("AV Media Player Connected : %s - %d\n", apcBtDevAddr, apstBtMediaStUpdate->m_mediaPlayerConnected); 

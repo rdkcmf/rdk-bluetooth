@@ -1660,7 +1660,7 @@ btrCore_RunTask (
 
     gint64                      li64usTimeout       = 0;
     guint16                     lui16msTimeout      = 20;
-    gboolean                    lbRunTaskExit       = FALSE;
+    BOOLEAN                     lbRunTaskExit       = FALSE;
     enBTRCoreTaskOp             lenRunTskOpPrv      = enBTRCoreTaskOpUnknown;
     enBTRCoreTaskOp             lenRunTskOpCur      = enBTRCoreTaskOpUnknown;
     enBTRCoreTaskProcessType    lenRunTskPTCur      = enBTRCoreTaskPTUnknown;
@@ -1808,7 +1808,7 @@ btrCore_OutTask (
 
     gint64                      li64usTimeout       = 0;
     guint16                     lui16msTimeout      = 50;
-    gboolean                    lbOutTaskExit       = FALSE;
+    BOOLEAN                     lbOutTaskExit       = FALSE;
     enBTRCoreTaskOp             lenOutTskOpPrv      = enBTRCoreTaskOpUnknown;
     enBTRCoreTaskOp             lenOutTskOpCur      = enBTRCoreTaskOpUnknown;
     enBTRCoreTaskProcessType    lenOutTskPTCur      = enBTRCoreTaskPTUnknown;
@@ -2009,7 +2009,7 @@ btrCore_OutTask (
                         tBTRCoreDevId       lBTRCoreDevId = lpstOutTskInData->bTRCoreDevId;
                         int                 i32LoopIdx = -1;
                         int                 i32KnownDevIdx  = -1;
-                        gboolean            postEvent = FALSE;
+                        BOOLEAN             postEvent = FALSE;
 
                         (void)lpstBTDeviceInfo;
 
@@ -3582,8 +3582,7 @@ BTRCore_PairDevice (
             BTRCORELOG_DEBUG (" sky devices Bluez-5.48 \n");
             lunBtOpAdapProp.enBtAdapterProp = enBTAdPropPairable;
 
-           if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter,
-                   lunBtOpAdapProp, &ispairable)) {
+           if (BtrCore_BTSetProp(pstlhBTRCore->connHdl, pstlhBTRCore->curAdapterPath, enBTAdapter, lunBtOpAdapProp, &ispairable)) {
                 BTRCORELOG_ERROR ("Set Adapter Property enBTAdPropPairable - FAILED\n");
                 return enBTRCoreFailure;
             }
@@ -4552,7 +4551,8 @@ BTRCore_MediaControl (
     enBTRCoreRet            lenBTRCoreRet       = enBTRCoreFailure;
 
     BOOLEAN                 lbBTDeviceConnected = FALSE; 
-    enBTRCoreAVMediaCtrl    aenBTRCoreAVMediaCtrl = 0;
+    enBTRCoreAVMediaCtrl    lenBTRCoreAVMediaCtrl = 0;
+    eBTRCoreAVMediaFlow     lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowUnknown;
 
 
     if (!hBTRCore) {
@@ -4579,76 +4579,102 @@ BTRCore_MediaControl (
     }
 
 
-    switch (aenBTRCoreMediaCtrl) {
-    case enBTRCoreMediaCtrlPlay:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPlay;
+    switch (lenBTDeviceType) {
+    case enBTDevAudioSink:
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowOut;
         break;
-    case enBTRCoreMediaCtrlPause:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPause;
+    case enBTDevAudioSource:
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowIn;
         break;
-    case enBTRCoreMediaCtrlStop:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlStop;
+    case enBTDevHFPHeadset:
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowInOut;
         break;
-    case enBTRCoreMediaCtrlNext:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlNext;
+    case enBTDevHFPAudioGateway:
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowInOut;
         break;
-    case enBTRCoreMediaCtrlPrevious:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPrevious;
+    case enBTDevLE:
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowUnknown;
         break;
-    case enBTRCoreMediaCtrlFastForward:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlFastForward;
-        break;
-    case enBTRCoreMediaCtrlRewind:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRewind;
-        break;
-    case enBTRCoreMediaCtrlVolumeUp:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlVolumeUp;
-        break;
-    case enBTRCoreMediaCtrlVolumeDown:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlVolumeDown;
-        break;
-    case enBTRCoreMediaCtrlEqlzrOff:
-        aenBTRCoreAVMediaCtrl = enBTRcoreAVMediaCtrlEqlzrOff;
-        break;
-    case enBTRCoreMediaCtrlEqlzrOn:
-        aenBTRCoreAVMediaCtrl = enBTRcoreAVMediaCtrlEqlzrOn;
-        break;
-    case enBTRCoreMediaCtrlShflOff:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlShflOff;
-        break;
-    case enBTRCoreMediaCtrlShflAllTracks:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlShflAllTracks; 
-        break;
-    case enBTRCoreMediaCtrlShflGroup:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlShflGroup;
-        break;
-    case enBTRCoreMediaCtrlRptOff:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptOff;
-        break;
-    case enBTRCoreMediaCtrlRptSingleTrack:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptSingleTrack;
-        break;
-    case enBTRCoreMediaCtrlRptAllTracks:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptAllTracks;
-        break;
-    case enBTRCoreMediaCtrlRptGroup:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptGroup;
+    case enBTDevUnknown:
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowUnknown;
         break;
     default:
-        aenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlUnknown;
+        lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowUnknown;
         break;
     }
 
-    if (aenBTRCoreAVMediaCtrl == enBTRCoreAVMediaCtrlUnknown) {
+    switch (aenBTRCoreMediaCtrl) {
+    case enBTRCoreMediaCtrlPlay:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPlay;
+        break;
+    case enBTRCoreMediaCtrlPause:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPause;
+        break;
+    case enBTRCoreMediaCtrlStop:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlStop;
+        break;
+    case enBTRCoreMediaCtrlNext:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlNext;
+        break;
+    case enBTRCoreMediaCtrlPrevious:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlPrevious;
+        break;
+    case enBTRCoreMediaCtrlFastForward:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlFastForward;
+        break;
+    case enBTRCoreMediaCtrlRewind:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRewind;
+        break;
+    case enBTRCoreMediaCtrlVolumeUp:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlVolumeUp;
+        break;
+    case enBTRCoreMediaCtrlVolumeDown:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlVolumeDown;
+        break;
+    case enBTRCoreMediaCtrlEqlzrOff:
+        lenBTRCoreAVMediaCtrl = enBTRcoreAVMediaCtrlEqlzrOff;
+        break;
+    case enBTRCoreMediaCtrlEqlzrOn:
+        lenBTRCoreAVMediaCtrl = enBTRcoreAVMediaCtrlEqlzrOn;
+        break;
+    case enBTRCoreMediaCtrlShflOff:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlShflOff;
+        break;
+    case enBTRCoreMediaCtrlShflAllTracks:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlShflAllTracks; 
+        break;
+    case enBTRCoreMediaCtrlShflGroup:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlShflGroup;
+        break;
+    case enBTRCoreMediaCtrlRptOff:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptOff;
+        break;
+    case enBTRCoreMediaCtrlRptSingleTrack:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptSingleTrack;
+        break;
+    case enBTRCoreMediaCtrlRptAllTracks:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptAllTracks;
+        break;
+    case enBTRCoreMediaCtrlRptGroup:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlRptGroup;
+        break;
+    default:
+        lenBTRCoreAVMediaCtrl = enBTRCoreAVMediaCtrlUnknown;
+        break;
+    }
+
+    if (lenBTRCoreAVMediaCtrl == enBTRCoreAVMediaCtrlUnknown) {
         BTRCORELOG_ERROR ("Media Play Control Unknown!\n");
         lenBTRCoreRet = enBTRCoreFailure;
     }
-    else
-    if (BTRCore_AVMedia_MediaControl(pstlhBTRCore->avMediaHdl,
-                                     pDeviceAddress,
-                                     aenBTRCoreAVMediaCtrl) != enBTRCoreSuccess) {
-        BTRCORELOG_ERROR ("Media Play Control Failed!!!\n");
-        lenBTRCoreRet = enBTRCoreFailure;
+    else {
+        BTRCORELOG_INFO (" We will Perform Media Control for %s - DevTy %d - Ctrl %d - Flow %d\n", pDeviceAddress, lenBTDeviceType, lenBTRCoreAVMediaCtrl, lenBTRCoreAVMediaFlow);
+        if ((lenBTRCoreRet = BTRCore_AVMedia_MediaControl(pstlhBTRCore->avMediaHdl,
+                                                          pDeviceAddress,
+                                                          lenBTRCoreAVMediaCtrl,
+                                                          lenBTRCoreAVMediaFlow)) != enBTRCoreSuccess) {
+            BTRCORELOG_ERROR ("Media Play Control Failed!!!\n");
+        }
     }
 
     return lenBTRCoreRet;
@@ -6106,7 +6132,7 @@ btrCore_BTMediaStatusUpdateCb (
         break;
     case eBTRCoreAVMediaPlyrVolume:
         lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.eBTMediaStUpdate = eBTRCoreMediaPlyrVolume;
-        lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.m_mediaPlayerVolumePercentage = apMediaStreamStatus->m_mediaPlayerVolumePercentage;
+        lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.m_mediaPlayerVolume = apMediaStreamStatus->m_mediaPlayerTransportVolume;
         break;
     case eBTRCoreAVMediaElementAdded:
         {
