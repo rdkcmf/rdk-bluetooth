@@ -3125,7 +3125,8 @@ btrCore_AVMedia_MediaStatusUpdateCb (
             break;
 
         case enBTMedTPropVol:
-            mediaStatus.eAVMediaState = eBTRCoreAVMediaPlyrVolume;
+            mediaStatus.eAVMediaState                   = eBTRCoreAVMediaPlyrVolume;
+            mediaStatus.bIsAVMediaCtrlAvail             = pstlhBTRCoreAVM->bAVMediaPlayerConnected;
             mediaStatus.m_mediaPlayerTransportVolume    = apstBtMediaStUpdate->m_mediaTransportVolume;
             pstlhBTRCoreAVM->ui8AVMediaTransportVolume  = apstBtMediaStUpdate->m_mediaTransportVolume;
             pstlhBTRCoreAVM->bAVMediaTrVolAvrcp         = TRUE;
@@ -3560,6 +3561,20 @@ btrCore_AVMedia_MediaStatusUpdateCb (
 
     /* post callback */
     if (postEvent && pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate) {
+
+        if (aeBtDeviceType == enBTDevAudioSink) {
+            mediaStatus.eAVMediaDataFlow = eBTRCoreAVMediaFlowOut;
+        }
+        else if (aeBtDeviceType == enBTDevAudioSource) {
+            mediaStatus.eAVMediaDataFlow = eBTRCoreAVMediaFlowIn;
+        }
+        else if ((aeBtDeviceType == enBTDevHFPHeadset) || (aeBtDeviceType == enBTDevHFPAudioGateway)) {
+            mediaStatus.eAVMediaDataFlow = eBTRCoreAVMediaFlowInOut;
+        }
+        else {
+            mediaStatus.eAVMediaDataFlow = eBTRCoreAVMediaFlowUnknown;
+        }
+
         if (pstlhBTRCoreAVM->fpcBBTRCoreAVMediaStatusUpdate(&mediaStatus, apcBtDevAddr, pstlhBTRCoreAVM->pcBMediaStatusUserData) != enBTRCoreSuccess) {
             BTRCORELOG_ERROR ("fpcBBTRCoreAVMediaStatusUpdate - Failure !!!\n");
             i32BtRet = -1;

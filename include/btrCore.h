@@ -413,7 +413,8 @@ typedef struct _stBTRCoreMediaElementInfoList {
 } stBTRCoreMediaElementInfoList;
 
 typedef struct _stBTRCoreMediaStatusUpdate {
-   eBTRCoreMediaStatusUpdate     eBTMediaStUpdate;
+    eBTRCoreMediaStatusUpdate    eBTMediaStUpdate;
+    BOOLEAN                      bIsMediaCtrlAvailable;
 
     union {
       stBTRCoreMediaTrackInfo         m_mediaTrackInfo;

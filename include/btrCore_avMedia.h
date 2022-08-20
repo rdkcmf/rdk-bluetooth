@@ -199,6 +199,8 @@ typedef struct _stBTRCoreAVMediaElementInfoList {
 
 typedef struct _stBTRCoreAVMediaStatusUpdate {
     eBTRCoreAVMediaStatusUpdate     eAVMediaState;
+    eBTRCoreAVMediaFlow             eAVMediaDataFlow;
+    unsigned char                   bIsAVMediaCtrlAvail;
 
     union {
         stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;

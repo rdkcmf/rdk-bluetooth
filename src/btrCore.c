@@ -2402,7 +2402,9 @@ btrCore_OutTask (
 
                         BTRCORELOG_TRACE ("i32KnownDevIdx = %d\n", i32KnownDevIdx);
 
-                        if ((i32KnownDevIdx != -1) && (pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected == TRUE)) {
+                        if ((i32KnownDevIdx != -1) &&
+                            ((pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].bDeviceConnected == TRUE) ||
+                             (lpstMediaStatusUpdateCbInfo->m_mediaStatusUpdate.bIsMediaCtrlAvailable == TRUE))) {
                             memcpy(&pstlhBTRCore->stMediaStatusCbInfo, lpstMediaStatusUpdateCbInfo, sizeof(stBTRCoreMediaStatusCBInfo));
                             pstlhBTRCore->stMediaStatusCbInfo.deviceId      = pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].tDeviceId;
                             pstlhBTRCore->stMediaStatusCbInfo.eDeviceClass  = pstlhBTRCore->stKnownDevicesArr[i32KnownDevIdx].enDeviceType;
@@ -6133,6 +6135,7 @@ btrCore_BTMediaStatusUpdateCb (
     case eBTRCoreAVMediaPlyrVolume:
         lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.eBTMediaStUpdate = eBTRCoreMediaPlyrVolume;
         lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.m_mediaPlayerVolume = apMediaStreamStatus->m_mediaPlayerTransportVolume;
+        lstMediaStatusUpdateCbInfo.m_mediaStatusUpdate.bIsMediaCtrlAvailable = (apMediaStreamStatus->bIsAVMediaCtrlAvail == 1) ? TRUE : FALSE;
         break;
     case eBTRCoreAVMediaElementAdded:
         {
