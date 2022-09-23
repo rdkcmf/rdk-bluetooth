@@ -281,14 +281,14 @@ btrCore_BTMapServiceClasstoDevType (
         lenBtDevType = enBTDevAudioSink;
     }
     else if (0x80000u & aui32Class) {
-        if (enBTDCMicrophone && aui32Class) {
+        if (enBTDCMicrophone & aui32Class) {
             BTRCORELOG_DEBUG ("Its a enBTDevAudioSource : Capturing Service and Mic Device\n");
             lenBtDevType = enBTDevAudioSource;
         }
     }
     //Audio device but not a peripheral  (mouse, joystick, keyboards etc )
     else if ((0x200000u & aui32Class) && ((0x500u & aui32Class) != 0x500u ))  {
-        if (enBTDCMicrophone && aui32Class) {
+        if (enBTDCMicrophone & aui32Class) {
             BTRCORELOG_DEBUG ("Its a enBTDevAudioSource : Audio Class of Service and Mic Device\n");
             lenBtDevType = enBTDevAudioSource;
         }
