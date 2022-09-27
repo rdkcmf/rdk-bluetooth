@@ -7812,7 +7812,8 @@ btrCore_BTDBusConnectionFilterCb (
                     char*                   apcDevAddr  = NULL;
                     enBTMediaTransportProp  lenBTMedTransProp = enBTMedTPropUnknown;
                     unsigned short          lVolume = 0;
-                    char*                   pcState = 0;
+                    unsigned short          lDelay  = 0xFFFFu;
+                    char*                   pcState = NULL;
 
                     if (!strncmp(pstlhBtIfce->pcBTVersion, BT_BLUEZ_VERSION_5_54, strlen(BT_BLUEZ_VERSION_5_54))) {
                         ui32DeviceIfceLen = strstr(apcMediaTransIface, "/sep") - apcMediaTransIface;
@@ -7851,6 +7852,9 @@ btrCore_BTDBusConnectionFilterCb (
                                 }
                                 else if (!strncmp(str, "Delay", strlen("Delay"))) {
                                     lenBTMedTransProp = enBTMedTPropDelay;
+                                    dbus_message_iter_next(&lDBusMsgIter1);
+                                    dbus_message_iter_recurse(&lDBusMsgIter1, &lDBusMsgIterVal);
+                                    dbus_message_iter_get_basic(&lDBusMsgIterVal, &lDelay);
                                 }
                                 else {
                                     lenBTMedTransProp = enBTMedTPropUnknown;
