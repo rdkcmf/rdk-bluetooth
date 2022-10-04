@@ -1630,7 +1630,8 @@ BTRCore_AVMedia_MediaControl (
     tBTRCoreAVMediaHdl      hBTRCoreAVM,
     const char*             apBtDevAddr,
     enBTRCoreAVMediaCtrl    aenBTRCoreAVMediaCtrl,
-    eBTRCoreAVMediaFlow     aenBTRCoreAVMediaFlow
+    eBTRCoreAVMediaFlow     aenBTRCoreAVMediaFlow,
+    stBTRCoreAVMediaCtData* apstBTRCoreAVMediaCtrlData
 ) {
     stBTRCoreAVMediaHdl*    pstlhBTRCoreAVM   = NULL;
     enBTRCoreRet            lenBTRCoreRet     = enBTRCoreSuccess;
@@ -1681,11 +1682,21 @@ BTRCore_AVMedia_MediaControl (
         break;
     case enBTRCoreAVMediaCtrlVolumeUp:
         aenBTMediaControl = enBTMediaCtrlVolumeUp;
-        lui16TranspVol = (pstlhBTRCoreAVM->ui8AVMediaTransportVolume < 240) ? ((pstlhBTRCoreAVM->ui8AVMediaTransportVolume + 10) / 2) : 127;
+        if (apstBTRCoreAVMediaCtrlData != NULL) {
+            lui16TranspVol = (apstBTRCoreAVMediaCtrlData->m_mediaAbsTransportVolume < 255) ? (apstBTRCoreAVMediaCtrlData->m_mediaAbsTransportVolume / 2) : 127;
+        }
+        else {
+            lui16TranspVol = (pstlhBTRCoreAVM->ui8AVMediaTransportVolume < 240) ? ((pstlhBTRCoreAVM->ui8AVMediaTransportVolume + 10) / 2) : 127;
+        }
         break;
     case enBTRCoreAVMediaCtrlVolumeDown:
         aenBTMediaControl = enBTMediaCtrlVolumeDown;
-        lui16TranspVol = (pstlhBTRCoreAVM->ui8AVMediaTransportVolume > 15) ? ((pstlhBTRCoreAVM->ui8AVMediaTransportVolume - 10) / 2) : 0;
+        if (apstBTRCoreAVMediaCtrlData != NULL) {
+            lui16TranspVol = (apstBTRCoreAVMediaCtrlData->m_mediaAbsTransportVolume < 255) ? (apstBTRCoreAVMediaCtrlData->m_mediaAbsTransportVolume / 2) : 127;
+        }
+        else {
+            lui16TranspVol = (pstlhBTRCoreAVM->ui8AVMediaTransportVolume > 15) ? ((pstlhBTRCoreAVM->ui8AVMediaTransportVolume - 10) / 2) : 0;
+        }
         break;
     case enBTRcoreAVMediaCtrlEqlzrOff:
         aenBTMediaControl = enBTMediaCtrlEqlzrOff;

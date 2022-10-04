@@ -4539,10 +4539,11 @@ BTRCore_SetDeviceDataAckTimeout (
 
 enBTRCoreRet
 BTRCore_MediaControl (
-    tBTRCoreHandle      hBTRCore, 
-    tBTRCoreDevId       aBTRCoreDevId, 
-    enBTRCoreDeviceType aenBTRCoreDevType,
-    enBTRCoreMediaCtrl  aenBTRCoreMediaCtrl
+    tBTRCoreHandle          hBTRCore, 
+    tBTRCoreDevId           aBTRCoreDevId, 
+    enBTRCoreDeviceType     aenBTRCoreDevType,
+    enBTRCoreMediaCtrl      aenBTRCoreMediaCtrl,
+    stBTRCoreMediaCtData*   apstBTRCoreMediaCData
 ) {
     stBTRCoreHdl*           pstlhBTRCore        = NULL;
 
@@ -4555,6 +4556,7 @@ BTRCore_MediaControl (
     BOOLEAN                 lbBTDeviceConnected = FALSE; 
     enBTRCoreAVMediaCtrl    lenBTRCoreAVMediaCtrl = 0;
     eBTRCoreAVMediaFlow     lenBTRCoreAVMediaFlow = eBTRCoreAVMediaFlowUnknown;
+    stBTRCoreAVMediaCtData* lpstBTRCoreAVMCtData  = NULL;
 
 
     if (!hBTRCore) {
@@ -4670,11 +4672,19 @@ BTRCore_MediaControl (
         lenBTRCoreRet = enBTRCoreFailure;
     }
     else {
+        stBTRCoreAVMediaCtData lstBTRCoreAVMCtData;
+
+        if (apstBTRCoreMediaCData != NULL) {
+            lstBTRCoreAVMCtData.m_mediaAbsTransportVolume = apstBTRCoreMediaCData->m_mediaAbsoluteVolume;
+            lpstBTRCoreAVMCtData = &lstBTRCoreAVMCtData;
+        }
+
         BTRCORELOG_INFO (" We will Perform Media Control for %s - DevTy %d - Ctrl %d - Flow %d\n", pDeviceAddress, lenBTDeviceType, lenBTRCoreAVMediaCtrl, lenBTRCoreAVMediaFlow);
         if ((lenBTRCoreRet = BTRCore_AVMedia_MediaControl(pstlhBTRCore->avMediaHdl,
                                                           pDeviceAddress,
                                                           lenBTRCoreAVMediaCtrl,
-                                                          lenBTRCoreAVMediaFlow)) != enBTRCoreSuccess) {
+                                                          lenBTRCoreAVMediaFlow,
+                                                          lpstBTRCoreAVMCtData)) != enBTRCoreSuccess) {
             BTRCORELOG_ERROR ("Media Play Control Failed!!!\n");
         }
     }

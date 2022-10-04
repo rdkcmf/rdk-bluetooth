@@ -211,6 +211,20 @@ typedef struct _stBTRCoreAVMediaStatusUpdate {
     };
 } stBTRCoreAVMediaStatusUpdate;
 
+
+typedef struct _stBTRCoreAVMediaCtData {
+    unsigned char                   m_mediaAbsTransportVolume;
+    //TODO: When we implement a Player for Audio-Out check if you can use a common union
+    //      similar to one use in stBTRCoreAVMediaStatusUpdate
+    //      union {
+    //          stBTRCoreAVMediaTrackInfo       m_mediaTrackInfo;
+    //          stBTRCoreAVMediaPositionInfo    m_mediaPositionInfo;
+    //          stBTRCoreAVMediaElementInfo     m_mediaElementInfo;
+    //          char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
+    //          unsigned char                   m_mediaPlayerTransportVolume;
+    //      };
+} stBTRCoreAVMediaCtData;
+
 /* @} */ // End of group BLUETOOTH_TYPES
 
 
@@ -295,7 +309,7 @@ enBTRCoreRet BTRCore_AVMedia_ReleaseDataPath (tBTRCoreAVMediaHdl hBTRCoreAVM, co
  * @retval enBTRCoreSuccess on success, appropriate error code otherwise.
  *
  */
-enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl, eBTRCoreAVMediaFlow aenBTRCoreAVMediaFlow);
+enBTRCoreRet BTRCore_AVMedia_MediaControl (tBTRCoreAVMediaHdl hBTRCoreAVM, const char* apBtDevAddr, enBTRCoreAVMediaCtrl aenBTRCoreAVMediaCtrl, eBTRCoreAVMediaFlow aenBTRCoreAVMediaFlow, stBTRCoreAVMediaCtData* apstBTRCoreAVMediaCtrlData);
 /**
  * @brief  This API is used to retrieve the information about the track that is being played on the media device.
  *

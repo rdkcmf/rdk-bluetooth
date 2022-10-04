@@ -433,6 +433,19 @@ typedef struct _stBTRCoreMediaStatusCBInfo {
     stBTRCoreMediaStatusUpdate      m_mediaStatusUpdate;
 } stBTRCoreMediaStatusCBInfo;
 
+typedef struct _stBTRCoreMediaCtData {
+    unsigned char                   m_mediaAbsoluteVolume;
+    //TODO: When we implement a Player for Audio-Out check if you can use a common union
+    //      similar to one use in stBTRCoreMediaStatusUpdate
+    //      union {
+    //        stBTRCoreMediaTrackInfo         m_mediaTrackInfo;
+    //        stBTRCoreMediaPositionInfo      m_mediaPositionInfo;
+    //        stBTRCoreMediaElementInfo       m_mediaElementInfo;
+    //        char                            m_mediaPlayerName[BTRCORE_MAX_STR_LEN];
+    //        unsigned char                   m_mediaPlayerVolume;
+    //      };
+} stBTRCoreMediaCtData;
+
 typedef struct _stBTRCoreUUID {
     unsigned short  flags;
     char            uuid[BTRCORE_UUID_LEN];
@@ -979,7 +992,7 @@ enBTRCoreRet BTRCore_SetDeviceDataAckTimeout(tBTRCoreHandle hBTRCore, unsigned i
  * @return  Returns the status of the operation.
  * @retval  Returns enBTRCoreSuccess on success, appropiate error code otherwise.
  */
-enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl aenBTRCoreMediaCtrl);
+enBTRCoreRet BTRCore_MediaControl(tBTRCoreHandle hBTRCore, tBTRCoreDevId aBTRCoreDevId, enBTRCoreDeviceType aenBTRCoreDevType, enBTRCoreMediaCtrl aenBTRCoreMediaCtrl, stBTRCoreMediaCtData* apstBTRCoreMediaCData);
 
 /**
  * @brief  This API is used to retrieve the media track information.

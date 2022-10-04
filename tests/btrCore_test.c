@@ -196,17 +196,20 @@ DoSBCwrite (
                         //write 0x9C plus header info
                         temp = 0x9C;
                         //   fwrite(&temp,1,1,w_ptr);
-                        write(fd,&temp,1);
+                        if (write(fd,&temp,1)) {
+                        }
                         temp = sigByte1;
                         //     fwrite(&temp,1,1,w_ptr);
-                        write(fd,&temp,1);
+                        if (write(fd,&temp,1)) {
+                        }
                     }
 
                     if (bytes2write) {
                         bytes2write--;
                         //write x
                         //fwrite(&x,1,1,w_ptr);
-                        write(fd,&x,1);
+                        if (write(fd,&x,1)) {
+                        }
 
                         if (bytes2write == 0)
                             sbcFrameState = 0;//reset the state machine
@@ -277,7 +280,8 @@ getChoice (
 ) {
     int mychoice;
     fprintf(stderr, "\nEnter a choice...\n");
-    scanf("%d", &mychoice);
+    if (scanf("%d", &mychoice)) {
+    }
         getchar();//suck up a newline?
     return mychoice;
 }
@@ -288,7 +292,8 @@ getEncodedSBCFile (
 ) {
     char sbcEncodedFile[1024];
     fprintf(stderr, "%d\t: %s - Enter SBC File location...\n", __LINE__, __FUNCTION__);
-    scanf("%s", sbcEncodedFile);
+    if (scanf("%s", sbcEncodedFile)) {
+    }
         getchar();//suck up a newline?
     return strdup(sbcEncodedFile);
 }
@@ -299,7 +304,8 @@ getLeUuidString (
 ) {
     char leUuidString[64];
     fprintf(stderr, "%d\t: %s - Enter the UUID for Le device...\n", __LINE__, __FUNCTION__);
-    scanf("%s",leUuidString );
+    if (scanf("%s",leUuidString )) {
+    }
         getchar();//suck up a newline?
     return strdup(leUuidString);
 }
@@ -357,8 +363,10 @@ sendSBCFileOverBT (
 
         // write bluetooth
         if (timeout > 0) {
-            fread (encoded_buf, 1, bytesToSend, sbcFilePtr);
-            write(fd, encoded_buf, bytesToSend);
+            if (fread (encoded_buf, 1, bytesToSend, sbcFilePtr)) {
+            }
+            if (write(fd, encoded_buf, bytesToSend)) {
+            }
             bytesLeft -= bytesToSend;
         }
 
@@ -555,7 +563,8 @@ main (
     fileWriteThread = g_thread_new("DoSBCwrite", DoSBCwrite, (gpointer)&stAppData);
     do {
         fprintf(stderr, "Enter a choice...\n");
-        scanf("%d", &choice);
+        if(scanf("%d", &choice)) {
+        }
         getchar();//suck up a newline?
         switch (choice) {
         case 1: 
@@ -722,7 +731,8 @@ main (
             {
                 char lcAdapterName[64] = {'\0'};
                 fprintf(stderr, "%d\t: %s - Set friendly name (up to 64 characters): \n", __LINE__, __FUNCTION__);
-                fgets(lcAdapterName, 63 , stdin);
+                if (fgets(lcAdapterName, 63 , stdin)) {
+                }
                 fprintf(stderr, "%d\t: %s - setting name to %s\n", __LINE__, __FUNCTION__, lcAdapterName);
                 BTRCore_SetAdapterDeviceName(lhBTRCore, &lstBTRCoreAdapter, lcAdapterName);
             }
@@ -757,7 +767,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 fprintf(stderr, "%d\t: %s - enter UUID of desired service... e.g. 0x110b for Audio Sink\n", __LINE__, __FUNCTION__);
-                fgets(myService,sizeof(myService),stdin);
+                if (fgets(myService,sizeof(myService),stdin)) {
+                }
                 for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                       {
                     if(myService[i] == '\n')
@@ -786,7 +797,8 @@ main (
                 BTRCore_GetListOfPairedDevices(lhBTRCore, &lstBTRCorePairedDevList);
                 devnum = getChoice();
                 fprintf(stderr, "%d\t: %s - enter UUID of desired service... e.g. 0x110b for Audio Sink\n", __LINE__, __FUNCTION__);
-                fgets(myService,sizeof(myService),stdin);
+                if (fgets(myService,sizeof(myService),stdin)) {
+                }
                 for (i=0;i<sizeof(myService);i++)//you need to remove the final newline from the string
                       {
                     if(myService[i] == '\n')
@@ -897,7 +909,8 @@ main (
             BT_loop = 6000 * choice;//6000 equates to roughly one minute
             writeSBC = 1;
             sleep(2);
-            system("gst-launch-1.0 filesrc location=/tmp/myfifo   ! sbcparse ! sbcdec ! brcmpcmsink");
+            if (system("gst-launch-1.0 filesrc location=/tmp/myfifo   ! sbcparse ! sbcdec ! brcmpcmsink")) {
+            }
             break;
         case 30:
             fprintf(stderr, "%d\t: %s - install agent - NoInputNoOutput\n", __LINE__, __FUNCTION__);
@@ -1045,13 +1058,14 @@ main (
                 char writeArg[BTRCORE_MAX_STR_LEN] = "\0";
 
                 fprintf(stderr, "%d\t: %s - Pick a option to perform method operation LE.\n", __LINE__, __FUNCTION__);
-                fprintf(stderr, "\t[0 - ReadValue | 1 - WriteValue | 2 - StartNotify | 3 - StopNotify]\n");
+                fprintf(stderr, "\t[1 - ReadValue | 2 - WriteValue | 3 - StartNotify | 4 - StopNotify]\n");
 
                 enBTRCoreLeOp aenBTRCoreLeOp = getChoice();
 
                 if (aenBTRCoreLeOp == enBTRCoreLeOpGWriteValue) {
                     fprintf(stderr, "\tEnter the Value to Write : ");
-                    scanf("%s", writeArg);
+                    if (scanf("%s", writeArg)) {
+                    }
                 }
                     
                 if (leUuidString) {
@@ -1059,7 +1073,7 @@ main (
                    BTRCore_PerformLEOp (lhBTRCore, devnum, leUuidString, aenBTRCoreLeOp, writeArg, val);
                    free(leUuidString);
                    leUuidString = NULL; 
-                   if (aenBTRCoreLeOp == 0) {
+                   if (aenBTRCoreLeOp == 1) {
                       fprintf(stderr, "%d\t: %s - Obtained Value [%s]\n", __LINE__, __FUNCTION__, val  );
                    }
                 }
