@@ -7881,7 +7881,7 @@ btrCore_BTDBusConnectionFilterCb (
                         if ((!strcmp(pstlhBtIfce->pcMediaCurrState, "none")) && (!strcmp(pcState, "pending"))) {
                             strcpy(pstlhBtIfce->pcMediaCurrState, pcState);
 
-                            if (!i32OpRet && pstBTDeviceInfo->bConnected) {
+                            if (!i32OpRet && pstBTDeviceInfo->bConnected && (strcmp(pcState, "idle") != 0)) {
                                 const char* value = "playing";
                                 enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
