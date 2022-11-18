@@ -7881,7 +7881,7 @@ btrCore_BTDBusConnectionFilterCb (
                         if ((!strcmp(pstlhBtIfce->pcMediaCurrState, "none")) && (!strcmp(pcState, "pending"))) {
                             strcpy(pstlhBtIfce->pcMediaCurrState, pcState);
 
-                            if (!i32OpRet && pstBTDeviceInfo->bConnected && (strcmp(pcState, "idle") != 0)) {
+                            if (!i32OpRet && pstBTDeviceInfo->bConnected) {
                                 const char* value = "playing";
                                 enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
 
@@ -7939,18 +7939,22 @@ btrCore_BTDBusConnectionFilterCb (
                             }
                         }
                         else if (lenBTDevType == enBTDevAudioSink) {    // Lets handle AudioOut case for media events for a Paired device which connects at Pairing
-                            if (!i32OpRet && pstBTDeviceInfo->bConnected && pstBTDeviceInfo->bPaired &&
-                                (!strcmp(pstlhBtIfce->pcMediaCurrState, "none")) && (!strcmp(pcState, "idle"))) {
-                                const char* value = "connected";
-                                enBTDeviceState lenBtDevState = enBTDevStPropChanged; 
+                            if (!i32OpRet && pstBTDeviceInfo->bConnected && pstBTDeviceInfo->bPaired) {
+                                if ((!strcmp(pstlhBtIfce->pcMediaCurrState, "none")) && (!strcmp(pcState, "idle"))) {
+                                    const char* value = "connected";
+                                    enBTDeviceState lenBtDevState = enBTDevStPropChanged;
 
-                                strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
-                                strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
-                                strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDevicePrevState, pstlhBtIfce->pcDeviceCurrState, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstBTDeviceInfo->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
+                                    strncpy(pstlhBtIfce->pcDeviceCurrState, value, BT_MAX_STR_LEN - 1);
 
-                                if (pstlhBtIfce->fpcBDevStatusUpdate) {
-                                    if (pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                    if (pstlhBtIfce->fpcBDevStatusUpdate) {
+                                        if (pstlhBtIfce->fpcBDevStatusUpdate(lenBTDevType, lenBtDevState, pstBTDeviceInfo, pstlhBtIfce->pcBDevStatusUserData)) {
+                                        }
                                     }
+                                }
+                                else {
+                                    strncpy(pstlhBtIfce->pcMediaCurrState, pcState, strlen(pcState));
                                 }
                             }
                         }
